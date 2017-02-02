@@ -25,14 +25,14 @@ namespace JBSnorro.GitTools
 			}
 			else if (args.Length == 1)
 			{
-				if (!IsValidTestName(args[0]))
+				if(FullyQuantifiedMethodName.TryParse(args[0], out FullyQuantifiedMethodName method))
 				{
-					WriteLine("No test found called " + args[0]);
-					return (int)ExitCodes.Abort;
+					return (int)Test(method);
 				}
 				else
 				{
-					return (int)Test(args[0]);
+					WriteLine("No test found called " + args[0]);
+					return (int)ExitCodes.Abort;
 				}
 			}
 			else
@@ -46,12 +46,7 @@ namespace JBSnorro.GitTools
 		{
 			throw new NotImplementedException();
 		}
-		static ExitCodes Test(string test)
-		{
-			throw new NotImplementedException();
-		}
-
-		static bool IsValidTestName(string testName)
+		static ExitCodes Test(FullyQuantifiedMethodName test)
 		{
 			throw new NotImplementedException();
 		}
