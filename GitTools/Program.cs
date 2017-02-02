@@ -8,6 +8,10 @@ namespace JBSnorro.GitTools
 {
 	class Program
 	{
+		/// <summary> 
+		/// Writes the specified message to the console. 
+		/// </summary>
+		/// <param name="message"></param>
 		static void WriteLine(string message)
 		{
 			if (string.IsNullOrEmpty(message)) throw new ArgumentException(nameof(message));
@@ -41,13 +45,23 @@ namespace JBSnorro.GitTools
 				return (int)ExitCodes.Abort;
 			}
 		}
-
+		/// <summary>
+		/// Tests all methods indentified by TestMethodAttribute.
+		/// </summary>
+		/// <returns> whether all tests passed </returns>
 		static ExitCodes TestAll()
 		{
 			throw new NotImplementedException();
 		}
-		static ExitCodes Test(FullyQuantifiedMethodName test)
+		/// <summary>
+		/// Tests the specified method.
+		/// </summary>
+		/// <param name="method"> The fully quantified name of the method to test. </param>
+		/// <returns> whether the test succeeded. </returns>
+		static ExitCodes Test(FullyQuantifiedMethodName method)
 		{
+			if (method == null) throw new ArgumentNullException(nameof(method));
+
 			throw new NotImplementedException();
 		}
 
