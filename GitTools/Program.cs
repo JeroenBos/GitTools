@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,6 +9,11 @@ namespace JBSnorro.GitTools
 {
 	class Program
 	{
+		/// <summary>
+		/// This char separates the path of the file containing the test method from the fully quantified name of the test method. 
+		/// </summary>
+		public static readonly char PathFromFullyQuantifiedMethodNameSeparator = '+';
+
 		/// <summary> 
 		/// Writes the specified message to the console. 
 		/// </summary>
