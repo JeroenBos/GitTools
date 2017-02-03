@@ -18,7 +18,7 @@ namespace JBSnorro.GitTools
 		/// Writes the specified message to the console. 
 		/// </summary>
 		/// <param name="message"></param>
-		static void WriteLine(string message)
+		public static void WriteLine(string message)
 		{
 			if (string.IsNullOrEmpty(message)) throw new ArgumentException(nameof(message));
 
