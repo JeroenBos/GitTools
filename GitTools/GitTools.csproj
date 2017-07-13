@@ -48,6 +48,7 @@
   <ItemGroup>
     <Compile Include="ExitCodes.cs" />
     <Compile Include="FullyQuantifiedMethodName.cs" />
+    <Compile Include="GitCommandLine.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
