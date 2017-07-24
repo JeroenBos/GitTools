@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Build.Construction;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -120,7 +121,7 @@ namespace JBSnorro.GitTools.CI
         }
         private static (object solution, string error) TryBuildSolution(object destinationSolutionFile)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(); //SolutionFile
         }
         private static (object success, string error) RunTests(object solution)
         {
