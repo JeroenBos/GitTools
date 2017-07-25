@@ -1,4 +1,5 @@
 ﻿using Microsoft.Build.Construction;
+using Microsoft.Build.Execution;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -49,14 +50,14 @@ namespace JBSnorro.GitTools.CI
                 return;
             }
 
-            var (solution, error3) = TryBuildSolution(destinationSolutionFile);
-            if (error3 != null)
+            var error3 = TryBuildSolution(destinationSolutionFile);
+            if (!error3)
             {
-                Console.WriteLine(error);
+                Console.WriteLine("Build failed");
                 return;
             }
 
-            var (success, error4) = RunTests(solution);
+            var (success, error4) = RunTests(destinationSolutionFile);
             if (error4 != null)
             {
                 Console.WriteLine(error);
@@ -123,6 +124,7 @@ namespace JBSnorro.GitTools.CI
                 return (null, e.Message);
             }
         }
+
         private static (string destinationSolutionFile, string error) TryCopySolution(string solutionFilePath, string destinationDirectory)
         {
             try
@@ -135,7 +137,7 @@ namespace JBSnorro.GitTools.CI
             {
                 return (null, e.Message);
             }
-            
+
             /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
             void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
             {
@@ -145,11 +147,32 @@ namespace JBSnorro.GitTools.CI
                     file.CopyTo(Path.Combine(target.FullName, file.Name));
             }
         }
-        private static (object solution, string error) TryBuildSolution(object destinationSolutionFile)
+        /// <summary>
+        /// Tries to build the solution and returns whether it succeeded.
+        /// </summary>
+        private static bool TryBuildSolution(string destinationSolutionFile)
         {
-            throw new NotImplementedException(); //SolutionFile
+            try
+            {
+                foreach(var project in GetProjectFilesIn(destinationSolutionFile))
+                {
+                    bool success = project.Build();
+                    if (!success)
+                        return false;
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
         }
-        private static (object success, string error) RunTests(object solution)
+        private static IEnumerable<ProjectInstance> GetProjectFilesIn(string solutionPath)
+        {
+            return SolutionFile.Parse(solutionPath).ProjectsInOrder.Select(path => new ProjectInstance(path.AbsolutePath));
+        }
+        private static (object success, string error) RunTests(string solutionPath)
         {
             throw new NotImplementedException();
         }
