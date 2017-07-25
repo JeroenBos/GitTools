@@ -125,7 +125,25 @@ namespace JBSnorro.GitTools.CI
         }
         private static (string destinationSolutionFile, string error) TryCopySolution(string solutionFilePath, string destinationDirectory)
         {
-            throw new NotImplementedException();
+            try
+            {
+                CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
+
+                return (Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath)), null);
+            }
+            catch (Exception e)
+            {
+                return (null, e.Message);
+            }
+            
+            /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
+            void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
+            {
+                foreach (DirectoryInfo dir in source.GetDirectories())
+                    CopyDirectory(dir, target.CreateSubdirectory(dir.Name));
+                foreach (FileInfo file in source.GetFiles())
+                    file.CopyTo(Path.Combine(target.FullName, file.Name));
+            }
         }
         private static (object solution, string error) TryBuildSolution(object destinationSolutionFile)
         {
