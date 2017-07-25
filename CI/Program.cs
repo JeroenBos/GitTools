@@ -111,9 +111,17 @@ namespace JBSnorro.GitTools.CI
                 return e.Message;
             }
         }
-        private static (string commitHash, string error) RetrieveCommit()
+        private static (string commitHash, string error) RetrieveCommitHash(string solutionDirectory)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var (result, error) = GitCommandLine.Execute(solutionDirectory, "status");
+                return (result?.FirstOrDefault(), error);
+            }
+            catch (Exception e)
+            {
+                return (null, e.Message);
+            }
         }
         private static (string destinationSolutionFile, string error) TryCopySolution(string solutionFilePath, string destinationDirectory)
         {
