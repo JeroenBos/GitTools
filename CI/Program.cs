@@ -36,7 +36,7 @@ namespace JBSnorro.GitTools.CI
                 return;
             }
 
-            var (commitHash, error1) = RetrieveCommit();
+            var (commitHash, error1) = RetrieveCommitHash(destinationDirectory);
             if (error1 != null)
             {
                 Console.WriteLine(error);
