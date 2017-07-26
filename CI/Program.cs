@@ -215,7 +215,20 @@ namespace JBSnorro.GitTools.CI
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
 
-            throw new NotImplementedException();
+            return type.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => TestClassFullNames.Contains(attributeType.FullName)));
         }
+
+        private static List<string> TestClassFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestClass" };
+
+        private static IEnumerable<Type> GetBaseTypes(Type type)
+        {
+            if (type == null) throw new ArgumentNullException(nameof(type));
+
+            yield return type;
+            if (type.BaseType != null)
+                foreach (var result in GetBaseTypes(type.BaseType))
+                    yield return result;
+        }
+
     }
 }
