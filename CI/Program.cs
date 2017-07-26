@@ -205,6 +205,13 @@ namespace JBSnorro.GitTools.CI
         }
         private static (int totalTestCount, int successfulTestCount) RunTests(Type testType)
         {
+            var successes = testType.GetMethods().Where(IsTestMethod).AsParallel().Select(RunTest).ToList();
+            return (successes.Count, successes.Count(_ => _));
+        }
+        private static bool RunTest(MethodInfo testMethod)
+        {
+            if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
+
             throw new NotImplementedException();
         }
         private static string GetAssemblyPath(ProjectInstance project)
@@ -219,6 +226,14 @@ namespace JBSnorro.GitTools.CI
         }
 
         private static List<string> TestClassFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestClass" };
+        private static bool IsTestMethod(MethodInfo method)
+        {
+            if (method == null) throw new ArgumentNullException(nameof(method));
+
+            return method.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => TestMethodAttributeFullNames.Contains(attributeType.FullName)));
+        }
+
+        private static List<string> TestMethodAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestMethod" };
 
         private static IEnumerable<Type> GetBaseTypes(Type type)
         {
