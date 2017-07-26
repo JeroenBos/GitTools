@@ -2,6 +2,7 @@
 using Microsoft.Build.Execution;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -154,7 +155,7 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                foreach(var project in GetProjectFilesIn(destinationSolutionFile))
+                foreach (var project in GetProjectFilesIn(destinationSolutionFile))
                 {
                     bool success = project.Build();
                     if (!success)
@@ -174,6 +175,27 @@ namespace JBSnorro.GitTools.CI
         }
         private static (object success, string error) RunTests(string solutionPath)
         {
+            try
+            {
+                var result = GetProjectFilesIn(solutionPath).AsParallel()
+                                                            .Select(RunTests)
+                                                            .Aggregate(Add);
+                return (result, null);
+            }
+            catch (Exception e)
+            {
+                return (null, e.Message);
+            }
+            
+            (int, int) Add((int, int) a, (int, int) b)
+            {
+                return (a.Item1 + b.Item1, a.Item2 + b.Item2);
+            }
+        }
+        private static (int totalTestCount, int successfulTestCount) RunTests(ProjectInstance project)
+        {
+            if (project == null) throw new ArgumentNullException(nameof(project));
+
             throw new NotImplementedException();
         }
     }
