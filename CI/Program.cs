@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -186,15 +187,33 @@ namespace JBSnorro.GitTools.CI
             {
                 return (null, e.Message);
             }
-            
-            (int, int) Add((int, int) a, (int, int) b)
-            {
-                return (a.Item1 + b.Item1, a.Item2 + b.Item2);
-            }
         }
         private static (int totalTestCount, int successfulTestCount) RunTests(ProjectInstance project)
         {
             if (project == null) throw new ArgumentNullException(nameof(project));
+
+            return Assembly.Load(GetAssemblyPath(project))
+                           .GetTypes()
+                           .Where(IsTestType)
+                           .AsParallel()
+                           .Select(RunTests)
+                           .Aggregate(Add);
+        }
+        static (int, int) Add((int, int) a, (int, int) b)
+        {
+            return (a.Item1 + b.Item1, a.Item2 + b.Item2);
+        }
+        private static (int totalTestCount, int successfulTestCount) RunTests(Type testType)
+        {
+            throw new NotImplementedException();
+        }
+        private static string GetAssemblyPath(ProjectInstance project)
+        {
+            throw new NotImplementedException();
+        }
+        private static bool IsTestType(Type type)
+        {
+            if (type == null) throw new ArgumentNullException(nameof(type));
 
             throw new NotImplementedException();
         }
