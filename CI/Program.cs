@@ -162,7 +162,7 @@ namespace JBSnorro.GitTools.CI
                 }
                 return true;
             }
-            catch (Exception e)
+            catch
             {
                 return false;
             }
