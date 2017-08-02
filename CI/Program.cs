@@ -212,7 +212,31 @@ namespace JBSnorro.GitTools.CI
         {
             if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
 
-            throw new NotImplementedException();
+            var testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
+            RunInitializationMethod(testClassInstance);
+            try
+            {
+
+                testMethod.Invoke(testClassInstance, new object[0]);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                RunCleanupMethod(testClassInstance);
+            }
+
+            void RunInitializationMethod(object instance)
+            {
+                GetInitializationMethod(instance)?.Invoke(instance, new object[0]);
+            }
+            void RunCleanupMethod(object instance)
+            {
+                GetCleanupMethod(instance)?.Invoke(instance, new object[0]);
+            }
         }
         private static string GetAssemblyPath(ProjectInstance project)
         {
@@ -225,15 +249,54 @@ namespace JBSnorro.GitTools.CI
             return type.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => TestClassFullNames.Contains(attributeType.FullName)));
         }
 
-        private static List<string> TestClassFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestClass" };
         private static bool IsTestMethod(MethodInfo method)
         {
             if (method == null) throw new ArgumentNullException(nameof(method));
 
-            return method.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => TestMethodAttributeFullNames.Contains(attributeType.FullName)));
+            return HasAttribute(method, TestMethodAttributeFullNames);
+        }
+        private static bool HasAttribute(MethodInfo method, IList<string> attibuteFullNames)
+        {
+            if (method == null) throw new ArgumentNullException(nameof(method));
+            if (attibuteFullNames == null) throw new ArgumentNullException(nameof(attibuteFullNames));
+
+            return method.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => attibuteFullNames.Contains(attributeType.FullName)));
+        }
+        private static bool IsTestInitializationMethod(MethodInfo method)
+        {
+            if (method == null) throw new ArgumentNullException(nameof(method));
+
+            return HasAttribute(method, TestMethodInitializationAttributeFullNames);
+        }
+        private static bool IsTestCleanupMethod(MethodInfo method)
+        {
+            if (method == null) throw new ArgumentNullException(nameof(method));
+
+            return HasAttribute(method, TestMethodCleanupAttributeFullNames);
+        }
+        private static MethodInfo GetInitializationMethod(object testTypeInstance)
+        {
+            if (testTypeInstance == null) throw new ArgumentNullException(nameof(testTypeInstance));
+
+            return testTypeInstance.GetType()
+                                   .GetMethods()
+                                   .Where(IsTestInitializationMethod)
+                                   .FirstOrDefault();
+        }
+        private static MethodInfo GetCleanupMethod(object testTypeInstance)
+        {
+            if (testTypeInstance == null) throw new ArgumentNullException(nameof(testTypeInstance));
+
+            return testTypeInstance.GetType()
+                                   .GetMethods()
+                                   .Where(IsTestCleanupMethod)
+                                   .FirstOrDefault();
         }
 
-        private static List<string> TestMethodAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestMethod" };
+        private static List<string> TestClassFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute" };
+        private static List<string> TestMethodAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute" };
+        private static List<string> TestMethodInitializationAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestInitializeAttribute" };
+        private static List<string> TestMethodCleanupAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestCleanupAttribute" };
 
         private static IEnumerable<Type> GetBaseTypes(Type type)
         {
