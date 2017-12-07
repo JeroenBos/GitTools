@@ -23,53 +23,57 @@ namespace JBSnorro.GitTools.CI
             if (args.Length != 2) { throw new ArgumentException("Two arguments must be specified", nameof(args)); }
 
             string solutionFilePath = args[0];
+            string destinationDirectory = args[1];
+
+            var (status, message) = CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory);
+            Console.WriteLine(message);
+        }
+
+        /// <summary>
+        /// Copies the solution to a temporary destination directory, build the solution and executes the tests and returns any errors.
+        /// </summary>
+        /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
+        /// <param name="destinationDirectory"> The temporary directory to copy the solution to. </param>
+        public static (Status, string) CopySolutionAndExecuteTests(string solutionFilePath, string destinationDirectory)
+        {
             var error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
             {
-                Console.WriteLine(error);
-                return;
+                return (Status.ArgumentError, error);
             }
 
-            string destinationDirectory = args[1];
             error = ValidateDestinationDirectory(destinationDirectory);
             if (error != null)
             {
-                Console.WriteLine(error);
-                return;
+                return (Status.ArgumentError, error);
             }
 
             var (commitHash, error1) = RetrieveCommitHash(destinationDirectory);
             if (error1 != null)
             {
-                Console.WriteLine(error);
-                return;
+                return (Status.MiscellaneousError, error1);
             }
 
             var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
             if (error2 != null)
             {
-                Console.WriteLine(error);
-                return;
+                return (Status.MiscellaneousError, error2);
             }
 
             var error3 = TryBuildSolution(destinationSolutionFile);
             if (!error3)
             {
-                Console.WriteLine("Build failed");
-                return;
+                return (Status.BuildError, "Build failed");
             }
 
             var (totalCount, error4) = RunTests(destinationSolutionFile);
             if (error4 != null)
             {
-                Console.WriteLine(error);
-                return;
+                return (Status.TestError, error);
             }
 
-            Console.WriteLine(totalCount + " tests run successfully");
+            return (Status.Success, totalCount.ToString() + " run successfully");
         }
-
-
 
         private static string ValidateSolutionFilePath(string solutionFilePath)
         {
