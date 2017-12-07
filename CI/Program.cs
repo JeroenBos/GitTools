@@ -59,14 +59,14 @@ namespace JBSnorro.GitTools.CI
                 return;
             }
 
-            var (success, error4) = RunTests(destinationSolutionFile);
+            var (totalCount, error4) = RunTests(destinationSolutionFile);
             if (error4 != null)
             {
                 Console.WriteLine(error);
                 return;
             }
 
-            Console.WriteLine(success);
+            Console.WriteLine(totalCount + " tests run successfully");
         }
 
 
@@ -174,18 +174,21 @@ namespace JBSnorro.GitTools.CI
         {
             return SolutionFile.Parse(solutionPath).ProjectsInOrder.Select(path => new ProjectInstance(path.AbsolutePath));
         }
-        private static (object success, string error) RunTests(string solutionPath)
+        private static (int totalTestCount, string error) RunTests(string solutionPath)
         {
             try
             {
-                var result = GetProjectFilesIn(solutionPath).AsParallel()
-                                                            .Select(RunTests)
-                                                            .Aggregate(Add);
-                return (result, null);
+                var (totalTestCount, successCount) = GetProjectFilesIn(solutionPath).AsParallel()
+                                                                                    .Select(RunTests)
+                                                                                    .Aggregate(Add);
+                if (totalTestCount == successCount)
+                    return (totalTestCount, null);
+                else
+                    return (totalTestCount, $"{totalTestCount - successCount}/{totalTestCount} tests failed");
             }
             catch (Exception e)
             {
-                return (null, e.Message);
+                return (-1, e.Message);
             }
         }
         private static (int totalTestCount, int successfulTestCount) RunTests(ProjectInstance project)
@@ -229,13 +232,13 @@ namespace JBSnorro.GitTools.CI
                 TestClassExtensions.RunCleanupMethod(testClassInstance);
             }
 
-            
+
         }
         private static string GetAssemblyPath(ProjectInstance project)
         {
             throw new NotImplementedException();
         }
-     
+
 
     }
 }
