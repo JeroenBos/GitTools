@@ -48,7 +48,7 @@ namespace JBSnorro.GitTools.CI
                 return (Status.ArgumentError, error);
             }
 
-            var (commitHash, error1) = RetrieveCommitHash(destinationDirectory);
+            var (commitHash, error1) = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath));
             if (error1 != null)
             {
                 return (Status.MiscellaneousError, error1);
