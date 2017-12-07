@@ -194,7 +194,7 @@ namespace JBSnorro.GitTools.CI
 
             return Assembly.Load(GetAssemblyPath(project))
                            .GetTypes()
-                           .Where(IsTestType)
+                           .Where(TestClassExtensions.IsTestType)
                            .AsParallel()
                            .Select(RunTests)
                            .Aggregate(Add);
@@ -205,7 +205,7 @@ namespace JBSnorro.GitTools.CI
         }
         private static (int totalTestCount, int successfulTestCount) RunTests(Type testType)
         {
-            var successes = testType.GetMethods().Where(IsTestMethod).AsParallel().Select(RunTest).ToList();
+            var successes = testType.GetMethods().Where(TestClassExtensions.IsTestMethod).AsParallel().Select(RunTest).ToList();
             return (successes.Count, successes.Count(_ => _));
         }
         private static bool RunTest(MethodInfo testMethod)
@@ -213,7 +213,7 @@ namespace JBSnorro.GitTools.CI
             if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
 
             var testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
-            RunInitializationMethod(testClassInstance);
+            TestClassExtensions.RunInitializationMethod(testClassInstance);
             try
             {
 
@@ -226,87 +226,16 @@ namespace JBSnorro.GitTools.CI
             }
             finally
             {
-                RunCleanupMethod(testClassInstance);
+                TestClassExtensions.RunCleanupMethod(testClassInstance);
             }
 
-            void RunInitializationMethod(object instance)
-            {
-                GetInitializationMethod(instance)?.Invoke(instance, new object[0]);
-            }
-            void RunCleanupMethod(object instance)
-            {
-                GetCleanupMethod(instance)?.Invoke(instance, new object[0]);
-            }
+            
         }
         private static string GetAssemblyPath(ProjectInstance project)
         {
             throw new NotImplementedException();
         }
-        private static bool IsTestType(Type type)
-        {
-            if (type == null) throw new ArgumentNullException(nameof(type));
-
-            return type.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => TestClassFullNames.Contains(attributeType.FullName)));
-        }
-
-        private static bool IsTestMethod(MethodInfo method)
-        {
-            if (method == null) throw new ArgumentNullException(nameof(method));
-
-            return HasAttribute(method, TestMethodAttributeFullNames);
-        }
-        private static bool HasAttribute(MethodInfo method, IList<string> attibuteFullNames)
-        {
-            if (method == null) throw new ArgumentNullException(nameof(method));
-            if (attibuteFullNames == null) throw new ArgumentNullException(nameof(attibuteFullNames));
-
-            return method.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => attibuteFullNames.Contains(attributeType.FullName)));
-        }
-        private static bool IsTestInitializationMethod(MethodInfo method)
-        {
-            if (method == null) throw new ArgumentNullException(nameof(method));
-
-            return HasAttribute(method, TestMethodInitializationAttributeFullNames);
-        }
-        private static bool IsTestCleanupMethod(MethodInfo method)
-        {
-            if (method == null) throw new ArgumentNullException(nameof(method));
-
-            return HasAttribute(method, TestMethodCleanupAttributeFullNames);
-        }
-        private static MethodInfo GetInitializationMethod(object testTypeInstance)
-        {
-            if (testTypeInstance == null) throw new ArgumentNullException(nameof(testTypeInstance));
-
-            return testTypeInstance.GetType()
-                                   .GetMethods()
-                                   .Where(IsTestInitializationMethod)
-                                   .FirstOrDefault();
-        }
-        private static MethodInfo GetCleanupMethod(object testTypeInstance)
-        {
-            if (testTypeInstance == null) throw new ArgumentNullException(nameof(testTypeInstance));
-
-            return testTypeInstance.GetType()
-                                   .GetMethods()
-                                   .Where(IsTestCleanupMethod)
-                                   .FirstOrDefault();
-        }
-
-        private static List<string> TestClassFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute" };
-        private static List<string> TestMethodAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute" };
-        private static List<string> TestMethodInitializationAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestInitializeAttribute" };
-        private static List<string> TestMethodCleanupAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestCleanupAttribute" };
-
-        private static IEnumerable<Type> GetBaseTypes(Type type)
-        {
-            if (type == null) throw new ArgumentNullException(nameof(type));
-
-            yield return type;
-            if (type.BaseType != null)
-                foreach (var result in GetBaseTypes(type.BaseType))
-                    yield return result;
-        }
+     
 
     }
 }
