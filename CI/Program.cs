@@ -55,8 +55,7 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, error1);
             }
 
-            solutionFilePath = solutionFilePath.EndsWith(Path.DirectorySeparatorChar.ToString()) ? solutionFilePath : solutionFilePath + Path.DirectorySeparatorChar;
-            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath + commitHash, destinationDirectory);
+            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, Path.Combine(destinationDirectory, commitHash));
             if (error2 != null)
             {
                 return (Status.MiscellaneousError, error2);
@@ -141,6 +140,7 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
+                //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
                 CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
 
                 return (Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath)), null);
@@ -154,7 +154,8 @@ namespace JBSnorro.GitTools.CI
             void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
             {
                 foreach (DirectoryInfo dir in source.GetDirectories())
-                    CopyDirectory(dir, target.CreateSubdirectory(dir.Name));
+                    if (!dir.Name.StartsWith(".vs"))
+                        CopyDirectory(dir, target.CreateSubdirectory(dir.Name));
                 foreach (FileInfo file in source.GetFiles())
                     file.CopyTo(Path.Combine(target.FullName, file.Name));
             }
