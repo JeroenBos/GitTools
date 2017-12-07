@@ -27,6 +27,7 @@ namespace JBSnorro.GitTools.CI
 
             var (status, message) = CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory);
             Console.WriteLine(message);
+            Console.ReadLine();
         }
 
         /// <summary>
