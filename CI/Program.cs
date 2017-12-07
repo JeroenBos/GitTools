@@ -124,8 +124,12 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                var (result, error) = GitCommandLine.Execute(solutionDirectory, "status");
-                return (result?.FirstOrDefault(), error);
+                var branchName = File.ReadAllText(Path.Combine(solutionDirectory, @".git\HEAD"));
+                if (!branchName.StartsWith("ref: refs")) throw new Exception("Assertion failed");
+
+                branchName = branchName.Substring("ref: ".Length, branchName.Length - "\n".Length - "ref: ".Length);
+                var commitHash = File.ReadAllText(Path.Combine(solutionDirectory, @".git\", branchName)).Substring(0, 40);
+                return (commitHash, null);
             }
             catch (Exception e)
             {
