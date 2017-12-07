@@ -54,7 +54,8 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, error1);
             }
 
-            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
+            solutionFilePath = solutionFilePath.EndsWith(Path.DirectorySeparatorChar.ToString()) ? solutionFilePath : solutionFilePath + Path.DirectorySeparatorChar;
+            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath + commitHash, destinationDirectory);
             if (error2 != null)
             {
                 return (Status.MiscellaneousError, error2);
@@ -242,7 +243,5 @@ namespace JBSnorro.GitTools.CI
         {
             throw new NotImplementedException();
         }
-
-
     }
 }
