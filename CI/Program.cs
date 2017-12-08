@@ -107,7 +107,7 @@ namespace JBSnorro.GitTools.CI
                 if (File.Exists(destinationDirectory))
                     return "The specified path is not a directory";
 
-                Directory.CreateDirectory(destinationDirectory);
+                Directory.CreateDirectory(destinationDirectory); // this gets deleted again shortly. It's just part of the check
                 return null;
             }
             catch (Exception e)
@@ -136,6 +136,11 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
+                DeleteContents(destinationDirectory);
+            }
+            catch { }
+            try
+            {
                 //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
                 CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
 
@@ -146,6 +151,15 @@ namespace JBSnorro.GitTools.CI
                 return (null, e.Message);
             }
 
+
+            void DeleteContents(string directory)
+            {
+                foreach (var nestedDirectory in Directory.EnumerateDirectories(directory))
+                    Directory.Delete(nestedDirectory, recursive: true);
+                foreach (var file in Directory.EnumerateFiles(directory))
+                    File.Delete(file);
+
+            }
             /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
             void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
             {
