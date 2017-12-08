@@ -104,14 +104,10 @@ namespace JBSnorro.GitTools.CI
                 if (Directory.Exists(destinationDirectory))
                     return null;
 
-                if (destinationDirectory.EndsWith(Path.DirectorySeparatorChar.ToString()))
-                    destinationDirectory += Path.DirectorySeparatorChar.ToString();
+                if (File.Exists(destinationDirectory))
+                    return "The specified path is not a directory";
 
-                string originalDestinationDirectory = destinationDirectory;
-                destinationDirectory = Path.GetDirectoryName(destinationDirectory);
-
-                if (originalDestinationDirectory != destinationDirectory)
-                    return "The specified destination directory was not a directory";
+                Directory.CreateDirectory(destinationDirectory);
                 return null;
             }
             catch (Exception e)
