@@ -62,7 +62,7 @@ namespace JBSnorro.GitTools.CI
             }
 
             var error3 = TryBuildSolution(destinationSolutionFile);
-            if (!error3)
+            if (error3 != null)
             {
                 return (Status.BuildError, "Build failed");
             }
@@ -157,9 +157,9 @@ namespace JBSnorro.GitTools.CI
             }
         }
         /// <summary>
-        /// Tries to build the solution and returns whether it succeeded.
+        /// Tries to build the solution and returns null if successful; otherwise the error message.
         /// </summary>
-        private static bool TryBuildSolution(string destinationSolutionFile)
+        private static string TryBuildSolution(string destinationSolutionFile)
         {
             try
             {
@@ -167,13 +167,13 @@ namespace JBSnorro.GitTools.CI
                 {
                     bool success = project.Build();
                     if (!success)
-                        return false;
+                        return "Build failed";
                 }
-                return true;
+                return null;
             }
-            catch
+            catch (Exception e)
             {
-                return false;
+                return e.Message;
             }
 
         }
