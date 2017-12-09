@@ -1,5 +1,6 @@
 ﻿using Microsoft.Build.Construction;
 using Microsoft.Build.Execution;
+using Microsoft.Build.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -179,7 +180,7 @@ namespace JBSnorro.GitTools.CI
             {
                 foreach (var project in GetProjectFilesIn(destinationSolutionFile))
                 {
-                    bool success = project.Build();
+                    bool success = project.Build(new[] { new Microsoft.Build.Logging.ConsoleLogger() });
                     if (!success)
                         return "Build failed";
                 }
