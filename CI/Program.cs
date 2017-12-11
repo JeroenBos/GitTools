@@ -214,7 +214,6 @@ namespace JBSnorro.GitTools.CI
             try
             {
                 var (totalTestCount, successCount) = projects.LoadedProjects.Select(GetAssemblyPath)
-                                                                                    .AsParallel()
                                                                                     .Select(RunTests)
                                                                                     .Aggregate(Add);
                 if (totalTestCount == successCount)
@@ -232,13 +231,23 @@ namespace JBSnorro.GitTools.CI
         {
             if (assemblyPath == null) throw new ArgumentNullException(nameof(assemblyPath));
 
+            try
+            {
+                var testTypes = Assembly.LoadFile(assemblyPath)
+                               .GetTypes()
+                               .Where(TestClassExtensions.IsTestType)
+                               .ToList();
+                if (testTypes.Count == 0)
+                    return (0, 0);
 
-            return Assembly.Load(assemblyPath)
-                           .GetTypes()
-                           .Where(TestClassExtensions.IsTestType)
-                           .AsParallel()
-                           .Select(RunTests)
-                           .Aggregate(Add);
+                return testTypes.Select(RunTests)
+                                .Aggregate(Add);
+            }
+            catch
+            {
+                throw;
+            }
+
         }
         static (int, int) Add((int, int) a, (int, int) b)
         {
