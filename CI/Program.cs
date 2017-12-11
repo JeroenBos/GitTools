@@ -1,5 +1,7 @@
 ﻿using Microsoft.Build.Construction;
+using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
+using Microsoft.Build.Logging;
 using Microsoft.Build.Utilities;
 using System;
 using System.Collections.Generic;
@@ -65,13 +67,13 @@ namespace JBSnorro.GitTools.CI
             var error3 = TryBuildSolution(destinationSolutionFile);
             if (error3 != null)
             {
-                return (Status.BuildError, "Build failed");
+                return (Status.BuildError, error3);
             }
 
-            var (totalCount, error4) = RunTests(destinationSolutionFile);
+            var (totalCount, error4) = RunSolutionTests(destinationSolutionFile);
             if (error4 != null)
             {
-                return (Status.TestError, error);
+                return (Status.TestError, error4);
             }
 
             return (Status.Success, totalCount.ToString() + " run successfully");
@@ -137,14 +139,15 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                DeleteContents(destinationDirectory);
+                SetAttributesNormal(destinationDirectory);
+                Directory.Delete(destinationDirectory, recursive: true);
             }
             catch { }
             try
             {
                 //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
                 CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
-
+                SetAttributesNormal(destinationDirectory);
                 return (Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath)), null);
             }
             catch (Exception e)
@@ -153,36 +156,43 @@ namespace JBSnorro.GitTools.CI
             }
 
 
-            void DeleteContents(string directory)
-            {
-                foreach (var nestedDirectory in Directory.EnumerateDirectories(directory))
-                    Directory.Delete(nestedDirectory, recursive: true);
-                foreach (var file in Directory.EnumerateFiles(directory))
-                    File.Delete(file);
-
-            }
             /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
             void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
             {
                 foreach (DirectoryInfo dir in source.GetDirectories())
-                    if (!dir.Name.StartsWith(".vs"))
+                    if (!(dir.Name.StartsWith(".vs") || dir.Name == "bin" || dir.Name == "obj"))
                         CopyDirectory(dir, target.CreateSubdirectory(dir.Name));
                 foreach (FileInfo file in source.GetFiles())
                     file.CopyTo(Path.Combine(target.FullName, file.Name), true);
             }
         }
+        private static void SetAttributesNormal(string dirPath)
+        {
+            SetAttributesNormal(new DirectoryInfo(dirPath));
+        }
+        private static void SetAttributesNormal(DirectoryInfo dir)
+        {
+            foreach (var subDir in dir.GetDirectories())
+                SetAttributesNormal(subDir);
+            foreach (var file in dir.GetFiles())
+            {
+                file.Attributes = FileAttributes.Normal;
+            }
+        }
+
         /// <summary>
         /// Tries to build the solution and returns null if successful; otherwise the error message.
         /// </summary>
         private static string TryBuildSolution(string destinationSolutionFile)
         {
+            SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
             try
             {
-                foreach (var project in GetProjectFilesIn(destinationSolutionFile))
+                var projects = new ProjectCollection() { IsBuildEnabled = true };
+                foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
                 {
-                    bool success = project.Build(new[] { new Microsoft.Build.Logging.ConsoleLogger() });
-                    if (!success)
-                        return "Build failed";
+                    var project = projects.LoadProject(projectPath);
+                    project.Build(new ConsoleLogger());
                 }
                 return null;
             }
@@ -192,16 +202,19 @@ namespace JBSnorro.GitTools.CI
             }
 
         }
-        private static IEnumerable<ProjectInstance> GetProjectFilesIn(string solutionPath)
+        private static IEnumerable<string> GetProjectFilesIn(string solutionPath)
         {
-            return SolutionFile.Parse(solutionPath).ProjectsInOrder.Select(path => new ProjectInstance(path.AbsolutePath));
+            return SolutionFile.Parse(solutionPath)
+                               .ProjectsInOrder
+                               .Select(project => project.AbsolutePath)
+                               .Where(File.Exists);
         }
-        private static (int totalTestCount, string error) RunTests(string solutionPath)
+        private static (int totalTestCount, string error) RunSolutionTests(string solutionPath)
         {
             try
             {
                 var (totalTestCount, successCount) = GetProjectFilesIn(solutionPath).AsParallel()
-                                                                                    .Select(RunTests)
+                                                                                    .Select(RunProjectsTests)
                                                                                     .Aggregate(Add);
                 if (totalTestCount == successCount)
                     return (totalTestCount, null);
@@ -213,11 +226,12 @@ namespace JBSnorro.GitTools.CI
                 return (-1, e.Message);
             }
         }
-        private static (int totalTestCount, int successfulTestCount) RunTests(ProjectInstance project)
+        private static (int totalTestCount, int successfulTestCount) RunProjectsTests(string projectFilePath)
         {
-            if (project == null) throw new ArgumentNullException(nameof(project));
+            if (projectFilePath == null) throw new ArgumentNullException(nameof(projectFilePath));
 
-            return Assembly.Load(GetAssemblyPath(project))
+
+            return Assembly.Load(GetAssemblyPath(projectFilePath))
                            .GetTypes()
                            .Where(TestClassExtensions.IsTestType)
                            .AsParallel()
@@ -256,7 +270,7 @@ namespace JBSnorro.GitTools.CI
 
 
         }
-        private static string GetAssemblyPath(ProjectInstance project)
+        private static string GetAssemblyPath(string project)
         {
             throw new NotImplementedException();
         }
