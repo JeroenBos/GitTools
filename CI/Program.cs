@@ -64,13 +64,13 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, error2);
             }
 
-            var error3 = TryBuildSolution(destinationSolutionFile);
+            var (projects, error3) = TryBuildSolution(destinationSolutionFile);
             if (error3 != null)
             {
                 return (Status.BuildError, error3);
             }
 
-            var (totalCount, error4) = RunSolutionTests(destinationSolutionFile);
+            var (totalCount, error4) = RunSolutionTests(projects);
             if (error4 != null)
             {
                 return (Status.TestError, error4);
@@ -181,9 +181,9 @@ namespace JBSnorro.GitTools.CI
         }
 
         /// <summary>
-        /// Tries to build the solution and returns null if successful; otherwise the error message.
+        /// Tries to build the solution and returns the projects if successful; otherwise an error message.
         /// </summary>
-        private static string TryBuildSolution(string destinationSolutionFile)
+        private static (ProjectCollection, string) TryBuildSolution(string destinationSolutionFile)
         {
             SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
             try
@@ -194,11 +194,11 @@ namespace JBSnorro.GitTools.CI
                     var project = projects.LoadProject(projectPath);
                     project.Build(new ConsoleLogger());
                 }
-                return null;
+                return (projects, null);
             }
             catch (Exception e)
             {
-                return e.Message;
+                return (null, e.Message);
             }
 
         }
@@ -209,12 +209,13 @@ namespace JBSnorro.GitTools.CI
                                .Select(project => project.AbsolutePath)
                                .Where(File.Exists);
         }
-        private static (int totalTestCount, string error) RunSolutionTests(string solutionPath)
+        private static (int totalTestCount, string error) RunSolutionTests(ProjectCollection projects)
         {
             try
             {
-                var (totalTestCount, successCount) = GetProjectFilesIn(solutionPath).AsParallel()
-                                                                                    .Select(RunProjectsTests)
+                var (totalTestCount, successCount) = projects.LoadedProjects.Select(GetAssemblyPath)
+                                                                                    .AsParallel()
+                                                                                    .Select(RunTests)
                                                                                     .Aggregate(Add);
                 if (totalTestCount == successCount)
                     return (totalTestCount, null);
@@ -226,12 +227,13 @@ namespace JBSnorro.GitTools.CI
                 return (-1, e.Message);
             }
         }
-        private static (int totalTestCount, int successfulTestCount) RunProjectsTests(string projectFilePath)
+
+        private static (int totalTestCount, int successfulTestCount) RunTests(string assemblyPath)
         {
-            if (projectFilePath == null) throw new ArgumentNullException(nameof(projectFilePath));
+            if (assemblyPath == null) throw new ArgumentNullException(nameof(assemblyPath));
 
 
-            return Assembly.Load(GetAssemblyPath(projectFilePath))
+            return Assembly.Load(assemblyPath)
                            .GetTypes()
                            .Where(TestClassExtensions.IsTestType)
                            .AsParallel()
@@ -270,9 +272,18 @@ namespace JBSnorro.GitTools.CI
 
 
         }
-        private static string GetAssemblyPath(string project)
+        private static string GetAssemblyPath(Project project)
         {
-            throw new NotImplementedException();
+            if (!project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.StartsWith("obj"))
+                throw new NotImplementedException();
+
+            //couldn't find it in the projects' AlLEvaluatedItems, so I'm hacking this together:
+            string relativePath = "bin" + project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.Substring("obj".Length);
+            string path = Path.Combine(project.DirectoryPath, relativePath);
+            
+            if(!File.Exists(path))
+                throw new NotImplementedException("Couldn't find assembly " + relativePath);
+            return path;
         }
     }
 }
