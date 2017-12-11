@@ -70,7 +70,7 @@ namespace JBSnorro.GitTools.CI
                 return (Status.BuildError, error3);
             }
 
-            var (totalCount, error4) = RunSolutionTests(projects);
+            var (totalCount, error4) = RunTests(projects.LoadedProjects);
             if (error4 != null)
             {
                 return (Status.TestError, error4);
@@ -209,13 +209,13 @@ namespace JBSnorro.GitTools.CI
                                .Select(project => project.AbsolutePath)
                                .Where(File.Exists);
         }
-        private static (int totalTestCount, string error) RunSolutionTests(ProjectCollection projects)
+        private static (int totalTestCount, string error) RunTests(IEnumerable<Project> projects)
         {
             try
             {
-                var (totalTestCount, successCount) = projects.LoadedProjects.Select(GetAssemblyPath)
-                                                                                    .Select(RunTests)
-                                                                                    .Aggregate(Add);
+                var (totalTestCount, successCount) = projects.Select(GetAssemblyPath)
+                                                             .Select(RunTests)
+                                                             .Aggregate(Add);
                 if (totalTestCount == successCount)
                     return (totalTestCount, null);
                 else
