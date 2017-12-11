@@ -231,6 +231,7 @@ namespace JBSnorro.GitTools.CI
         {
             if (assemblyPath == null) throw new ArgumentNullException(nameof(assemblyPath));
 
+            Console.WriteLine("Testing " + Path.GetFileName(assemblyPath));
             try
             {
                 var testTypes = Assembly.LoadFile(assemblyPath)
