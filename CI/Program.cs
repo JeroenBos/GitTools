@@ -65,13 +65,13 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, error2);
             }
 
-            var (projects, error3) = TryBuildSolution(destinationSolutionFile);
+            var (projectsInBuildOrder, error3) = TryBuildSolution(destinationSolutionFile);
             if (error3 != null)
             {
                 return (Status.BuildError, error3);
             }
 
-            var (totalCount, error4) = RunTests(projects);
+            var (totalCount, error4) = RunTests(projectsInBuildOrder);
             if (error4 != null)
             {
                 return (Status.TestError, error4);
@@ -196,7 +196,8 @@ namespace JBSnorro.GitTools.CI
                     projects.LoadProject(projectPath.AbsolutePath);
 
                 }
-                foreach (var project in GetInBuildOrder(projects.LoadedProjects))
+                var projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
+                foreach (var project in projectsInBuildOrder)
                 {
                     bool success = project.Build(new ConsoleLogger());
                     if (!success)
@@ -205,7 +206,7 @@ namespace JBSnorro.GitTools.CI
                     }
                 }
 
-                return (projects.LoadedProjects, null);
+                return (projectsInBuildOrder, null);
             }
             catch (Exception e)
             {
@@ -221,7 +222,7 @@ namespace JBSnorro.GitTools.CI
                        .EnsureSingleEnumerationDEBUG();
         }
 
-        private static IEnumerable<Project> GetInBuildOrder(IEnumerable<Project> projects)
+        private static List<Project> GetInBuildOrder(IEnumerable<Project> projects)
         {
             var remaining = projects.ToList();
             var result = new List<Project>();
@@ -261,13 +262,13 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static (int totalTestCount, string error) RunTests(IEnumerable<Project> projects)
+        private static (int totalTestCount, string error) RunTests(IEnumerable<Project> projectsInBuildOrder)
         {
             try
             {
-                var (totalTestCount, successCount) = projects.Select(GetAssemblyPath)
-                                                             .Select(RunTests)
-                                                             .Aggregate(Add);
+                var (totalTestCount, successCount) = projectsInBuildOrder.Select(GetAssemblyPath)
+                                                                         .Select(RunTests)
+                                                                         .Aggregate(Add);
                 if (totalTestCount == successCount)
                     return (totalTestCount, null);
                 else
