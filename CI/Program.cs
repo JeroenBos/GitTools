@@ -296,6 +296,7 @@ namespace JBSnorro.GitTools.CI
                 if (testTypes.Count == 0)
                     return (0, 0);
 
+
                 return testTypes.Select(RunTests)
                                 .Aggregate(Add);
             }
