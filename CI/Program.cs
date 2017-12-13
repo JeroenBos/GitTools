@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using JBSnorro;
 using System.Diagnostics;
+using System.Threading;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -21,6 +22,11 @@ namespace JBSnorro.GitTools.CI
     /// </summary>
     class Program
     {
+        /// <summary>
+        /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
+        /// </summary>
+        public const int MaxTestDuration = 5000;
+
         /// <param name="args"> Must contain the path of the solution file, and the directory where to copy the solution to. </param>
         static void Main(string[] args)
         {
@@ -312,7 +318,7 @@ namespace JBSnorro.GitTools.CI
         }
         private static (int totalTestCount, int successfulTestCount) RunTests(Type testType)
         {
-            var successes = testType.GetMethods().Where(TestClassExtensions.IsTestMethod).AsParallel().Select(RunTest).ToList();
+            var successes = testType.GetMethods().Where(TestClassExtensions.IsTestMethod).Select(RunTest).ToList();
             return (successes.Count, successes.Count(_ => _));
         }
         private static bool RunTest(MethodInfo testMethod)
@@ -320,23 +326,30 @@ namespace JBSnorro.GitTools.CI
             if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
 
             var testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
-            TestClassExtensions.RunInitializationMethod(testClassInstance);
-            try
-            {
 
-                testMethod.Invoke(testClassInstance, new object[0]);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-            finally
-            {
-                TestClassExtensions.RunCleanupMethod(testClassInstance);
-            }
+            bool success = true;
+            if (!new ThreadStart(run).InvokeWithTimeout(MaxTestDuration))
+                return false; // throw new TimeoutException($"{testMethod.DeclaringType}.{testMethod.Name}");
 
+            return success;
+            
 
+            void run()
+            {
+                TestClassExtensions.RunInitializationMethod(testClassInstance);
+                try
+                {
+                    testMethod.Invoke(testClassInstance, new object[0]);
+                }
+                catch
+                {
+                    success = false;
+                }
+                finally
+                {
+                    TestClassExtensions.RunCleanupMethod(testClassInstance);
+                }
+            }
         }
         private static string GetAssemblyPath(Project project)
         {
