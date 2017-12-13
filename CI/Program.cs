@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using JBSnorro;
+using System.Diagnostics;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -31,6 +32,7 @@ namespace JBSnorro.GitTools.CI
 
             var (status, message) = CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory);
             Console.WriteLine(message);
+            Debug.Write(message);
             Console.ReadLine();
         }
 
