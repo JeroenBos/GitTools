@@ -44,12 +44,20 @@ namespace JBSnorro.GitTools
             return HasAttribute(method, TestMethodAttributeFullNames);
         }
 
-        private static bool HasAttribute(MethodInfo method, IList<string> attibuteFullNames)
+        /// <summary>
+        /// Gets the first attribute on the specified method that has a full name in the specified list; or null if none match.
+        /// </summary>
+        private static CustomAttributeData GetAttributeData(MethodInfo method, IList<string> attributeFullNames)
         {
             if (method == null) throw new ArgumentNullException(nameof(method));
-            if (attibuteFullNames == null) throw new ArgumentNullException(nameof(attibuteFullNames));
+            if (attributeFullNames == null) throw new ArgumentNullException(nameof(attributeFullNames));
 
-            return method.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => attibuteFullNames.Contains(attributeType.FullName)));
+            return method.CustomAttributes.Where(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => attributeFullNames.Contains(attributeType.FullName)))
+                                          .FirstOrDefault();
+        }
+        private static bool HasAttribute(MethodInfo method, IList<string> attributeFullNames)
+        {
+            return GetAttributeData(method, attributeFullNames) != null;
         }
         private static bool IsTestInitializationMethod(MethodInfo method)
         {
