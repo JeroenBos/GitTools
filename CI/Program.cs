@@ -197,7 +197,11 @@ namespace JBSnorro.GitTools.CI
                 }
                 foreach (var project in GetInBuildOrder(projects.LoadedProjects))
                 {
-                    project.Build(new ConsoleLogger());
+                    bool success = project.Build(new ConsoleLogger());
+                    if(!success)
+                    {
+                        return (null, "Build failed");
+                    }
                 }
 
                 return (projects.LoadedProjects, null);
