@@ -29,7 +29,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
-        private const bool skipBuild = true;
+        private const bool skipBuild = false;
 
         /// <param name="args"> Must contain the path of the solution file, and the directory where to copy the solution to. </param>
         static void Main(string[] args)
@@ -305,7 +305,7 @@ namespace JBSnorro.GitTools.CI
             Console.WriteLine("Testing " + Path.GetFileName(assemblyPath));
             try
             {
-                var testTypes = Assembly.LoadFile(assemblyPath)
+                var testTypes = Assembly.LoadFrom(assemblyPath)
                                .GetTypes()
                                .Where(TestClassExtensions.IsTestType)
                                .ToList();
