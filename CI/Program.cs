@@ -26,6 +26,10 @@ namespace JBSnorro.GitTools.CI
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
         /// </summary>
         public const int MaxTestDuration = 5000;
+        /// <summary>
+        /// Debugging flag to disable building.
+        /// </summary>
+        private const bool skipBuild = true;
 
         /// <param name="args"> Must contain the path of the solution file, and the directory where to copy the solution to. </param>
         static void Main(string[] args)
@@ -202,16 +206,22 @@ namespace JBSnorro.GitTools.CI
                 foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
                 {
                     projects.LoadProject(projectPath.AbsolutePath);
-
                 }
                 var projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
-                foreach (var project in projectsInBuildOrder)
+
+                if (!skipBuild)
                 {
-                    bool success = project.Build(new ConsoleLogger());
-                    if (!success)
+#pragma warning disable CS0162 // Unreachable code detected
+                    foreach (var project in projectsInBuildOrder)
+
                     {
-                        return (null, "Build failed");
+                        bool success = project.Build(new ConsoleLogger());
+                        if (!success)
+                        {
+                            return (null, "Build failed");
+                        }
                     }
+#pragma warning restore CS0162 // Unreachable code detected
                 }
 
                 return (projectsInBuildOrder, null);
@@ -329,10 +339,10 @@ namespace JBSnorro.GitTools.CI
 
             bool success = true;
             if (!new ThreadStart(run).InvokeWithTimeout(MaxTestDuration))
-                return false; // throw new TimeoutException($"{testMethod.DeclaringType}.{testMethod.Name}");
+                return false;
 
             return success;
-            
+
 
             void run()
             {
