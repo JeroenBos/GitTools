@@ -189,7 +189,8 @@ namespace JBSnorro.GitTools.CI
             SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
             try
             {
-                var projects = new ProjectCollection() { IsBuildEnabled = true };
+                var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true };
+
                 foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
                 {
                     projects.LoadProject(projectPath.AbsolutePath);
@@ -198,7 +199,7 @@ namespace JBSnorro.GitTools.CI
                 foreach (var project in GetInBuildOrder(projects.LoadedProjects))
                 {
                     bool success = project.Build(new ConsoleLogger());
-                    if(!success)
+                    if (!success)
                     {
                         return (null, "Build failed");
                     }
@@ -259,7 +260,7 @@ namespace JBSnorro.GitTools.CI
                 return project.GetProperty("ProjectGuid").EvaluatedValue.ToUpper();
             }
         }
-        
+
         private static (int totalTestCount, string error) RunTests(IEnumerable<Project> projects)
         {
             try
