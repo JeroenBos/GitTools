@@ -11,6 +11,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using JBSnorro;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -70,7 +71,7 @@ namespace JBSnorro.GitTools.CI
                 return (Status.BuildError, error3);
             }
 
-            var (totalCount, error4) = RunTests(projects.LoadedProjects);
+            var (totalCount, error4) = RunTests(projects);
             if (error4 != null)
             {
                 return (Status.TestError, error4);
@@ -183,7 +184,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Tries to build the solution and returns the projects if successful; otherwise an error message.
         /// </summary>
-        private static (ProjectCollection, string) TryBuildSolution(string destinationSolutionFile)
+        private static (IEnumerable<Project>, string) TryBuildSolution(string destinationSolutionFile)
         {
             SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
             try
@@ -191,10 +192,15 @@ namespace JBSnorro.GitTools.CI
                 var projects = new ProjectCollection() { IsBuildEnabled = true };
                 foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
                 {
-                    var project = projects.LoadProject(projectPath);
+                    projects.LoadProject(projectPath.AbsolutePath);
+
+                }
+                foreach (var project in GetInBuildOrder(projects.LoadedProjects))
+                {
                     project.Build(new ConsoleLogger());
                 }
-                return (projects, null);
+
+                return (projects.LoadedProjects, null);
             }
             catch (Exception e)
             {
@@ -202,13 +208,54 @@ namespace JBSnorro.GitTools.CI
             }
 
         }
-        private static IEnumerable<string> GetProjectFilesIn(string solutionPath)
+        private static IEnumerable<ProjectInSolution> GetProjectFilesIn(string solutionFilePath)
         {
-            return SolutionFile.Parse(solutionPath)
-                               .ProjectsInOrder
-                               .Select(project => project.AbsolutePath)
-                               .Where(File.Exists);
+            var file = SolutionFile.Parse(solutionFilePath);
+            return file.ProjectsInOrder
+                       .Where(project => File.Exists(project.AbsolutePath))
+                       .EnsureSingleEnumerationDEBUG();
         }
+
+        private static IEnumerable<Project> GetInBuildOrder(IEnumerable<Project> projects)
+        {
+            var remaining = projects.ToList();
+            var result = new List<Project>();
+            while (remaining.Count != 0)
+            {
+                var next = findTop(remaining);
+                result.Add(next);
+                remaining.Remove(next);
+            }
+            return result;
+
+
+            // returns the guid of a project in the specified list that has no dependencies on the specified projects
+            Project findTop(List<Project> unbuiltProjects)
+            {
+                return unbuiltProjects.First(project =>
+                {
+                    var dependencies = GetProjectReferenceGuids(project);
+                    return dependencies.All(dependency => !unbuiltProjects.Select(GetGuid).Contains(dependency));
+                });
+            }
+
+            // Gets the guids of the project references upon which the specified project depends
+            IEnumerable<string> GetProjectReferenceGuids(Project p)
+            {
+                return p.Items
+                        .Where(i => i.ItemType == "ProjectReference")
+                        .Select(item => item.GetMetadata("Project").EvaluatedValue)
+                        .Select(s => s.ToUpper())
+                        .EnsureSingleEnumerationDEBUG();
+            }
+
+            // Gets the guid of the specified project
+            string GetGuid(Project project)
+            {
+                return project.GetProperty("ProjectGuid").EvaluatedValue.ToUpper();
+            }
+        }
+        
         private static (int totalTestCount, string error) RunTests(IEnumerable<Project> projects)
         {
             try
@@ -290,8 +337,8 @@ namespace JBSnorro.GitTools.CI
             //couldn't find it in the projects' AlLEvaluatedItems, so I'm hacking this together:
             string relativePath = "bin" + project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.Substring("obj".Length);
             string path = Path.Combine(project.DirectoryPath, relativePath);
-            
-            if(!File.Exists(path))
+
+            if (!File.Exists(path))
                 throw new NotImplementedException("Couldn't find assembly " + relativePath);
             return path;
         }
