@@ -58,5 +58,16 @@ namespace JBSnorro.GitTools
 
             return (results, null);
         }
+        /// <summary>
+        /// Gets the hash of the current commit; or throws if somehow an error is thrown during execution.
+        /// </summary>
+        public static string GetCurrentCommitHash()
+        {
+            var (results, error) = Execute("git rev-parse head");
+            if (error != null)
+                throw new Exception(error);
+            else
+                return results.First();
+        }
     }
 }
