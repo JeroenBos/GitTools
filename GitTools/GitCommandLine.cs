@@ -60,15 +60,27 @@ namespace JBSnorro.GitTools
             return (results, null);
         }
         /// <summary>
+        /// Invokes the specified commands on the specified repository and returns the results; or throws the error if one occurred.
+        /// </summary>
+        public static IReadOnlyList<string> ExecuteWithThrow(string repositoryPath, params string[] commands)
+        {
+            var (results, error) = Execute(repositoryPath, commands);
+            if (error != null)
+            {
+                throw new GitCommandException(error);
+            }
+            else
+            {
+                return results;
+            }
+        }
+
+        /// <summary>
         /// Gets the hash of the current commit; or throws if somehow an error is thrown during execution.
         /// </summary>
         public static string GetCurrentCommitHash()
         {
-            var (results, error) = Execute("git rev-parse head");
-            if (error != null)
-                throw new Exception(error);
-            else
-                return results.First();
+            return ExecuteWithThrow("git rev-parse head").First();
         }
     }
 }
