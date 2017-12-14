@@ -142,6 +142,11 @@ namespace JBSnorro.GitTools.CI
                 var commitHash = File.ReadAllText(Path.Combine(solutionDirectory, @".git\", branchName)).Substring(0, 40);
                 return (commitHash, null);
             }
+            catch (DirectoryNotFoundException e) when (e.Message.Contains(".git"))
+            {
+                // if there is no git, don't copy to a directory called "no-git"
+                return ("no-git", null); 
+            }
             catch (Exception e)
             {
                 return (null, e.Message);
