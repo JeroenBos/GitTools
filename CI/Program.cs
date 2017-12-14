@@ -21,7 +21,7 @@ namespace JBSnorro.GitTools.CI
     /// <summary>
     /// This program copies a solution, builds it and runs all its tests.
     /// </summary>
-    class Program
+    public sealed class Program
     {
         /// <summary>
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.

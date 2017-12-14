@@ -61,6 +61,15 @@ namespace CI.UI.Properties {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to D:\CI_Testing.
+        /// </summary>
+        internal static string destinationPath {
+            get {
+                return ResourceManager.GetString("destinationPath", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to ..\..\..\Icons\.
         /// </summary>
         internal static string iconsPath {

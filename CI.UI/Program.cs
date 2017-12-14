@@ -1,7 +1,9 @@
-﻿using JBSnorro.GitTools;
+﻿using CI.UI.Properties;
+using JBSnorro.GitTools;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -20,12 +22,17 @@ namespace CI.UI
             {
                 case "commit":
                     {
-                        if (args.Length != 2)
-                            throw new ArgumentException("No commit hash was provided");
+                        const int expectedArgumentCount = 3;
+                        if (args.Length != expectedArgumentCount)
+                            throw new ArgumentException($"Too {(args.Length > expectedArgumentCount ? "many" : "few")} arguments provided: expected {expectedArgumentCount}, given {args.Length}");
                         if (args[1].Length != GitCommandLine.CommitHashLength)
                             throw new ArgumentException($"The commit hash has length {args[1].Length} where {GitCommandLine.CommitHashLength} was expected");
+                        if (!args[2].EndsWith(".sln"))
+                            throw new ArgumentException("The second argument to 'commit' is expected to be a .sln file");
+                        if (!File.Exists(args[2]))
+                            throw new ArgumentException($"The file '{args[2]}' could not be found");
 
-                        HandleCommit(args[1]);
+                        HandleCommit(args[1], args[2]);
                     }
                     break;
                 default:
@@ -33,7 +40,7 @@ namespace CI.UI
             }
         }
 
-        static void HandleCommit(string hash)
+        static void HandleCommit(string hash, string solutionFilePath)
         {
             //TODO
         }
