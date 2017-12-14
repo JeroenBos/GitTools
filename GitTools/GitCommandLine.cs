@@ -16,15 +16,15 @@ namespace JBSnorro.GitTools
         /// </summary>
         public static string GitPath = @"C:\Program Files\Git\bin\git.exe";
         /// <summary>
-        /// Invokes the specified commands on the specified repository and results the results.
+        /// Invokes the specified commands on the specified repository and returns the results or an error.
         /// </summary>
-        public static (IEnumerable<string> result, string error) Execute(string repositoryPath, params string[] commands)
+        public static (IReadOnlyList<string> result, string error) Execute(string repositoryPath, params string[] commands)
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
             Contract.Requires(commands != null);
 
             if (commands.Length == 0)
-                return (Enumerable.Empty<string>(), null);
+                return (EmptyCollection<string>.ReadOnlyList, null);
 
             ProcessStartInfo info = new ProcessStartInfo()
             {
