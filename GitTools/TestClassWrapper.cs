@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using JBSnorro.Extensions;
 
 namespace JBSnorro.GitTools
 {
@@ -16,7 +17,7 @@ namespace JBSnorro.GitTools
         {
             if (type == null) throw new ArgumentNullException(nameof(type));
 
-            return type.CustomAttributes.Any(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => TestClassFullNames.Contains(attributeType.FullName)));
+            return type.CustomAttributes.Any(attribute => attribute.AttributeType.GetBaseTypesAndSelf().Any(attributeType => TestClassFullNames.Contains(attributeType.FullName)));
         }
         /// <summary>
         /// Runs the initialization method, if any.
@@ -41,7 +42,7 @@ namespace JBSnorro.GitTools
         {
             if (method == null) throw new ArgumentNullException(nameof(method));
 
-            return HasAttribute(method, TestMethodAttributeFullNames);
+            return method.HasAttribute(TestMethodAttributeFullNames);
         }
         /// <summary>
         /// Gets whether the specified test method expects the specified exception to be thrown.
@@ -51,60 +52,29 @@ namespace JBSnorro.GitTools
             if (method == null) throw new ArgumentNullException(nameof(method));
             if (!IsTestMethod(method)) throw new ArgumentException(nameof(method));
 
-            var attributeData = GetAttributeData(method, TestMethodExpectedExceptionAttributeFullNames.Keys, out var key);
+            var attributeData = method.GetAttributeData(TestMethodExpectedExceptionAttributeFullNames.Keys, out var key);
             if (attributeData == null)
                 return false;
 
-            var attribute = (Attribute)attributeData.Constructor.Invoke(attributeData.ConstructorArguments.Select(arg => arg.Value).ToArray());
+            Attribute attribute = attributeData.Invoke();
             var verify = TestMethodExpectedExceptionAttributeFullNames[key];
             bool result = verify(attribute, thrownException);
 
             return result;
         }
-        /// <summary>
-        /// Gets the first attribute on the specified method that has a full name in the specified list; or null if none match.
-        /// </summary>
-        private static CustomAttributeData GetAttributeData(MethodInfo method, IReadOnlyCollection<string> attributeFullNames)
-        {
-            return GetAttributeData(method, attributeFullNames, out var _);
-        }
-        /// <summary>
-        /// Gets the first attribute on the specified method that has a full name in the specified list; or null if none match.
-        /// </summary>
-        private static CustomAttributeData GetAttributeData(MethodInfo method, IReadOnlyCollection<string> attributeFullNames, out string fullName)
-        {
-            if (method == null) throw new ArgumentNullException(nameof(method));
-            if (attributeFullNames == null) throw new ArgumentNullException(nameof(attributeFullNames));
+        
 
-            foreach (var attribute in method.CustomAttributes)
-            {
-                foreach (var attributeBaseType in GetBaseTypes(attribute.AttributeType))
-                {
-                    if (attributeFullNames.Contains(attributeBaseType.FullName))
-                    {
-                        fullName = attributeBaseType.FullName;
-                        return attribute;
-                    }
-                }
-            }
-            fullName = null;
-            return null;
-        }
-        private static bool HasAttribute(MethodInfo method, IReadOnlyCollection<string> attributeFullNames)
-        {
-            return GetAttributeData(method, attributeFullNames) != null;
-        }
         private static bool IsTestInitializationMethod(MethodInfo method)
         {
             if (method == null) throw new ArgumentNullException(nameof(method));
 
-            return HasAttribute(method, TestMethodInitializationAttributeFullNames);
+            return method.HasAttribute(TestMethodInitializationAttributeFullNames);
         }
         private static bool IsTestCleanupMethod(MethodInfo method)
         {
             if (method == null) throw new ArgumentNullException(nameof(method));
 
-            return HasAttribute(method, TestMethodCleanupAttributeFullNames);
+            return method.HasAttribute(TestMethodCleanupAttributeFullNames);
         }
         private static MethodInfo GetInitializationMethod(object testTypeInstance)
         {
@@ -143,16 +113,6 @@ namespace JBSnorro.GitTools
             {
                 return false;
             }
-        }
-
-        private static IEnumerable<Type> GetBaseTypes(Type type)
-        {
-            if (type == null) throw new ArgumentNullException(nameof(type));
-
-            yield return type;
-            if (type.BaseType != null)
-                foreach (var result in GetBaseTypes(type.BaseType))
-                    yield return result;
         }
     }
 }

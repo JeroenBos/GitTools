@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using JBSnorro;
+using JBSnorro.Extensions;
 using System.Diagnostics;
 using System.Threading;
 
