@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JBSnorro.GitTools;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -13,13 +14,28 @@ namespace CI.UI
     {
         static void Main(string[] args)
         {
-            using (var n = new NotificationIcon())
-            {
-                Thread.Sleep(1000);
-                n.ShowErrorBalloon("hi", JBSnorro.GitTools.CI.Status.BuildError);
-                Thread.Sleep(3000);
-            }
+            if (args.Length == 0) throw new ArgumentException("No arguments were provided");
 
+            switch (args[0])
+            {
+                case "commit":
+                    {
+                        if (args.Length != 2)
+                            throw new ArgumentException("No commit hash was provided");
+                        if (args[1].Length != GitCommandLine.CommitHashLength)
+                            throw new ArgumentException($"The commit hash has length {args[1].Length} where {GitCommandLine.CommitHashLength} was expected");
+
+                        HandleCommit(args[1]);
+                    }
+                    break;
+                default:
+                    throw new ArgumentException("The first argument was not any of the expected values");
+            }
+        }
+
+        static void HandleCommit(string hash)
+        {
+            //TODO
         }
     }
 }

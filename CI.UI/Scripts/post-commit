@@ -1,0 +1,4 @@
+#!/bin/sh
+
+hash="$(git rev-parse head)"
+start D:\\GitTools\\CI.UI\\bin\\x86\\Debug\\CI.UI.exe "commit" $hash
