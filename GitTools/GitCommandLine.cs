@@ -10,6 +10,7 @@ namespace JBSnorro.GitTools
 {
     public static class GitCommandLine
     {
+        public const int CommitHashLength = 40;
         /// <summary>
         /// Gets or sets the path of the git executable.
         /// </summary>
