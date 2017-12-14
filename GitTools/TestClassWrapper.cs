@@ -43,19 +43,54 @@ namespace JBSnorro.GitTools
 
             return HasAttribute(method, TestMethodAttributeFullNames);
         }
+        /// <summary>
+        /// Gets whether the specified test method expects the specified exception to be thrown.
+        /// </summary>
+        public static bool IsExceptionExpected(MethodInfo method, Exception thrownException)
+        {
+            if (method == null) throw new ArgumentNullException(nameof(method));
+            if (!IsTestMethod(method)) throw new ArgumentException(nameof(method));
 
+            var attributeData = GetAttributeData(method, TestMethodExpectedExceptionAttributeFullNames.Keys, out var key);
+            if (attributeData == null)
+                return false;
+
+            var attribute = (Attribute)attributeData.Constructor.Invoke(attributeData.ConstructorArguments.Select(arg => arg.Value).ToArray());
+            var verify = TestMethodExpectedExceptionAttributeFullNames[key];
+            bool result = verify(attribute, thrownException);
+
+            return result;
+        }
         /// <summary>
         /// Gets the first attribute on the specified method that has a full name in the specified list; or null if none match.
         /// </summary>
-        private static CustomAttributeData GetAttributeData(MethodInfo method, IList<string> attributeFullNames)
+        private static CustomAttributeData GetAttributeData(MethodInfo method, IReadOnlyCollection<string> attributeFullNames)
+        {
+            return GetAttributeData(method, attributeFullNames, out var _);
+        }
+        /// <summary>
+        /// Gets the first attribute on the specified method that has a full name in the specified list; or null if none match.
+        /// </summary>
+        private static CustomAttributeData GetAttributeData(MethodInfo method, IReadOnlyCollection<string> attributeFullNames, out string fullName)
         {
             if (method == null) throw new ArgumentNullException(nameof(method));
             if (attributeFullNames == null) throw new ArgumentNullException(nameof(attributeFullNames));
 
-            return method.CustomAttributes.Where(attribute => GetBaseTypes(attribute.AttributeType).Any(attributeType => attributeFullNames.Contains(attributeType.FullName)))
-                                          .FirstOrDefault();
+            foreach (var attribute in method.CustomAttributes)
+            {
+                foreach (var attributeBaseType in GetBaseTypes(attribute.AttributeType))
+                {
+                    if (attributeFullNames.Contains(attributeBaseType.FullName))
+                    {
+                        fullName = attributeBaseType.FullName;
+                        return attribute;
+                    }
+                }
+            }
+            fullName = null;
+            return null;
         }
-        private static bool HasAttribute(MethodInfo method, IList<string> attributeFullNames)
+        private static bool HasAttribute(MethodInfo method, IReadOnlyCollection<string> attributeFullNames)
         {
             return GetAttributeData(method, attributeFullNames) != null;
         }
@@ -94,6 +129,21 @@ namespace JBSnorro.GitTools
         private static List<string> TestMethodAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute" };
         private static List<string> TestMethodInitializationAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestInitializeAttribute" };
         private static List<string> TestMethodCleanupAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestCleanupAttribute" };
+        private static Dictionary<string, Func<Attribute, Exception, bool>> TestMethodExpectedExceptionAttributeFullNames = new Dictionary<string, Func<Attribute, Exception, bool>> { ["Microsoft.VisualStudio.TestTools.UnitTesting.ExpectedExceptionBaseAttribute"] = verifyExpectedExceptionBaseAttribute };
+
+        private static bool verifyExpectedExceptionBaseAttribute(Attribute attribute, Exception e)
+        {
+            var m = attribute.GetType().GetMethod("Verify", BindingFlags.Instance | BindingFlags.NonPublic);
+            try
+            {
+                m.Invoke(attribute, new object[] { e });
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
         private static IEnumerable<Type> GetBaseTypes(Type type)
         {

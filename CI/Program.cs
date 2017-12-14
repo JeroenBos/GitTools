@@ -320,7 +320,6 @@ namespace JBSnorro.GitTools.CI
             {
                 throw;
             }
-
         }
         static (int, int) Add((int, int) a, (int, int) b)
         {
@@ -351,9 +350,10 @@ namespace JBSnorro.GitTools.CI
                 {
                     testMethod.Invoke(testClassInstance, new object[0]);
                 }
-                catch
+                catch (Exception e)
                 {
-                    success = false;
+                    if (!TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
+                        success = false;
                 }
                 finally
                 {
