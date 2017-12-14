@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JBSnorro.Diagnostics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -16,5 +17,29 @@ namespace JBSnorro.GitTools.CI
         MiscellaneousError,
         BuildError,
         TestError
+    }
+
+    public static class StatusExtensions
+    {
+        public static string ToDisplayString(this Status status)
+        {
+            Contract.RequiresEnumIsDefined(status);
+
+            switch (status)
+            {
+                case Status.Success:
+                    return "Tests run successfully";
+                case Status.ArgumentError:
+                    return "Input invalid";
+                case Status.MiscellaneousError:
+                    return "Unknown error";
+                case Status.BuildError:
+                    return "Build failed";
+                case Status.TestError:
+                    return "Tests failed";
+                default:
+                    throw new DefaultSwitchCaseUnreachableException();
+            }
+        }
     }
 }

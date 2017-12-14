@@ -14,7 +14,12 @@ namespace CI.UI
         static void Main(string[] args)
         {
             using (var n = new NotificationIcon())
-                Thread.Sleep(10000);
+            {
+                Thread.Sleep(1000);
+                n.ShowErrorBalloon("hi", JBSnorro.GitTools.CI.Status.BuildError);
+                Thread.Sleep(3000);
+            }
+
         }
     }
 }

@@ -33,7 +33,7 @@ namespace CI.UI
         {
             this.Icon = new NotifyIcon()
             {
-                Visible = true
+                Visible = true,
             };
 
             this.PropertyChanged += (sender, e) => { if (e.PropertyName == nameof(Status)) OnStatusChanged(); };
@@ -47,6 +47,16 @@ namespace CI.UI
             this.Icon.Icon = Icons.GetIcon(this.Status);
         }
 
+        /// <summary>
+        /// Shows an error message in a balloon.
+        /// </summary>
+        public void ShowErrorBalloon(string message, JBSnorro.GitTools.CI.Status status)
+        {
+            this.Status = NotificationIconStatus.Bad;
+
+            this.Icon.ShowBalloonTip(5000, JBSnorro.GitTools.CI.StatusExtensions.ToDisplayString(status), message, ToolTipIcon.Error);
+        }
+        
         public void Dispose()
         {
             this.Icon.Visible = false;
