@@ -18,6 +18,7 @@ namespace JBSnorro.GitTools
         /// <summary>
         /// Invokes the specified commands on the specified repository and returns the results or an error.
         /// </summary>
+        /// <param name="commands"> Includes the keyword 'git'. </param>
         public static (IReadOnlyList<string> result, string error) Execute(string repositoryPath, params string[] commands)
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
@@ -81,6 +82,13 @@ namespace JBSnorro.GitTools
         public static string GetCurrentCommitHash()
         {
             return ExecuteWithThrow("git rev-parse head").First();
+        }
+        /// <summary>
+        /// Checks out the specified commit in the repository.
+        /// </summary>
+        public static void Checkout(string repositoryPath, string hash)
+        {
+            ExecuteWithThrow(repositoryPath, "git checkout " + hash);
         }
     }
 }

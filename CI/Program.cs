@@ -51,8 +51,9 @@ namespace JBSnorro.GitTools.CI
         /// Copies the solution to a temporary destination directory, build the solution and executes the tests and returns any errors.
         /// </summary>
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
-        /// <param name="destinationDirectory"> The temporary directory to copy the solution to. </param>
-        public static (Status, string) CopySolutionAndExecuteTests(string solutionFilePath, string destinationDirectory)
+        /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
+        /// <param name="hash "> The hash of the commit to execute the tests on. </param>
+        public static (Status, string) CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null)
         {
             var error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
@@ -60,23 +61,37 @@ namespace JBSnorro.GitTools.CI
                 return (Status.ArgumentError, error);
             }
 
-            error = ValidateDestinationDirectory(destinationDirectory);
+            error = ValidateDestinationDirectory(baseDestinationDirectory);
             if (error != null)
             {
                 return (Status.ArgumentError, error);
             }
 
-            var (commitHash, error1) = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath));
-            if (error1 != null)
+            bool mustDoCheckout = false;
+            if (hash == null)
             {
-                return (Status.MiscellaneousError, error1);
+                var (currentCommitHash, error1) = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath));
+                if (currentCommitHash != hash)
+                {
+                    mustDoCheckout = true;
+                    hash = currentCommitHash;
+                }
+                if (error1 != null)
+                {
+                    return (Status.MiscellaneousError, error1);
+                }
             }
 
-            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, Path.Combine(destinationDirectory, commitHash));
+            string solutionName = Path.GetDirectoryName(solutionFilePath).Substring(Path.GetDirectoryName(solutionFilePath).LastIndexOf(Path.DirectorySeparatorChar) + 1); ;
+            string destinationDirectory = Path.Combine(baseDestinationDirectory, solutionName, hash);
+            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
             if (error2 != null)
             {
                 return (Status.MiscellaneousError, error2);
             }
+
+            if (mustDoCheckout)
+                GitCommandLine.Checkout(destinationDirectory, hash);
 
             var (projectsInBuildOrder, error3) = TryBuildSolution(destinationSolutionFile);
             if (error3 != null)
@@ -146,7 +161,7 @@ namespace JBSnorro.GitTools.CI
             catch (DirectoryNotFoundException e) when (e.Message.Contains(".git"))
             {
                 // if there is no git, don't copy to a directory called "no-git"
-                return ("no-git", null); 
+                return ("no-git", null);
             }
             catch (Exception e)
             {
