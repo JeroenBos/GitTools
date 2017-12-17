@@ -52,7 +52,7 @@ namespace JBSnorro.GitTools.CI
         /// </summary>
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
-        /// <param name="hash "> The hash of the commit to execute the tests on. </param>
+        /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
         public static (Status, string) CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null)
         {
             var error = ValidateSolutionFilePath(solutionFilePath);
@@ -71,7 +71,11 @@ namespace JBSnorro.GitTools.CI
             if (hash == null)
             {
                 var (currentCommitHash, error1) = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath));
-                if (currentCommitHash != hash)
+                if(hash == null)
+                {
+                    hash = currentCommitHash;
+                }
+                else if (currentCommitHash != hash)
                 {
                     mustDoCheckout = true;
                     hash = currentCommitHash;
