@@ -17,6 +17,11 @@ namespace CI.UI
     /// </summary>
     public sealed class NotificationIcon : DefaultINotifyPropertyChanged, IDisposable
     {
+        /// <summary>
+        /// Gets the duration to show the error balloon in ms.
+        /// </summary>
+        public const int ErrorBalloonShowDuration = 5000;
+
         private NotifyIcon Icon { get; }
         /// <summary>
         /// Gets or sets the status of the notification icon.
@@ -58,7 +63,7 @@ namespace CI.UI
 
             this.Status = NotificationIconStatus.Bad;
 
-            this.Icon.ShowBalloonTip(5000, status.ToTitle(), message, ToolTipIcon.Error);
+            this.Icon.ShowBalloonTip(ErrorBalloonShowDuration, status.ToTitle(), message, ToolTipIcon.Error);
         }
         
         public void Dispose()
