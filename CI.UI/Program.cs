@@ -18,30 +18,42 @@ namespace CI.UI
     {
         static void Main(string[] args)
         {
-            if (args.Length == 0) throw new ArgumentException("No arguments were provided");
+            try
+            {
+                HandleInput(args);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.ReadLine();
+            }
+        }
 
-            switch (args[0])
+        private static void HandleInput(string[] input)
+        {
+            if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
+
+            switch (input[0])
             {
                 case "commit":
                     {
                         const int expectedArgumentCount = 3;
-                        if (args.Length != expectedArgumentCount)
-                            throw new ArgumentException($"Too {(args.Length > expectedArgumentCount ? "many" : "few")} arguments provided: expected {expectedArgumentCount}, given {args.Length}");
-                        if (!args[1].EndsWith(".sln"))
+                        if (input.Length != expectedArgumentCount)
+                            throw new ArgumentException($"Too {(input.Length > expectedArgumentCount ? "many" : "few")} arguments provided: expected {expectedArgumentCount}, given {input.Length}");
+                        if (!input[1].EndsWith(".sln"))
                             throw new ArgumentException("The second argument to 'commit' is expected to be a .sln file");
-                        if (!File.Exists(args[1]))
-                            throw new ArgumentException($"The file '{args[1]}' could not be found");
-                        if (args[2].Length != GitCommandLine.CommitHashLength)
-                            throw new ArgumentException($"The commit hash has length {args[2].Length} where {GitCommandLine.CommitHashLength} was expected");
+                        if (!File.Exists(input[1]))
+                            throw new ArgumentException($"The file '{input[1]}' could not be found");
+                        if (input[2].Length != GitCommandLine.CommitHashLength)
+                            throw new ArgumentException($"The commit hash has length {input[2].Length} where {GitCommandLine.CommitHashLength} was expected");
 
-                        HandleCommit(args[1], args[2]);
+                        HandleCommit(input[1], input[2]);
                     }
                     break;
                 default:
                     throw new ArgumentException("The first argument was not any of the expected values");
             }
         }
-
         private static void HandleCommit(string solutionFilePath, string hash)
         {
             using (var icon = new NotificationIcon() { Status = NotificationIconStatus.Working })
@@ -51,6 +63,7 @@ namespace CI.UI
                 if (status == Status.Success)
                 {
                     icon.Status = NotificationIconStatus.Ok;
+                    Thread.Sleep(5000);
                 }
                 else
                 {
