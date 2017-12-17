@@ -8,6 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using JBSnorro.GitTools.CI;
 
 namespace CI.UI
 {
@@ -50,11 +51,14 @@ namespace CI.UI
         /// <summary>
         /// Shows an error message in a balloon.
         /// </summary>
-        public void ShowErrorBalloon(string message, JBSnorro.GitTools.CI.Status status)
+        public void ShowErrorBalloon(string message, Status status)
         {
+            Contract.RequiresEnumIsDefined(status);
+            Contract.Requires(status != JBSnorro.GitTools.CI.Status.Success);
+
             this.Status = NotificationIconStatus.Bad;
 
-            this.Icon.ShowBalloonTip(5000, JBSnorro.GitTools.CI.StatusExtensions.ToDisplayString(status), message, ToolTipIcon.Error);
+            this.Icon.ShowBalloonTip(5000, status.ToTitle(), message, ToolTipIcon.Error);
         }
         
         public void Dispose()

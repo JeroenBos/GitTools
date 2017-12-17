@@ -21,7 +21,7 @@ namespace JBSnorro.GitTools.CI
 
     public static class StatusExtensions
     {
-        public static string ToDisplayString(this Status status)
+        public static string ToTitle(this Status status)
         {
             Contract.RequiresEnumIsDefined(status);
 
