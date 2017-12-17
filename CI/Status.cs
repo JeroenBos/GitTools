@@ -16,7 +16,8 @@ namespace JBSnorro.GitTools.CI
         ArgumentError,
         MiscellaneousError,
         BuildError,
-        TestError
+        TestError,
+        UnhandledException
     }
 
     public static class StatusExtensions
@@ -37,6 +38,8 @@ namespace JBSnorro.GitTools.CI
                     return "Build failed";
                 case Status.TestError:
                     return "Tests failed";
+                case Status.UnhandledException:
+                    return "Unhandled exception occurred";
                 default:
                     throw new DefaultSwitchCaseUnreachableException();
             }

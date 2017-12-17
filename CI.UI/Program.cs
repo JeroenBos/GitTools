@@ -25,7 +25,15 @@ namespace CI.UI
             catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+#if DEBUG
                 Console.ReadLine();
+#else
+                using (var icon = new NotificationIcon())
+                {
+                    icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
+                    Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
+                }
+#endif
             }
         }
 
