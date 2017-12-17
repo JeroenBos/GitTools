@@ -1,7 +1,9 @@
 ﻿using CI.UI.Properties;
 using JBSnorro.GitTools;
+using JBSnorro.GitTools.CI;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -40,11 +42,23 @@ namespace CI.UI
             }
         }
 
-        static void HandleCommit(string solutionFilePath, string hash)
+        private static void HandleCommit(string solutionFilePath, string hash)
         {
-            var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, Resources.destinationPath, hash);
-            Console.WriteLine(message);
-            Console.ReadLine();
+            using (var icon = new NotificationIcon() { Status = NotificationIconStatus.Working })
+            {
+                var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, Resources.destinationPath, hash);
+
+                if (status == Status.Success)
+                {
+                    icon.Status = NotificationIconStatus.Ok;
+                }
+                else
+                {
+                    Debug.Write(message);
+                    icon.ShowErrorBalloon(message, status);
+                    Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
+                }
+            }
         }
     }
 }
