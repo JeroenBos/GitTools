@@ -37,6 +37,7 @@ namespace CI.UI
         /// </summary>
         public NotificationIcon()
         {
+            ProcessExit.Event += onProcessExit;
             this.Icon = new NotifyIcon()
             {
                 Visible = true,
@@ -68,7 +69,14 @@ namespace CI.UI
         
         public void Dispose()
         {
-            this.Icon.Visible = false;
+            this.Icon.Dispose();
+            ProcessExit.Event -= onProcessExit;
+        }
+
+        private bool onProcessExit(ProcessExit.EventArg exitType)
+        {
+            this.Dispose();
+            return true;
         }
 
         private NotificationIconStatus _status;
