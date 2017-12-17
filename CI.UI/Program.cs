@@ -41,26 +41,19 @@ namespace CI.UI
         {
             if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
 
-            switch (input[0])
-            {
-                case "commit":
-                    {
-                        const int expectedArgumentCount = 3;
-                        if (input.Length != expectedArgumentCount)
-                            throw new ArgumentException($"Too {(input.Length > expectedArgumentCount ? "many" : "few")} arguments provided: expected {expectedArgumentCount}, given {input.Length}");
-                        if (!input[1].EndsWith(".sln"))
-                            throw new ArgumentException("The second argument to 'commit' is expected to be a .sln file");
-                        if (!File.Exists(input[1]))
-                            throw new ArgumentException($"The file '{input[1]}' could not be found");
-                        if (input[2].Length != GitCommandLine.CommitHashLength)
-                            throw new ArgumentException($"The commit hash has length {input[2].Length} where {GitCommandLine.CommitHashLength} was expected");
+            const int expectedArgumentCount = 2;
+            if (input.Length != expectedArgumentCount)
+                throw new ArgumentException($"Too {(input.Length > expectedArgumentCount ? "many" : "few")} arguments provided: expected {expectedArgumentCount}, given {input.Length}");
 
-                        HandleCommit(input[1], input[2]);
-                    }
-                    break;
-                default:
-                    throw new ArgumentException("The first argument was not any of the expected values");
-            }
+            if (!input[0].EndsWith(".sln"))
+                throw new ArgumentException("The second argument to 'commit' is expected to be a .sln file");
+            if (!File.Exists(input[0]))
+                throw new ArgumentException($"The file '{input[0]}' could not be found");
+
+            if (input[1].Length != GitCommandLine.CommitHashLength)
+                throw new ArgumentException($"The commit hash has length {input[1].Length} where {GitCommandLine.CommitHashLength} was expected");
+
+            HandleCommit(input[0], input[1]);
         }
         private static void HandleCommit(string solutionFilePath, string hash)
         {

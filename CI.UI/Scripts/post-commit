@@ -1,4 +1,4 @@
 #!/bin/sh
 
 hash="$(git rev-parse head)"
-start D:\\GitTools\\CI.UI\\bin\\x86\\Debug\\CI.UI.exe "commit" $PWD"\\CI.Tests.sln" $hash
+start D:\\GitTools\\CI.UI\\bin\\x86\\Debug\\CI.UI.exe $PWD"\\CI.Tests.sln" $hash
