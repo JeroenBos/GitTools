@@ -42,7 +42,9 @@ namespace CI.UI
 
         static void HandleCommit(string solutionFilePath, string hash)
         {
-            //TODO
+            var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, Resources.destinationPath, hash);
+            Console.WriteLine(message);
+            Console.ReadLine();
         }
     }
 }
