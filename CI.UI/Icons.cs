@@ -1,7 +1,7 @@
-﻿using CI.UI.Properties;
-using JBSnorro.Diagnostics;
+﻿using JBSnorro.Diagnostics;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace CI.UI
     public static class Icons
     {
         private static string executingAssemblyDirectory => Path.GetDirectoryName(new Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBa‌​se).LocalPath);
-        private static string iconsPath => Path.Combine(executingAssemblyDirectory, Resources.iconsPath);
+        private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"]);
         private static Dictionary<NotificationIconStatus, Icon> icons = new Dictionary<NotificationIconStatus, Icon>
         {
             [NotificationIconStatus.Default] = Convert(Path.Combine(iconsPath, "default_status.png")),

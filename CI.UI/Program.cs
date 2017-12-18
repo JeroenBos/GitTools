@@ -1,9 +1,9 @@
-﻿using CI.UI.Properties;
-using JBSnorro.Diagnostics;
+﻿using JBSnorro.Diagnostics;
 using JBSnorro.GitTools;
 using JBSnorro.GitTools.CI;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -78,7 +78,7 @@ namespace CI.UI
         private static void HandleCommit(string solutionFilePath, string hash)
         {
             icon.Status = NotificationIconStatus.Working;
-            var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, Resources.destinationPath, hash);
+            var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
             if (status == Status.Success)
             {
