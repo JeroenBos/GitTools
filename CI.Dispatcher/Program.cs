@@ -82,7 +82,7 @@ namespace CI.Dispatcher
             try
             {
                 string ci_exe_path = CI_UI_Path;
-                var process = Process.Start(ci_exe_path, ReceivingPipe.UIIdentifier);
+                var process = Process.Start(ci_exe_path);
                 return process.WaitForExitAsync();
             }
             catch (Exception e)

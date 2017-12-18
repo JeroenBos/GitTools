@@ -11,7 +11,6 @@ namespace CI.UI
 {
     public static class ReceivingPipe
     {
-        public static readonly string UIIdentifier = "UI";
         public static readonly string PipeName = "CI_Messaging";
         public static readonly string Separator = "-,-";
         public static bool IsInPipeMode { get; private set; }

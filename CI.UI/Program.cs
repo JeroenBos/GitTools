@@ -18,15 +18,10 @@ namespace CI.UI
     {
         static void Main(string[] args)
         {
-            if (args.Length == 1 && args[0] == ReceivingPipe.UIIdentifier)
-            {
-                OutputError(() => ReceivingPipe.Start());
-            }
-            else
-            {
-                HandleInputAndOutputErrors(args);
-                Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
-            }
+            if (args.Length != 0)
+                throw new ArgumentException("Legacy direct call deprecated; call via CI.Dispatcher");
+
+            OutputError(() => ReceivingPipe.Start());
         }
         private static void OutputError(Action action)
         {
