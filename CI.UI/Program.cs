@@ -61,22 +61,29 @@ namespace CI.UI
         {
             if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
 
-            const int expectedArgumentCount = 2;
-            if (input.Length != expectedArgumentCount)
-                throw new ArgumentException($"Too {(input.Length > expectedArgumentCount ? "many" : "few")} arguments provided: expected {expectedArgumentCount}, given {input.Length}");
+            if (input.Length > 2)
+                throw new ArgumentException($"Too many arguments provided: expected 1 or 2, received {input.Length}");
 
             if (!input[0].EndsWith(".sln"))
-                throw new ArgumentException("The second argument to 'commit' is expected to be a .sln file");
+                throw new ArgumentException("The first argument is expected to be a .sln file");
             if (!File.Exists(input[0]))
                 throw new ArgumentException($"The file '{input[0]}' could not be found");
+            string solutionFilePath = input[0];
 
-            if (input[1].Length != GitCommandLine.CommitHashLength)
-                throw new ArgumentException($"The commit hash has length {input[1].Length} where {GitCommandLine.CommitHashLength} was expected");
+            string hash = null;
+            if (input.Length == 2)
+            {
+                if (!GitCommandLine.IsValidCommitHash(input[1]))
+                    throw new ArgumentException($"The second argument, the commit hash {input[1]}, is not a valid hash");
+                hash = input[1];
+            }
 
-            HandleCommit(input[0], input[1]);
+            HandleCommit(solutionFilePath, hash);
         }
         private static void HandleCommit(string solutionFilePath, string hash)
         {
+            Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
+
             icon.Status = NotificationIconStatus.Working;
             var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
@@ -84,7 +91,7 @@ namespace CI.UI
             {
                 icon.Status = NotificationIconStatus.Ok;
             }
-            else if(status == Status.Skipped)
+            else if (status == Status.Skipped)
             {
                 icon.Status = NotificationIconStatus.Default;
             }
