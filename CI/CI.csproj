@@ -89,6 +89,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SerializableWrappers.cs" />
     <Compile Include="Status.cs" />
+    <Compile Include="TestResultsFile.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">

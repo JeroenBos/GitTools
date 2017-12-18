@@ -65,6 +65,7 @@ namespace CI.Dispatcher
             Task firstCompletedTask = Task.WhenAny(newMakeConnectionTask, ciProcessTask, timeoutTask).Result;
             if (firstCompletedTask == newMakeConnectionTask)
             {
+                Console.WriteLine("Found listener");
                 return pipe; //connection made
             }
             else if (firstCompletedTask == ciProcessTask)
@@ -83,10 +84,10 @@ namespace CI.Dispatcher
         {
            try
             {
-#if DEBUG
-                return Task.Run((Action)ReceivingPipe.Start).ContinueWith(task => Console.WriteLine("receiving pipe finished")).ContinueWith(UI.Program.OutputError, TaskContinuationOptions.OnlyOnFaulted);
-#else
                 Console.WriteLine("Starting CI.UI");
+#if DEBUG
+                return Task.Run((Action)ReceivingPipe.Start).ContinueWith(UI.Program.OutputError, TaskContinuationOptions.OnlyOnFaulted);
+#else
                 string ci_exe_path = CI_UI_Path;
                 var process = Process.Start(ci_exe_path);
                 return process.WaitForExitAsync();
@@ -94,7 +95,7 @@ namespace CI.Dispatcher
             }
             catch (Exception e)
             {
-                CI.UI.Program.OutputError(e);
+                UI.Program.OutputError(e);
                 return null;
             }
         }
@@ -107,6 +108,7 @@ namespace CI.Dispatcher
                 {
                     writer.AutoFlush = true;
                     writer.WriteLine(message);
+                    Console.WriteLine("Written message");
                 }
             }
             catch (IOException e)

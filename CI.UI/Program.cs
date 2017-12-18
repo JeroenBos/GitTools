@@ -23,14 +23,9 @@ namespace CI.UI
         {
             if (args.Length != 0)
                 throw new ArgumentException("Legacy direct call deprecated; call via CI.Dispatcher");
-
-            OutputError(() => ReceivingPipe.Start());
-        }
-        public static void OutputError(Action action)
-        {
             try
             {
-                action();
+                ReceivingPipe.Start();
             }
             catch (Exception e)
             {

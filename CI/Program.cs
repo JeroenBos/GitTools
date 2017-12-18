@@ -56,7 +56,7 @@ namespace JBSnorro.GitTools.CI
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static (Status, string) CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null)
+        public static (Status, string) CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, bool writeToTestsFile = true)
         {
             var error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
@@ -89,39 +89,51 @@ namespace JBSnorro.GitTools.CI
                 }
             }
 
+
             (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory, hash);
-            var (skip, error_) = CheckCommitMessage(sourceDirectory, hash);
-            if (skip)
+            using (TestResultsFile resultsFile = new TestResultsFile(sourceDirectory))
             {
-                return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_);
-            }
-            else if (error_ != null)
-            {
-                return (Status.MiscellaneousError, error_);
+                var (resultStatus, resultError) = buildAndTest(resultsFile);
+                if (writeToTestsFile)
+                    resultsFile.TryAppend(hash, resultStatus);
+                return (resultStatus, resultError);
             }
 
-            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
-            if (error2 != null)
+            (Status, string) buildAndTest(TestResultsFile resultsFile)
             {
-                return (Status.MiscellaneousError, error2);
+                var (skip, error_) = CheckCommitMessage(sourceDirectory, hash, resultsFile);
+                if (skip)
+                {
+                    return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_);
+                }
+                else if (error_ != null)
+                {
+                    return (Status.MiscellaneousError, error_);
+                }
+
+                var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
+                if (error2 != null)
+                {
+                    return (Status.MiscellaneousError, error2);
+                }
+
+                if (mustDoCheckout)
+                    GitCommandLine.Checkout(destinationDirectory, hash);
+
+                var (projectsInBuildOrder, error3) = TryBuildSolution(destinationSolutionFile);
+                if (error3 != null)
+                {
+                    return (Status.BuildError, error3);
+                }
+
+                var (totalCount, error4) = RunTests(projectsInBuildOrder);
+                if (error4 != null)
+                {
+                    return (Status.TestError, error4);
+                }
+
+                return (Status.Success, totalCount.ToString() + " run successfully");
             }
-
-            if (mustDoCheckout)
-                GitCommandLine.Checkout(destinationDirectory, hash);
-
-            var (projectsInBuildOrder, error3) = TryBuildSolution(destinationSolutionFile);
-            if (error3 != null)
-            {
-                return (Status.BuildError, error3);
-            }
-
-            var (totalCount, error4) = RunTests(projectsInBuildOrder);
-            if (error4 != null)
-            {
-                return (Status.TestError, error4);
-            }
-
-            return (Status.Success, totalCount.ToString() + " run successfully");
         }
 
         private static string ValidateSolutionFilePath(string solutionFilePath)
@@ -193,14 +205,17 @@ namespace JBSnorro.GitTools.CI
             return (sourceDirectory, destinationDirectory);
 
         }
-        private static (bool skip, string) CheckCommitMessage(string sourceDirectory, string hash)
+        private static (bool skip, string error) CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile)
         {
+            if (resultsFile.Hashes.ContainsKey(hash))
+                return (true, "It is present in .testresults");
+
             string commitMessage;
             try
             {
                 commitMessage = GitCommandLine.GetCommitMessage(sourceDirectory, hash);
                 bool skip = GetAllIgnorePrefixes().Any(commitMessage.StartsWith);
-                return (skip, skip ? "It is present in .testresults" : null);
+                return (skip, skip ? "The commit message starts with a prefix signaling to ignore" : null);
             }
             catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
             {
@@ -245,7 +260,8 @@ namespace JBSnorro.GitTools.CI
                     if (!(dir.Name.StartsWith(".vs") || dir.Name == "bin" || dir.Name == "obj"))
                         CopyDirectory(dir, target.CreateSubdirectory(dir.Name));
                 foreach (FileInfo file in source.GetFiles())
-                    file.CopyTo(Path.Combine(target.FullName, file.Name), true);
+                    if (file.Name != ".testresults") // can't copy because this program currently has a filestream opened on it
+                        file.CopyTo(Path.Combine(target.FullName, file.Name), true);
             }
         }
         private static void SetAttributesNormal(string dirPath)
