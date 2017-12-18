@@ -87,6 +87,7 @@ namespace CI.UI
             icon.Status = NotificationIconStatus.Working;
             var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
+            Console.WriteLine(message);
             if (status == Status.Success)
             {
                 icon.Status = NotificationIconStatus.Ok;
@@ -97,7 +98,6 @@ namespace CI.UI
             }
             else
             {
-                Console.WriteLine(message);
                 icon.ShowErrorBalloon(message, status);
             }
         }
