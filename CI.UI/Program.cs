@@ -18,12 +18,25 @@ namespace CI.UI
     {
         static void Main(string[] args)
         {
+            if (args.Length == 1 && args[0] == ReceivingPipe.UIIdentifier)
+            {
+                OutputError(() => ReceivingPipe.Start());
+            }
+            else
+            {
+                HandleInputAndOutputErrors(args);
+                Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
+            }
+        }
+        private static void OutputError(Action action)
+        {
             try
             {
-                HandleInput(args);
+                action();
             }
             catch (Exception e)
             {
+                Console.WriteLine(e.InnerException?.StackTrace);
                 Console.WriteLine(e.Message);
 #if DEBUG
                 Console.ReadLine();
@@ -36,8 +49,11 @@ namespace CI.UI
 #endif
             }
         }
-
-        private static void HandleInput(string[] input)
+        internal static void HandleInputAndOutputErrors(string[] input)
+        {
+            OutputError(() => HandleInput(input));
+        }
+        internal static void HandleInput(string[] input)
         {
             if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
 
@@ -64,13 +80,11 @@ namespace CI.UI
                 if (status == Status.Success)
                 {
                     icon.Status = NotificationIconStatus.Ok;
-                    Thread.Sleep(5000);
                 }
                 else
                 {
                     Debug.Write(message);
                     icon.ShowErrorBalloon(message, status);
-                    Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
                 }
             }
         }

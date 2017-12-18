@@ -58,6 +58,9 @@
     <StartupObject />
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="AppDomainToolkit, Version=1.0.4.1, Culture=neutral, PublicKeyToken=f2fc7ab5180cf5c4, processorArchitecture=MSIL">
+      <HintPath>..\packages\AppDomainToolkit.1.0.4.3\lib\net\AppDomainToolkit.dll</HintPath>
+    </Reference>
     <Reference Include="JBSnorro">
       <HintPath>..\..\ASDE\JBSnorro\bin\x86\Debug\JBSnorro.dll</HintPath>
     </Reference>
@@ -84,6 +87,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="ReceivingPipe.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
