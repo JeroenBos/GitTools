@@ -44,7 +44,7 @@ namespace CI.UI
 
             OutputError(task.Exception);
         }
-        private static void OutputError(Exception e)
+        public static void OutputError(Exception e)
         {
             Debug.WriteLine(e.StackTrace);
             Debug.WriteLine(e.Message);

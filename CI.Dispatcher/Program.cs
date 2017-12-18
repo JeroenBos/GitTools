@@ -24,19 +24,16 @@ namespace CI.Dispatcher
         static void Main(string[] args)
         {
             var message = ComposeMessage(args);
-            if (message == null)
-                return;
-
-
-            var pipe = SetupConnection();
-            if (pipe == null)
-                return;
-
-            TrySendMessage(pipe, message);
+            if (message != null)
+            {
+                var pipe = SetupConnection();
+                if (pipe != null)
+                    TrySendMessage(pipe, message);
 
 #if DEBUG
-            Console.ReadLine();
+                Console.ReadLine();
 #endif
+            }
         }
         private static string ComposeMessage(string[] args)
         {
@@ -84,7 +81,7 @@ namespace CI.Dispatcher
 
         private static Task StartCIUI()
         {
-            try
+           try
             {
 #if DEBUG
                 return Task.Run((Action)ReceivingPipe.Start).ContinueWith(UI.Program.OutputError, TaskContinuationOptions.OnlyOnFaulted);
@@ -97,7 +94,7 @@ namespace CI.Dispatcher
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.Message);
+                CI.UI.Program.OutputError(e);
                 return null;
             }
         }
