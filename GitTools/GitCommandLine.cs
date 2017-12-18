@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace JBSnorro.GitTools
@@ -11,6 +12,16 @@ namespace JBSnorro.GitTools
     public static class GitCommandLine
     {
         public const int CommitHashLength = 40;
+        private static readonly Regex hashRegex = new Regex($"^[a-fA-F0-9]{CommitHashLength}$");
+        /// <summary>
+        /// Gets whether the specified string contains a valid commit hash.
+        /// </summary>
+        /// <param name="hash"></param>
+        /// <returns></returns>
+        public static bool IsValidCommitHash(string hash)
+        {
+            return hash != null && hashRegex.Match(hash) != null;
+        }
         /// <summary>
         /// Gets or sets the path of the git executable.
         /// </summary>
