@@ -71,7 +71,7 @@ namespace JBSnorro.GitTools.CI
             if (hash == null)
             {
                 var (currentCommitHash, error1) = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath));
-                if(hash == null)
+                if (hash == null)
                 {
                     hash = currentCommitHash;
                 }
@@ -226,30 +226,30 @@ namespace JBSnorro.GitTools.CI
             SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
             try
             {
-                var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true };
-
-                foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
+                using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
                 {
-                    projects.LoadProject(projectPath.AbsolutePath);
-                }
-                var projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
-
-                if (!skipBuild)
-                {
-#pragma warning disable CS0162 // Unreachable code detected
-                    foreach (var project in projectsInBuildOrder)
-
+                    foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
                     {
-                        bool success = project.Build(new ConsoleLogger());
-                        if (!success)
-                        {
-                            return (null, "Build failed");
-                        }
+                        projects.LoadProject(projectPath.AbsolutePath);
                     }
-#pragma warning restore CS0162 // Unreachable code detected
-                }
+                    var projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
 
-                return (projectsInBuildOrder, null);
+                    if (!skipBuild)
+                    {
+#pragma warning disable CS0162 // Unreachable code detected
+                        foreach (var project in projectsInBuildOrder)
+                        {
+                            bool success = project.Build(new ConsoleLogger());
+                            if (!success)
+                            {
+                                return (null, "Build failed");
+                            }
+                        }
+#pragma warning restore CS0162 // Unreachable code detected
+                    }
+
+                    return (projectsInBuildOrder, null);
+                }
             }
             catch (Exception e)
             {
