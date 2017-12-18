@@ -15,6 +15,8 @@ using JBSnorro;
 using JBSnorro.Extensions;
 using System.Diagnostics;
 using System.Threading;
+using AppDomainToolkit;
+using AppDomainContext = AppDomainToolkit.AppDomainContext<AppDomainToolkit.AssemblyTargetLoader, AppDomainToolkit.PathBasedAssemblyResolver>;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -307,15 +309,30 @@ namespace JBSnorro.GitTools.CI
 
         private static (int totalTestCount, string error) RunTests(IEnumerable<Project> projectsInBuildOrder)
         {
+            using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create())
+            {
+                var projectAssemblyPathsInBuildOrder = projectsInBuildOrder.Select(GetAssemblyPath).ToArray();
+                var result = RemoteFunc.Invoke<SerializableProjectAssemblyPaths, SerializableTestResults>(testerDomain.Domain,
+                                                                                                          arg1: projectAssemblyPathsInBuildOrder,
+                                                                                                          toInvoke: request => runTests(request.ProjectAssemblyPathsInBuildOrder));
+                return (result.TotalTestCount, result.Error);
+            }
+        }
+
+        private static (int totalTestCount, string error) runTests(IEnumerable<string> projectAssemblyPathsInBuildOrder)
+        {
             try
             {
-                var (totalTestCount, successCount) = projectsInBuildOrder.Select(GetAssemblyPath)
-                                                                         .Select(RunTests)
-                                                                         .Aggregate(Add);
-                if (totalTestCount == successCount)
-                    return (totalTestCount, null);
-                else
-                    return (totalTestCount, $"{totalTestCount - successCount}/{totalTestCount} tests failed");
+                using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create())
+                {
+                    var (totalTestCount, successCount) = projectAssemblyPathsInBuildOrder.Select(RunTests)
+                                                                                         .Aggregate(Add);
+
+                    if (totalTestCount == successCount)
+                        return (totalTestCount, null);
+                    else
+                        return (totalTestCount, $"{totalTestCount - successCount}/{totalTestCount} tests failed");
+                }
             }
             catch (Exception e)
             {
