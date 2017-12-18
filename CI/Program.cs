@@ -202,6 +202,10 @@ namespace JBSnorro.GitTools.CI
                 bool skip = GetAllIgnorePrefixes().Any(commitMessage.StartsWith);
                 return (skip, null);
             }
+            catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
+            {
+                throw new ArgumentException("The specified hash does not exist");
+            }
             catch (Exception e)
             {
                 return (false, e.Message);
