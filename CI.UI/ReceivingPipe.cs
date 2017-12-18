@@ -23,11 +23,13 @@ namespace CI.UI
                 {
                     StreamReader reader = new StreamReader(pipe);
 
-                    while (!pipe.IsConnected)
+                    string message = null;
+                    while (!pipe.IsConnected && message == null)
                     {
                         try
                         {
                             pipe.Connect(0);
+                            message = reader.ReadLine();
                         }
                         catch (TimeoutException)
                         {
@@ -35,14 +37,10 @@ namespace CI.UI
                         }
                     }
 
-                    string message = reader.ReadLine();
-                    if (message != null)
-                    {
-                        string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
-                        Program.HandleInput(args);
-                        Console.WriteLine($"Processed message {processedMessageCount}");
-                        processedMessageCount++;
-                    }
+                    string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
+                    Program.HandleInput(args);
+                    Console.WriteLine($"Processed message {processedMessageCount}");
+                    processedMessageCount++;
                 }
             }
         }
