@@ -84,7 +84,7 @@ namespace CI.Dispatcher
            try
             {
 #if DEBUG
-                return Task.Run((Action)ReceivingPipe.Start).ContinueWith(UI.Program.OutputError, TaskContinuationOptions.OnlyOnFaulted);
+                return Task.Run((Action)ReceivingPipe.Start).ContinueWith(task => Console.WriteLine("receiving pipe finished")).ContinueWith(UI.Program.OutputError, TaskContinuationOptions.OnlyOnFaulted);
 #else
                 Console.WriteLine("Starting CI.UI");
                 string ci_exe_path = CI_UI_Path;
