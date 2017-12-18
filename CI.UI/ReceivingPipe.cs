@@ -27,14 +27,19 @@ namespace CI.UI
                     {
                         StreamReader reader = new StreamReader(pipe);
 
-                        pipe.Connect();
-
-                        string message = null;
-                        while (message == null)
+                        while (!pipe.IsConnected)
                         {
-                            message = reader.ReadLine();
-                            Thread.Sleep(100);
+                            try
+                            {
+                                pipe.Connect(0);
+                            }
+                            catch (TimeoutException)
+                            {
+                                Thread.Sleep(100);
+                            }
                         }
+
+                        string message = reader.ReadLine();
                         if (message != null)
                         {
                             string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
