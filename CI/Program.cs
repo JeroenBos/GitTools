@@ -17,6 +17,7 @@ using System.Diagnostics;
 using System.Threading;
 using AppDomainToolkit;
 using AppDomainContext = AppDomainToolkit.AppDomainContext<AppDomainToolkit.AssemblyTargetLoader, AppDomainToolkit.PathBasedAssemblyResolver>;
+using System.Configuration;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -88,8 +89,17 @@ namespace JBSnorro.GitTools.CI
                 }
             }
 
-            string solutionName = Path.GetDirectoryName(solutionFilePath).Substring(Path.GetDirectoryName(solutionFilePath).LastIndexOf(Path.DirectorySeparatorChar) + 1); ;
-            string destinationDirectory = Path.Combine(baseDestinationDirectory, solutionName, hash);
+            (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory, hash);
+            var (skip, error_) = CheckCommitMessage(sourceDirectory, hash);
+            if (error_ != null)
+            {
+                return (Status.MiscellaneousError, error_);
+            }
+            else if (skip)
+            {
+                return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_);
+            }
+
             var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
             if (error2 != null)
             {
@@ -175,6 +185,34 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
+        private static (string sourceDirectory, string destinationDirectory) GetDirectories(string solutionFilePath, string baseDestinationDirectory, string hash)
+        {
+            string sourceDirectory = Path.GetDirectoryName(solutionFilePath);
+            string solutionName = sourceDirectory.Substring(Path.GetDirectoryName(solutionFilePath).LastIndexOf(Path.DirectorySeparatorChar) + 1);
+            string destinationDirectory = Path.Combine(baseDestinationDirectory, solutionName, hash);
+            return (sourceDirectory, destinationDirectory);
+
+        }
+        private static (bool skip, string) CheckCommitMessage(string sourceDirectory, string hash)
+        {
+            string commitMessage;
+            try
+            {
+                commitMessage = GitCommandLine.GetCommitMessage(sourceDirectory, hash);
+                bool skip = GetAllIgnorePrefixes().Any(commitMessage.StartsWith);
+                return (skip, null);
+            }
+            catch (Exception e)
+            {
+                return (false, e.Message);
+            }
+        }
+        private static IEnumerable<string> GetAllIgnorePrefixes()
+        {
+            return ConfigurationManager.AppSettings.AllKeys
+                                                   .Where(key => key.StartsWith("ignore_prefix"))
+                                                   .Select(key => ConfigurationManager.AppSettings[key]);
+        }
         private static (string destinationSolutionFile, string error) TryCopySolution(string solutionFilePath, string destinationDirectory)
         {
             try

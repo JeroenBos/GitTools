@@ -72,6 +72,10 @@ namespace CI.UI
             {
                 icon.Status = NotificationIconStatus.Ok;
             }
+            else if(status == Status.Skipped)
+            {
+                icon.Status = NotificationIconStatus.Default;
+            }
             else
             {
                 Console.WriteLine(message);

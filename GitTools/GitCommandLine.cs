@@ -90,5 +90,12 @@ namespace JBSnorro.GitTools
         {
             ExecuteWithThrow(repositoryPath, "git checkout " + hash);
         }
+        /// <summary>
+        /// Gets the commit message of the commit with the specified hash.
+        /// </summary>
+        public static string GetCommitMessage(string repositoryPath, string hash)
+        {
+            return ExecuteWithThrow(repositoryPath, "log -1 --pretty=format:%s " + hash).First();
+        }
     }
 }
