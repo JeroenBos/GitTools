@@ -17,6 +17,8 @@ namespace CI.UI
         public static bool IsInPipeMode { get; private set; }
         public static void Start()
         {
+            int processedMessageCount = 0;
+            Console.WriteLine("Starting client pipe");
             IsInPipeMode = true;
             try
             {
@@ -24,7 +26,7 @@ namespace CI.UI
                 {
                     using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
                     {
-                           StreamReader reader = new StreamReader(pipe);
+                        StreamReader reader = new StreamReader(pipe);
 
                         pipe.Connect();
 
@@ -38,6 +40,8 @@ namespace CI.UI
                         {
                             string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
                             Program.HandleInput(args);
+                            Console.WriteLine($"Processed message {processedMessageCount}");
+                            processedMessageCount++;
                         }
                     }
                 }
