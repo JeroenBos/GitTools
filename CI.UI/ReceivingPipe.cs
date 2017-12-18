@@ -13,46 +13,37 @@ namespace CI.UI
     {
         public static readonly string PipeName = "CI_Messaging";
         public static readonly string Separator = "-,-";
-        public static bool IsInPipeMode { get; private set; }
         public static void Start()
         {
             int processedMessageCount = 0;
             Console.WriteLine("Starting client pipe");
-            IsInPipeMode = true;
-            try
+            while (true)
             {
-                while (true)
+                using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
                 {
-                    using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
+                    StreamReader reader = new StreamReader(pipe);
+
+                    while (!pipe.IsConnected)
                     {
-                        StreamReader reader = new StreamReader(pipe);
-
-                        while (!pipe.IsConnected)
+                        try
                         {
-                            try
-                            {
-                                pipe.Connect(0);
-                            }
-                            catch (TimeoutException)
-                            {
-                                Thread.Sleep(100);
-                            }
+                            pipe.Connect(0);
                         }
-
-                        string message = reader.ReadLine();
-                        if (message != null)
+                        catch (TimeoutException)
                         {
-                            string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
-                            Program.HandleInput(args);
-                            Console.WriteLine($"Processed message {processedMessageCount}");
-                            processedMessageCount++;
+                            Thread.Sleep(100);
                         }
                     }
+
+                    string message = reader.ReadLine();
+                    if (message != null)
+                    {
+                        string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
+                        Program.HandleInput(args);
+                        Console.WriteLine($"Processed message {processedMessageCount}");
+                        processedMessageCount++;
+                    }
                 }
-            }
-            finally
-            {
-                IsInPipeMode = false;
             }
         }
     }
