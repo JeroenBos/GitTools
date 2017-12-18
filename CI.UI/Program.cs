@@ -1,4 +1,5 @@
 ﻿using CI.UI.Properties;
+using JBSnorro.Diagnostics;
 using JBSnorro.GitTools;
 using JBSnorro.GitTools.CI;
 using System;
@@ -14,7 +15,7 @@ using System.Windows.Forms;
 
 namespace CI.UI
 {
-    class Program
+    public class Program
     {
         private readonly static NotificationIcon icon = new NotificationIcon();
 
@@ -25,7 +26,7 @@ namespace CI.UI
 
             OutputError(() => ReceivingPipe.Start());
         }
-        private static void OutputError(Action action)
+        public static void OutputError(Action action)
         {
             try
             {
@@ -33,17 +34,28 @@ namespace CI.UI
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e.StackTrace);
-                Debug.WriteLine(e.Message);
-                Console.WriteLine(e.Message);
-#if DEBUG
-                icon.Status = NotificationIconStatus.Bad;
-                Console.ReadLine();
-#else
-                icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
-                Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
-#endif
+                OutputError(e);
             }
+        }
+        public static void OutputError(Task task)
+        {
+            Contract.Requires(task != null);
+            Contract.Requires(task.IsFaulted);
+
+            OutputError(task.Exception);
+        }
+        private static void OutputError(Exception e)
+        {
+            Debug.WriteLine(e.StackTrace);
+            Debug.WriteLine(e.Message);
+            Console.WriteLine(e.Message);
+#if DEBUG
+            icon.Status = NotificationIconStatus.Bad;
+            Console.ReadLine();
+#else
+            icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
+            Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
+#endif
         }
         internal static void HandleInput(string[] input)
         {

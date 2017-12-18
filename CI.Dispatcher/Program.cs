@@ -6,6 +6,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace CI.Dispatcher
@@ -32,6 +33,10 @@ namespace CI.Dispatcher
                 return;
 
             TrySendMessage(pipe, message);
+
+#if DEBUG
+            Console.ReadLine();
+#endif
         }
         private static string ComposeMessage(string[] args)
         {
@@ -81,10 +86,14 @@ namespace CI.Dispatcher
         {
             try
             {
+#if DEBUG
+                return Task.Run((Action)ReceivingPipe.Start).ContinueWith(UI.Program.OutputError, TaskContinuationOptions.OnlyOnFaulted);
+#else
                 Console.WriteLine("Starting CI.UI");
                 string ci_exe_path = CI_UI_Path;
                 var process = Process.Start(ci_exe_path);
                 return process.WaitForExitAsync();
+#endif
             }
             catch (Exception e)
             {
