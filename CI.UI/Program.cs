@@ -16,6 +16,8 @@ namespace CI.UI
 {
     class Program
     {
+        private readonly static NotificationIcon icon = new NotificationIcon();
+
         static void Main(string[] args)
         {
             if (args.Length != 0)
@@ -31,22 +33,17 @@ namespace CI.UI
             }
             catch (Exception e)
             {
-                Console.WriteLine(e.InnerException?.StackTrace);
+                Debug.WriteLine(e.StackTrace);
+                Debug.WriteLine(e.Message);
                 Console.WriteLine(e.Message);
 #if DEBUG
+                icon.Status = NotificationIconStatus.Bad;
                 Console.ReadLine();
 #else
-                using (var icon = new NotificationIcon())
-                {
-                    icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
-                    Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
-                }
+                icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
+                Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
 #endif
             }
-        }
-        internal static void HandleInputAndOutputErrors(string[] input)
-        {
-            OutputError(() => HandleInput(input));
         }
         internal static void HandleInput(string[] input)
         {
@@ -68,19 +65,17 @@ namespace CI.UI
         }
         private static void HandleCommit(string solutionFilePath, string hash)
         {
-            using (var icon = new NotificationIcon() { Status = NotificationIconStatus.Working })
-            {
-                var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, Resources.destinationPath, hash);
+            icon.Status = NotificationIconStatus.Working;
+            var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, Resources.destinationPath, hash);
 
-                if (status == Status.Success)
-                {
-                    icon.Status = NotificationIconStatus.Ok;
-                }
-                else
-                {
-                    Debug.Write(message);
-                    icon.ShowErrorBalloon(message, status);
-                }
+            if (status == Status.Success)
+            {
+                icon.Status = NotificationIconStatus.Ok;
+            }
+            else
+            {
+                Console.WriteLine(message);
+                icon.ShowErrorBalloon(message, status);
             }
         }
     }
