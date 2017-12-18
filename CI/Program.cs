@@ -91,13 +91,13 @@ namespace JBSnorro.GitTools.CI
 
             (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory, hash);
             var (skip, error_) = CheckCommitMessage(sourceDirectory, hash);
-            if (error_ != null)
-            {
-                return (Status.MiscellaneousError, error_);
-            }
-            else if (skip)
+            if (skip)
             {
                 return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_);
+            }
+            else if (error_ != null)
+            {
+                return (Status.MiscellaneousError, error_);
             }
 
             var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
@@ -200,7 +200,7 @@ namespace JBSnorro.GitTools.CI
             {
                 commitMessage = GitCommandLine.GetCommitMessage(sourceDirectory, hash);
                 bool skip = GetAllIgnorePrefixes().Any(commitMessage.StartsWith);
-                return (skip, null);
+                return (skip, skip ? "It is present in .testresults" : null);
             }
             catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
             {
