@@ -81,6 +81,7 @@ namespace CI.Dispatcher
         {
             try
             {
+                Console.WriteLine("Starting CI.UI");
                 string ci_exe_path = CI_UI_Path;
                 var process = Process.Start(ci_exe_path);
                 return process.WaitForExitAsync();
