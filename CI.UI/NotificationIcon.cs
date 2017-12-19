@@ -80,6 +80,7 @@ namespace CI.UI
 
         private bool onProcessExit(ProcessExit.EventArg exitType)
         {
+            Logger.Log("Exiting UI");
             this.Dispose();
             return true;
         }

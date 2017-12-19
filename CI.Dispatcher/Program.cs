@@ -25,7 +25,7 @@ namespace CI.Dispatcher
         /// </summary>
         static void Main(string[] args)
         {
-            Logger.Log("in main. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
+            Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
             try
             {
                 var message = ComposeMessage(args);
@@ -83,17 +83,17 @@ namespace CI.Dispatcher
             Task firstCompletedTask = Task.WhenAny(newMakeConnectionTask, ciProcessTask, timeoutTask).Result;
             if (firstCompletedTask == newMakeConnectionTask)
             {
-                Console.WriteLine("Found listener");
+                Logger.Log("Found listener");
                 return pipe; //connection made
             }
             else if (firstCompletedTask == ciProcessTask)
             {
-                Console.WriteLine("CI.UI stopped unexpectedly");
+                Logger.Log("CI.UI stopped unexpectedly");
                 return null;
             }
             else
             {
-                Console.WriteLine("Dispatching the message to CI.UI timed out");
+                Logger.Log("Dispatching the message to CI.UI timed out");
                 return null;
             }
         }
@@ -108,9 +108,9 @@ namespace CI.Dispatcher
 #else
             try
             {
-                Logger.Log("Starting CI.UI out of process");
-                string ci_exe_path = CI_UI_Path;
-                var process = Process.Start(ci_exe_path);
+                string command = $"/C start {CI_UI_Path}";
+                Logger.Log("Starting CI.UI out of process. Executing " + command);
+                var process = Process.Start(new ProcessStartInfo("cmd", command) { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true });
                 return process.WaitForExitAsync();
             }
             catch (Exception e)

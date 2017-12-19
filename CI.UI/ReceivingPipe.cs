@@ -15,7 +15,7 @@ namespace CI.UI
     {
         public static readonly string PipeName = "CI_Messaging";
         public static readonly string Separator = "-,-";
-        public static async void Start()
+        public static async Task Start()
         {
             int processedMessageCount = 0;
             Logger.Log("Starting client pipe");
@@ -42,7 +42,6 @@ namespace CI.UI
                     Logger.Log($"Received message {processedMessageCount}");
                     string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
                     Program.HandleInput(args);
-                    Logger.Log($"Processed message {processedMessageCount}");
                     processedMessageCount++;
                 }
             }

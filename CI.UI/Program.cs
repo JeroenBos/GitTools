@@ -22,20 +22,32 @@ namespace CI.UI
 
         public static void Main(string[] args)
         {
+            Logger.Log("In UI.main");
             if (args.Length != 0)
                 throw new ArgumentException("Legacy direct call deprecated; call via CI.Dispatcher");
+
             try
             {
-                Dispatcher.CurrentDispatcher.InvokeAsync(ReceivingPipe.Start);
+                Logger.Log("Starting message pump");
+                Dispatcher.CurrentDispatcher.InvokeAsync(LoggedReceivingPipeStart);
                 Dispatcher.Run(); //required for buttons on Notify Icon
-            }
-            catch (Exception e)
-            {
-                OutputError(e);
             }
             finally
             {
                 icon.Dispose();
+            }
+
+            async void LoggedReceivingPipeStart()
+            {
+                try
+                {
+                    await ReceivingPipe.Start();
+                }
+                catch (Exception e)
+                {
+                    OutputError(e);
+                    Logger.Log("Exited message pump with error");
+                }
             }
         }
         public static void OutputError(Task task)
@@ -91,19 +103,23 @@ namespace CI.UI
             Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
 
             icon.Status = NotificationIconStatus.Working;
+            Logger.Log("Processing message");
             var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
             Console.WriteLine(message);
             if (status == Status.Success)
             {
+                Logger.Log("Processed message: OK");
                 icon.Status = NotificationIconStatus.Ok;
             }
             else if (status == Status.Skipped)
             {
+                Logger.Log("Processed message: Skipped");
                 icon.Status = NotificationIconStatus.Default;
             }
             else
             {
+                Logger.Log($"Processed message: {status.ToTitle()}: " + message);
                 icon.ShowErrorBalloon(message, status);
             }
         }
