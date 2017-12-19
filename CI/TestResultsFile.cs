@@ -52,6 +52,19 @@ namespace JBSnorro.GitTools.CI
 
             this.stream = new StreamWriter(stream);
         }
+        public static TestResultsFile TryReadFile(string path, out string errorMessage)
+        {
+            try
+            {
+                errorMessage = null;
+                return new TestResultsFile(path);
+            }
+            catch (Exception e)
+            {
+                errorMessage = $"Error in reading file {path}. " + e.Message;
+                return null;
+            }
+        }
         /// <summary>
         /// Writes the specified result and key to the current file.
         /// </summary>
@@ -144,7 +157,7 @@ namespace JBSnorro.GitTools.CI
             if (line[13] != ' ') throw new FormatException($"The line '{line}' does not start with a 8-character hash and a test result. ");
 
             string[] split = line.Split(' ');
-            if (split.Length < 4)
+            if (split.Length < 3)
                 throw new FormatException($"Line '{line}' was expected to have a hash summary, test result, commit message and full hash");
 
             string hash = split.Last();

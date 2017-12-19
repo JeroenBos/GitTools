@@ -91,8 +91,13 @@ namespace JBSnorro.GitTools.CI
 
 
             (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory, hash);
-            using (TestResultsFile resultsFile = new TestResultsFile(sourceDirectory))
+            using (TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error))
             {
+                if (error != null)
+                {
+                    return (Status.MiscellaneousError, error);
+                }
+
                 var (resultStatus, resultError) = buildAndTest(resultsFile, out string commitMessage);
                 if (writeToTestsFile)
                     resultsFile.Append(hash, resultStatus, commitMessage);
