@@ -7,6 +7,7 @@ using System.IO.Pipes;
 using System.IO;
 using System.Threading;
 using JBSnorro.GitTools.CI;
+using System.Windows.Threading;
 
 namespace CI.UI
 {
@@ -14,7 +15,7 @@ namespace CI.UI
     {
         public static readonly string PipeName = "CI_Messaging";
         public static readonly string Separator = "-,-";
-        public static void Start()
+        public static async void Start()
         {
             int processedMessageCount = 0;
             Logger.Log("Starting client pipe");
@@ -34,7 +35,7 @@ namespace CI.UI
                         }
                         catch (TimeoutException)
                         {
-                            Thread.Sleep(100);
+                            await Dispatcher.Yield();
                         }
                     }
 

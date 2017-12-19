@@ -100,22 +100,25 @@ namespace CI.Dispatcher
 
         private static Task StartCIUI()
         {
+
+
+#if DEBUG
+            Logger.Log("Starting CI.UI in process");
+            return Task.Run(() => UI.Program.Main(Array.Empty<string>()));
+#else
             try
             {
-                Console.WriteLine("Starting CI.UI");
-#if DEBUG
-                return Task.Run((Action)ReceivingPipe.Start).ContinueWith(UI.Program.OutputError, TaskContinuationOptions.OnlyOnFaulted);
-#else
+                Logger.Log("Starting CI.UI out of process");
                 string ci_exe_path = CI_UI_Path;
                 var process = Process.Start(ci_exe_path);
                 return process.WaitForExitAsync();
-#endif
             }
             catch (Exception e)
             {
                 UI.Program.OutputError(e);
                 return null;
             }
+#endif
         }
 
         private static void TrySendMessage(NamedPipeServerStream pipe, string message)

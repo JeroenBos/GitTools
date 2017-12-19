@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Threading;
 
 namespace CI.UI
 {
@@ -19,17 +20,22 @@ namespace CI.UI
     {
         private readonly static NotificationIcon icon = new NotificationIcon();
 
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             if (args.Length != 0)
                 throw new ArgumentException("Legacy direct call deprecated; call via CI.Dispatcher");
             try
             {
-                ReceivingPipe.Start();
+                Dispatcher.CurrentDispatcher.InvokeAsync(ReceivingPipe.Start);
+                Dispatcher.Run(); //required for buttons on Notify Icon
             }
             catch (Exception e)
             {
                 OutputError(e);
+            }
+            finally
+            {
+                icon.Dispose();
             }
         }
         public static void OutputError(Task task)

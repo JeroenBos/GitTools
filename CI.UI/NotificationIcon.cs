@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using JBSnorro.GitTools.CI;
+using System.Windows.Threading;
 
 namespace CI.UI
 {
@@ -41,9 +42,13 @@ namespace CI.UI
             this.Icon = new NotifyIcon()
             {
                 Visible = true,
+                ContextMenu = new ContextMenu(new[] { new MenuItem("Exit", (sender, e) => Dispatcher.CurrentDispatcher.InvokeShutdown()) })
             };
 
-            this.PropertyChanged += (sender, e) => { if (e.PropertyName == nameof(Status)) OnStatusChanged(); };
+            this.PropertyChanged += (sender, e) =>
+            {
+                if (e.PropertyName == nameof(Status)) OnStatusChanged();
+            };
 
             //set default icon
             this.OnStatusChanged();
@@ -66,7 +71,7 @@ namespace CI.UI
 
             this.Icon.ShowBalloonTip(ErrorBalloonShowDuration, status.ToTitle(), message, ToolTipIcon.Error);
         }
-        
+
         public void Dispose()
         {
             this.Icon.Dispose();
