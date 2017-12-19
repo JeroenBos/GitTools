@@ -26,12 +26,13 @@ namespace CI.Dispatcher
         static void Main(string[] args)
         {
             Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
+            Task uiProcess = null;
             try
             {
                 var message = ComposeMessage(args);
                 if (message != null)
                 {
-                    var pipe = SetupConnection();
+                    var pipe = SetupConnection(out uiProcess);
                     if (pipe != null)
                     {
                         Logger.Log("trying to send message");
@@ -47,9 +48,14 @@ namespace CI.Dispatcher
             }
             finally
             {
+                Logger.Log("Waiting for UI to finish");
+                if (uiProcess != null)
+                    uiProcess.Wait();
+                Logger.Log("UI finished");
 #if DEBUG
                 Console.ReadLine();
 #endif
+
             }
         }
 
@@ -61,7 +67,7 @@ namespace CI.Dispatcher
             return string.Join(ReceivingPipe.Separator, args);
         }
 
-        private static NamedPipeServerStream SetupConnection()
+        private static NamedPipeServerStream SetupConnection(out Task uiProcess)
         {
             var pipe = new NamedPipeServerStream(ReceivingPipe.PipeName, PipeDirection.Out);
 
@@ -69,10 +75,12 @@ namespace CI.Dispatcher
             Task makeConnectionTask = pipe.WaitForConnectionAsync();
             if (!makeConnectionTask.Wait(timeBeforeAssumingUINotRunning))
             {
-                Task ciProcessTask = StartCIUI();
-                if (ciProcessTask == null)
+                uiProcess = StartCIUI();
+                if (uiProcess == null)
                     return null;
             }
+            else
+                uiProcess = null;
 
             // try to make connection again, stopping if the potentially started UI ends
             var newMakeConnectionTask = pipe.WaitForConnectionAsync();
