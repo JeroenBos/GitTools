@@ -108,9 +108,8 @@ namespace CI.Dispatcher
 #else
             try
             {
-                string command = $"/C start {CI_UI_Path}";
-                Logger.Log("Starting CI.UI out of process. Executing " + command);
-                var process = Process.Start(new ProcessStartInfo("cmd", command) { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true });
+                Logger.Log($"Starting CI.UI out of process. Executing '{CI_UI_Path}'");
+                var process = Process.Start(new ProcessStartInfo(CI_UI_Path) { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true });
                 return process.WaitForExitAsync();
             }
             catch (Exception e)
