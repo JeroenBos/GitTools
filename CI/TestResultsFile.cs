@@ -44,7 +44,7 @@ namespace JBSnorro.GitTools.CI
             this.Hashes = new ReadOnlyDictionary<string, TestResult>(hashes);
 
             var reader = new StreamReader(stream);
-            while (stream.Position != stream.Length)
+            while (!reader.EndOfStream)
             {
                 var (key, result) = TestResultExtensions.FromLine(reader.ReadLine());
                 hashes[key] = result;
