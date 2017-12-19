@@ -67,29 +67,21 @@ namespace CI.Dispatcher
 
             // try to make connection, or start the executable in case it's not responding
             Task makeConnectionTask = pipe.WaitForConnectionAsync();
-            Task ciProcessTask;
             if (!makeConnectionTask.Wait(timeBeforeAssumingUINotRunning))
             {
-                ciProcessTask = StartCIUI();
+                Task ciProcessTask = StartCIUI();
                 if (ciProcessTask == null)
                     return null;
             }
-            else
-                ciProcessTask = Task.Delay(-1);
 
             // try to make connection again, stopping if the potentially started UI ends
             var newMakeConnectionTask = pipe.WaitForConnectionAsync();
             var timeoutTask = Task.Delay(timeout);
-            Task firstCompletedTask = Task.WhenAny(newMakeConnectionTask, ciProcessTask, timeoutTask).Result;
+            Task firstCompletedTask = Task.WhenAny(newMakeConnectionTask, timeoutTask).Result;
             if (firstCompletedTask == newMakeConnectionTask)
             {
                 Logger.Log("Found listener");
                 return pipe; //connection made
-            }
-            else if (firstCompletedTask == ciProcessTask)
-            {
-                Logger.Log("CI.UI stopped unexpectedly");
-                return null;
             }
             else
             {
