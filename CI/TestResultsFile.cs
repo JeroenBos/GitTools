@@ -55,33 +55,21 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Writes the specified result and key to the current file.
         /// </summary>
-        public void Append(string hash, TestResult result)
+        public void Append(string hash, TestResult result, string commitMessage)
         {
-            string line = TestResultExtensions.ToLine(hash, result);
+            string line = TestResultExtensions.ToLine(hash, result, commitMessage);
             if (line != null)
             {
                 this.stream.WriteLine(line);
             }
         }
-        public void Append(string hash, Status status)
+        /// <summary>
+        /// Writes the specified result and key to the current file.
+        /// </summary>
+        public void Append(string hash, Status status, string commitMessage)
         {
-            Append(hash, status.ToTestResult());
+            Append(hash, status.ToTestResult(), commitMessage);
         }
-        public bool TryAppend(string hash, Status status)
-        {
-            try
-            {
-                Append(hash, status);
-                return true;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"{e.Message}");
-                Console.WriteLine("Continuing...");
-                return false;
-            }
-        }
-
         public void Dispose()
         {
             stream.Dispose();
@@ -100,7 +88,7 @@ namespace JBSnorro.GitTools.CI
             switch (testResult)
             {
                 case TestResult.Success:
-                    return "OK";
+                    return "OK  "; //spaces for alignment
                 case TestResult.Failure:
                     return "FAIL";
                 case TestResult.Ignored:
@@ -114,6 +102,7 @@ namespace JBSnorro.GitTools.CI
             switch (abbreviation)
             {
                 case "OK":
+                case "OK  ":
                     return TestResult.Success;
                 case "FAIL":
                     return TestResult.Failure;
@@ -140,21 +129,31 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        public static string ToLine(string hash, TestResult result)
+        public static string ToLine(string hash, TestResult result, string commitMessage)
         {
             if (result == TestResult.Ignored)
                 return null;
-            return $"{hash} {result.ToAbbreviation()}";
+
+            return $"{hash.Substring(0, 8)} {result.ToAbbreviation()} {commitMessage} ({hash})";
         }
         public static (string, TestResult) FromLine(string line)
         {
-            string[] split = line.Split(' ');
-            if (split.Length != 2)
-                throw new FormatException($"Line '{line}' was expected to have a hash and test result");
+            if (line == null) throw new ArgumentException(nameof(line));
+            if (line.Length < 54) throw new FormatException($"Any line is expected to have at least 54 characters");
+            if (line[8] != ' ') throw new FormatException($"The line '{line}' does not start with a 8-character hash. ");
+            if (line[13] != ' ') throw new FormatException($"The line '{line}' does not start with a 8-character hash and a test result. ");
 
-            string hash = split[0];
+            string[] split = line.Split(' ');
+            if (split.Length < 4)
+                throw new FormatException($"Line '{line}' was expected to have a hash summary, test result, commit message and full hash");
+
+            string hash = split.Last();
+            if (hash.Length == 0 || hash[0] != '(' || hash.Last() != ')')
+                throw new FormatException($"The full hash in '{line}' is invalid");
+
+            hash = hash.Substring("(".Length, hash.Length - "()".Length);
             if (!GitCommandLine.IsValidCommitHash(hash))
-                throw new FormatException($"The hash in '{line}' is invalid");
+                throw new FormatException($"The full hash in '{line}' is invalid");
 
             TestResult testResult;
             try

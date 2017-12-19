@@ -93,15 +93,15 @@ namespace JBSnorro.GitTools.CI
             (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory, hash);
             using (TestResultsFile resultsFile = new TestResultsFile(sourceDirectory))
             {
-                var (resultStatus, resultError) = buildAndTest(resultsFile);
+                var (resultStatus, resultError) = buildAndTest(resultsFile, out string commitMessage);
                 if (writeToTestsFile)
-                    resultsFile.TryAppend(hash, resultStatus);
+                    resultsFile.Append(hash, resultStatus, commitMessage);
                 return (resultStatus, resultError);
             }
 
-            (Status, string) buildAndTest(TestResultsFile resultsFile)
+            (Status, string) buildAndTest(TestResultsFile resultsFile, out string commitMessage)
             {
-                var (skip, error_) = CheckCommitMessage(sourceDirectory, hash, resultsFile);
+                var (skip, error_) = CheckCommitMessage(sourceDirectory, hash, resultsFile, out commitMessage);
                 if (skip)
                 {
                     return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_);
@@ -205,12 +205,14 @@ namespace JBSnorro.GitTools.CI
             return (sourceDirectory, destinationDirectory);
 
         }
-        private static (bool skip, string error) CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile)
+        private static (bool skip, string error) CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile, out string commitMessage)
         {
             if (resultsFile.Hashes.ContainsKey(hash))
+            {
+                commitMessage = null;
                 return (true, "It is present in .testresults");
+            }
 
-            string commitMessage;
             try
             {
                 commitMessage = GitCommandLine.GetCommitMessage(sourceDirectory, hash);
@@ -223,6 +225,7 @@ namespace JBSnorro.GitTools.CI
             }
             catch (Exception e)
             {
+                commitMessage = null;
                 return (false, e.Message);
             }
         }
