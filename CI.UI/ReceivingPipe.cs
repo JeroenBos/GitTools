@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO.Pipes;
 using System.IO;
 using System.Threading;
+using JBSnorro.GitTools.CI;
 
 namespace CI.UI
 {
@@ -16,7 +17,7 @@ namespace CI.UI
         public static void Start()
         {
             int processedMessageCount = 0;
-            Console.WriteLine("Starting client pipe");
+            Logger.Log("Starting client pipe");
             while (true)
             {
                 using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
@@ -37,10 +38,10 @@ namespace CI.UI
                         }
                     }
 
-                    Console.WriteLine($"Received message {processedMessageCount}");
+                    Logger.Log($"Received message {processedMessageCount}");
                     string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
                     Program.HandleInput(args);
-                    Console.WriteLine($"Processed message {processedMessageCount}");
+                    Logger.Log($"Processed message {processedMessageCount}");
                     processedMessageCount++;
                 }
             }

@@ -48,7 +48,7 @@ namespace CI.UI
             }
             Debug.WriteLine(e.StackTrace);
             Debug.WriteLine(e.Message);
-            Console.WriteLine(e.Message);
+            Logger.Log(e.Message);
 #if DEBUG
             icon.Status = NotificationIconStatus.Bad;
             Console.ReadLine();

@@ -1,6 +1,8 @@
 ﻿using CI.UI;
+using System.Linq;
 using JBSnorro;
 using JBSnorro.Diagnostics;
+using JBSnorro.GitTools.CI;
 using System;
 using System.Configuration;
 using System.Diagnostics;
@@ -23,18 +25,34 @@ namespace CI.Dispatcher
         /// </summary>
         static void Main(string[] args)
         {
-            var message = ComposeMessage(args);
-            if (message != null)
+            Logger.Log("in main. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
+            try
             {
-                var pipe = SetupConnection();
-                if (pipe != null)
-                    TrySendMessage(pipe, message);
+                var message = ComposeMessage(args);
+                if (message != null)
+                {
+                    var pipe = SetupConnection();
+                    if (pipe != null)
+                    {
+                        Logger.Log("trying to send message");
+                        TrySendMessage(pipe, message);
 
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Log("exception: " + e.Message);
+
+            }
+            finally
+            {
 #if DEBUG
                 Console.ReadLine();
 #endif
             }
         }
+
         private static string ComposeMessage(string[] args)
         {
             Contract.Requires(args != null);
@@ -82,7 +100,7 @@ namespace CI.Dispatcher
 
         private static Task StartCIUI()
         {
-           try
+            try
             {
                 Console.WriteLine("Starting CI.UI");
 #if DEBUG
@@ -109,11 +127,13 @@ namespace CI.Dispatcher
                     writer.AutoFlush = true;
                     writer.WriteLine(message);
                     Console.WriteLine("Written message");
+                    Logger.Log("written message");
                 }
             }
             catch (IOException e)
             {
                 Console.WriteLine("ERROR: {0}", e.Message);
+                Logger.Log(e.Message);
             }
         }
     }

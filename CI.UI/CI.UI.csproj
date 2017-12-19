@@ -78,6 +78,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Logger.cs" />
     <Compile Include="NotificationIconStatus.cs" />
     <Compile Include="NotificationIcon.cs" />
     <Compile Include="Icons.cs" />
