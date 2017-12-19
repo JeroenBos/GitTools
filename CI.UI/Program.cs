@@ -41,6 +41,11 @@ namespace CI.UI
         }
         public static void OutputError(Exception e)
         {
+            if (e is AggregateException agr)
+            {
+                OutputError(agr.InnerException);
+                return;
+            }
             Debug.WriteLine(e.StackTrace);
             Debug.WriteLine(e.Message);
             Console.WriteLine(e.Message);
