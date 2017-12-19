@@ -142,23 +142,26 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
+        private const string format = "yy-MMM-dd hh:mm";
+        private const int previewLength = 7;
         public static string ToLine(string hash, TestResult result, string commitMessage)
         {
             if (result == TestResult.Ignored)
                 return null;
 
-            return $"{hash.Substring(0, 8)} {result.ToAbbreviation()} {commitMessage} ({hash})";
+            return $"{DateTime.Now.ToString(format)} - {hash.Substring(0, previewLength)} - {result.ToAbbreviation()} - {commitMessage} - ({hash})";
         }
         public static (string, TestResult) FromLine(string line)
         {
             if (line == null) throw new ArgumentException(nameof(line));
-            if (line.Length < 54) throw new FormatException($"Any line is expected to have at least 54 characters");
-            if (line[8] != ' ') throw new FormatException($"The line '{line}' does not start with a 8-character hash. ");
-            if (line[13] != ' ') throw new FormatException($"The line '{line}' does not start with a 8-character hash and a test result. ");
+            if (line.Substring(format.Length, 3) != " - ")
+                throw new FormatException($"The line '{line}' does not start with a date in the format '{format}'. ");
+            if (line.Substring(format.Length + " - ".Length + previewLength, 3) != " - ")
+                throw new FormatException($"The line '{line}' does not start with a date and a {previewLength}-character hash. ");
 
             string[] split = line.Split(' ');
-            if (split.Length < 3)
-                throw new FormatException($"Line '{line}' was expected to have a hash summary, test result, commit message and full hash");
+            if (split.Length < 6)
+                throw new FormatException($"Line '{line}' is expected to have a date, hash summary, test result, commit message and full hash separated by ' - '");
 
             string hash = split.Last();
             if (hash.Length == 0 || hash[0] != '(' || hash.Last() != ')')
@@ -171,7 +174,7 @@ namespace JBSnorro.GitTools.CI
             TestResult testResult;
             try
             {
-                testResult = FromAbbreviation(split[1]);
+                testResult = FromAbbreviation(split[5]);
             }
             catch (DefaultSwitchCaseUnreachableException)
             {
