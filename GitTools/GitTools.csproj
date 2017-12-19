@@ -57,7 +57,7 @@
       <HintPath>..\packages\AppDomainToolkit.1.0.4.3\lib\net\AppDomainToolkit.dll</HintPath>
     </Reference>
     <Reference Include="JBSnorro">
-      <HintPath>..\..\ASDE\JBSnorro\bin\x86\Debug\JBSnorro.dll</HintPath>
+      <HintPath>D:\ASDE\JBSnorro\bin\x86\Debug\JBSnorro.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ValueTuple, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
