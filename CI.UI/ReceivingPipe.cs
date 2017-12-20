@@ -8,11 +8,33 @@ using System.IO;
 using System.Threading;
 using JBSnorro.GitTools.CI;
 using System.Windows.Threading;
+using JBSnorro.Diagnostics;
 
 namespace CI.UI
 {
     public static class ReceivingPipe
     {
+        static ReceivingPipe()
+        {
+            mainDispatcher = Dispatcher.CurrentDispatcher;
+            SetupBackground();
+        }
+        private static readonly Dispatcher mainDispatcher;
+        private static Dispatcher executingDispatcher;
+        private static void SetupBackground()
+        {
+            Contract.Requires(executingDispatcher == null);
+
+            ThreadPool.QueueUserWorkItem((object mainThread) =>
+            {
+                if (Thread.CurrentThread == mainThread) throw new Exception("The background thread is the foreground thread");
+
+                executingDispatcher = Dispatcher.CurrentDispatcher;
+                Dispatcher.Run();
+            }, Thread.CurrentThread);
+        }
+
+
         public static readonly string PipeName = "CI_Messaging";
         public static readonly string Separator = "-,-";
         public static async Task Start()
@@ -40,8 +62,18 @@ namespace CI.UI
                     }
 
                     Logger.Log($"Received message {processedMessageCount}");
-                    string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
-                    Program.HandleInput(args);
+                    await executingDispatcher.InvokeAsync(() =>
+                        {
+                            try
+                            {
+                                string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
+                                Program.HandleInput(args);
+                            }
+                            catch(Exception e)
+                            {
+                                mainDispatcher.InvokeAsync(() => Program.OutputError(e));
+                            }
+                        });
                     processedMessageCount++;
                 }
             }
