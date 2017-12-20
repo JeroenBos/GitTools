@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace CI.Dispatcher
 {
-    class Program
+    class Dispatcher
     {
         private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"];
         private const int timeout = 1000;
