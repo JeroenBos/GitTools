@@ -35,6 +35,7 @@ namespace CI.UI
             finally
             {
                 icon.Dispose();
+                Logger.Log("Disposing UI");
             }
 
             async void LoggedReceivingPipeStart()
@@ -45,8 +46,8 @@ namespace CI.UI
                 }
                 catch (Exception e)
                 {
-                    OutputError(e);
                     Logger.Log("Exited message pump with error");
+                    OutputError(e);
                 }
             }
         }
