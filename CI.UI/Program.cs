@@ -68,12 +68,12 @@ namespace CI.UI
             Debug.WriteLine(e.StackTrace);
             Debug.WriteLine(e.Message);
             Logger.Log(e.Message);
+            Logger.Log(e.StackTrace);
 #if DEBUG
             icon.Status = NotificationIconStatus.Bad;
             Console.ReadLine();
 #else
             icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
-            Thread.Sleep(NotificationIcon.ErrorBalloonShowDuration);
 #endif
         }
         internal static void HandleInput(string[] input)
