@@ -24,18 +24,18 @@ namespace CI.Dispatcher
         /// </summary>
         static void Main(string[] args)
         {
+            NamedPipeServerStream pipe = null;
             Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
             try
             {
                 var message = ComposeMessage(args);
                 if (message != null)
                 {
-                    var pipe = SetupConnection();
+                    pipe = SetupConnection();
                     if (pipe != null)
                     {
                         Logger.Log("trying to send message");
                         TrySendMessage(pipe, message);
-
                     }
                 }
             }
@@ -45,6 +45,8 @@ namespace CI.Dispatcher
             }
             finally
             {
+                if (pipe != null)
+                    pipe.Dispose();
 #if DEBUG
                 Console.ReadLine();
 #endif
