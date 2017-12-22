@@ -90,7 +90,7 @@ namespace JBSnorro.GitTools.CI
             }
 
 
-            (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory, hash);
+            (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
             using (TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error))
             {
                 if (error != null)
@@ -202,11 +202,11 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static (string sourceDirectory, string destinationDirectory) GetDirectories(string solutionFilePath, string baseDestinationDirectory, string hash)
+        private static (string sourceDirectory, string destinationDirectory) GetDirectories(string solutionFilePath, string baseDestinationDirectory)
         {
             string sourceDirectory = Path.GetDirectoryName(solutionFilePath);
             string solutionName = sourceDirectory.Substring(Path.GetDirectoryName(solutionFilePath).LastIndexOf(Path.DirectorySeparatorChar) + 1);
-            string destinationDirectory = Path.Combine(baseDestinationDirectory, solutionName, hash);
+            string destinationDirectory = Path.Combine(baseDestinationDirectory, solutionName);
             return (sourceDirectory, destinationDirectory);
 
         }
