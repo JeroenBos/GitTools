@@ -389,16 +389,13 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create())
-                {
-                    var (totalTestCount, successCount) = projectAssemblyPathsInBuildOrder.Select(RunTests)
-                                                                                         .Aggregate(Add);
+                var (totalTestCount, successCount) = projectAssemblyPathsInBuildOrder.Select(RunTests)
+                                                                                     .Aggregate(Add);
 
-                    if (totalTestCount == successCount)
-                        return (totalTestCount, null);
-                    else
-                        return (totalTestCount, $"{totalTestCount - successCount}/{totalTestCount} tests failed");
-                }
+                if (totalTestCount == successCount)
+                    return (totalTestCount, null);
+                else
+                    return (totalTestCount, $"{totalTestCount - successCount}/{totalTestCount} tests failed");
             }
             catch (Exception e)
             {
