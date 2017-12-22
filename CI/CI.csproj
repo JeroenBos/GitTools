@@ -87,7 +87,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SerializableWrappers.cs" />
+    <Compile Include="SerializableTestResults.cs" />
     <Compile Include="Status.cs" />
     <Compile Include="TestResultsFile.cs" />
   </ItemGroup>

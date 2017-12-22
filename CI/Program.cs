@@ -375,22 +375,10 @@ namespace JBSnorro.GitTools.CI
 
         private static (int totalTestCount, string error) RunTests(IEnumerable<Project> projectsInBuildOrder)
         {
-            using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create())
-            {
-                var projectAssemblyPathsInBuildOrder = projectsInBuildOrder.Select(GetAssemblyPath).ToArray();
-                var result = RemoteFunc.Invoke<SerializableProjectAssemblyPaths, SerializableTestResults>(testerDomain.Domain,
-                                                                                                          arg1: projectAssemblyPathsInBuildOrder,
-                                                                                                          toInvoke: request => runTests(request.ProjectAssemblyPathsInBuildOrder));
-                return (result.TotalTestCount, result.Error);
-            }
-        }
-
-        private static (int totalTestCount, string error) runTests(IEnumerable<string> projectAssemblyPathsInBuildOrder)
-        {
             try
             {
-                var (totalTestCount, successCount) = projectAssemblyPathsInBuildOrder.Select(RunTests)
-                                                                                     .Aggregate(Add);
+                var (totalTestCount, successCount) = projectsInBuildOrder.Select(RunTests)
+                                                                         .Aggregate(Add);
 
                 if (totalTestCount == successCount)
                     return (totalTestCount, null);
@@ -403,27 +391,43 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static (int totalTestCount, int successfulTestCount) RunTests(string assemblyPath)
+        private static (int totalTestCount, int successfulTestCount) RunTests(Project assembly)
         {
-            if (assemblyPath == null) throw new ArgumentNullException(nameof(assemblyPath));
+            string assemblyPath = GetAssemblyPath(assembly);
 
-            Console.WriteLine("Testing " + Path.GetFileName(assemblyPath));
-            try
+            using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup()))
             {
-                var testTypes = Assembly.LoadFrom(assemblyPath)
-                               .GetTypes()
-                               .Where(TestClassExtensions.IsTestType)
-                               .ToList();
-                if (testTypes.Count == 0)
-                    return (0, 0);
+                SerializableTestResults result = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
+                {
+                    Console.WriteLine("Testing " + Path.GetFileName(assemblyPathLocal));
+                    try
+                    {
+                        var testTypes = Assembly.LoadFrom(assemblyPathLocal)
+                                                .GetTypes()
+                                                .Where(TestClassExtensions.IsTestType)
+                                                .ToList();
+                        if (testTypes.Count == 0)
+                            return new SerializableTestResults(0, 0);
 
+                        var (totalTestCount, successfulTestCount) = testTypes.Select(RunTests)
+                                                                             .Aggregate(Add);
+                        return new SerializableTestResults(totalTestCount, successfulTestCount);
+                    }
+                    catch (Exception e)
+                    {
+                        return new SerializableTestResults(e.Message);
+                    }
+                });
 
-                return testTypes.Select(RunTests)
-                                .Aggregate(Add);
-            }
-            catch
-            {
-                throw;
+                if (result.Error != null)
+                {
+                    // rethrow exception in main AppDomain
+                    throw new Exception(result.Error);
+                }
+                else
+                {
+                    return (result.TotalTestCount, result.SuccessfulTestCount);
+                }
             }
         }
         static (int, int) Add((int, int) a, (int, int) b)
