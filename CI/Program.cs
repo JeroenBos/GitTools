@@ -259,18 +259,16 @@ namespace JBSnorro.GitTools.CI
             {
                 return (null, e.Message);
             }
-
-
-            /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
-            void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
-            {
-                foreach (DirectoryInfo dir in source.GetDirectories())
-                    if (!(dir.Name.StartsWith(".vs") || dir.Name == "bin" || dir.Name == "obj"))
-                        CopyDirectory(dir, target.CreateSubdirectory(dir.Name));
-                foreach (FileInfo file in source.GetFiles())
-                    if (file.Name != ".testresults") // can't copy because this program currently has a filestream opened on it
-                        file.CopyTo(Path.Combine(target.FullName, file.Name), true);
-            }
+        }
+        /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
+        private static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
+        {
+            foreach (DirectoryInfo dir in source.GetDirectories())
+                if (!(dir.Name.StartsWith(".vs") || dir.Name == "bin" || dir.Name == "obj"))
+                    CopyDirectory(dir, target.CreateSubdirectory(dir.Name));
+            foreach (FileInfo file in source.GetFiles())
+                if (file.Name != ".testresults") // can't copy because this program currently has a filestream opened on it
+                    file.CopyTo(Path.Combine(target.FullName, file.Name), true);
         }
         private static void SetAttributesNormal(string dirPath)
         {
@@ -394,8 +392,11 @@ namespace JBSnorro.GitTools.CI
         private static (int totalTestCount, int successfulTestCount) RunTests(Project assembly)
         {
             string assemblyPath = GetAssemblyPath(assembly);
+            string appDomainBase = Path.GetDirectoryName(assemblyPath);
 
-            using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup()))
+            CopyPackagesToNewAppDomainBaseDirectory(appDomainBase);
+
+            using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, }))
             {
                 SerializableTestResults result = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
                 {
@@ -429,6 +430,19 @@ namespace JBSnorro.GitTools.CI
                     return (result.TotalTestCount, result.SuccessfulTestCount);
                 }
             }
+        }
+        private static void CopyPackagesToNewAppDomainBaseDirectory(string appDomainBase)
+        {
+            // this method is mainly about AppDomainToolkit
+            string packagesDirectory = Path.GetFullPath(@"..\..\..\..\packages");
+            if (!Directory.Exists(packagesDirectory))
+            {
+                throw new Exception($"directory '{packagesDirectory}' not found");
+            }
+
+            var destinationDirectory = Path.GetFullPath(Path.Combine(appDomainBase, @"..\..\..\..\packages"));
+
+            CopyDirectory(new DirectoryInfo(packagesDirectory), new DirectoryInfo(destinationDirectory));
         }
         static (int, int) Add((int, int) a, (int, int) b)
         {
