@@ -57,7 +57,7 @@ namespace CI.UI
                         }
                         catch (TimeoutException)
                         {
-                            await Dispatcher.Yield();
+                            await Task.Delay(100);
                         }
                     }
 
