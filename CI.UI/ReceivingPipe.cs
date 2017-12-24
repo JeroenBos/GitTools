@@ -44,9 +44,8 @@ namespace CI.UI
             while (true)
             {
                 using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
+                using (StreamReader reader = new StreamReader(pipe))
                 {
-                    StreamReader reader = new StreamReader(pipe);
-
                     string message = null;
                     while (!pipe.IsConnected && message == null)
                     {
@@ -69,7 +68,7 @@ namespace CI.UI
                                 string[] args = message.Split(new string[] { Separator }, StringSplitOptions.None);
                                 Program.HandleInput(args);
                             }
-                            catch(Exception e)
+                            catch (Exception e)
                             {
                                 mainDispatcher.InvokeAsync(() => Program.OutputError(e));
                             }
