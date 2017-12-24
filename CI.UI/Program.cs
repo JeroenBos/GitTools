@@ -23,15 +23,26 @@ namespace CI.UI
         public static void Main(string[] args)
         {
             Logger.Log("In UI.main");
+#if !DEBUG
             if (args.Length != 0)
             {
                 string s = "Legacy direct call deprecated; call via CI.Dispatcher";
                 Logger.Log(s);
                 throw new ArgumentException(s);
             }
+#endif
 
             try
             {
+#if DEBUG
+                if (args.Length != 0)
+                {
+                    Logger.Log($"Directly handling message {string.Join(" ", args)}");
+                    HandleInput(args);
+                    Console.ReadLine();
+                    return;
+                }
+#endif
                 Logger.Log("Starting message pump");
                 Dispatcher.CurrentDispatcher.InvokeAsync(LoggedReceivingPipeStart);
                 Dispatcher.Run(); //required for buttons on Notify Icon
