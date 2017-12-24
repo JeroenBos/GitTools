@@ -42,7 +42,7 @@ namespace JBSnorro.GitTools
         {
             if (method == null) throw new ArgumentNullException(nameof(method));
 
-            return method.HasAttribute(TestMethodAttributeFullNames);
+            return method.HasAttribute(TestMethodAttributeFullNames) && !method.HasAttribute(TestMethodIgnoreAttributeFullNames);
         }
         /// <summary>
         /// Gets whether the specified test method expects the specified exception to be thrown.
@@ -99,6 +99,7 @@ namespace JBSnorro.GitTools
         private static List<string> TestMethodAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute" };
         private static List<string> TestMethodInitializationAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestInitializeAttribute" };
         private static List<string> TestMethodCleanupAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestCleanupAttribute" };
+        private static List<string> TestMethodIgnoreAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.IgnoreAttribute" };
         private static Dictionary<string, Func<Attribute, Exception, bool>> TestMethodExpectedExceptionAttributeFullNames = new Dictionary<string, Func<Attribute, Exception, bool>> { ["Microsoft.VisualStudio.TestTools.UnitTesting.ExpectedExceptionBaseAttribute"] = verifyExpectedExceptionBaseAttribute };
 
         private static bool verifyExpectedExceptionBaseAttribute(Attribute attribute, Exception e)
