@@ -399,15 +399,17 @@ namespace JBSnorro.GitTools.CI
             string assemblyPath = GetAssemblyPath(assembly);
             string appDomainBase = Path.GetDirectoryName(assemblyPath);
 
-            CopyPackagesToNewAppDomainBaseDirectory(appDomainBase);
+            CopyDependenciesToNewAppDomainBaseDirectory(appDomainBase);
 
             using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, }))
             {
                 SerializableTestResults result = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
                 {
-                    Console.WriteLine("Testing " + Path.GetFileName(assemblyPathLocal));
                     try
                     {
+                        Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPathLocal), $"{AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPathLocal)}");
+                        Console.WriteLine("Testing " + Path.GetFileName(assemblyPathLocal));
+
                         var testTypes = Assembly.LoadFrom(assemblyPathLocal)
                                                 .GetTypes()
                                                 .Where(TestClassExtensions.IsTestType)
@@ -436,19 +438,24 @@ namespace JBSnorro.GitTools.CI
                 }
             }
         }
-        private static void CopyPackagesToNewAppDomainBaseDirectory(string appDomainBase)
+
+        private static void CopyDependenciesToNewAppDomainBaseDirectory(string appDomainBase)
         {
-            // this method is mainly about AppDomainToolkit
-            string packagesDirectory = Path.GetFullPath(@"..\..\..\..\packages");
-            if (!Directory.Exists(packagesDirectory))
+            foreach (string source in Directory.GetFiles(Environment.CurrentDirectory))
             {
-                throw new Exception($"directory '{packagesDirectory}' not found");
+                if (source.EndsWith(".dll") || source.EndsWith(".exe"))
+                {
+                    string destination = Path.Combine(appDomainBase, Path.GetFileName(source));
+
+                    if (source.EndsWith("JBSnorro.dll") && File.Exists(destination))
+                        continue;
+
+                    File.Copy(source, destination, overwrite: true);
+                }
             }
-
-            var destinationDirectory = Path.GetFullPath(Path.Combine(appDomainBase, @"..\..\..\..\packages"));
-
-            CopyDirectory(new DirectoryInfo(packagesDirectory), new DirectoryInfo(destinationDirectory));
         }
+
+
         static (int, int) Add((int, int) a, (int, int) b)
         {
             return (a.Item1 + b.Item1, a.Item2 + b.Item2);
