@@ -58,9 +58,11 @@ namespace JBSnorro.GitTools.CI
             string solutionFilePath = args[0];
             string destinationDirectory = args[1];
 
-            var (status, message) = CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory);
-            Console.WriteLine(message);
-            Debug.Write(message);
+            foreach((Status status, string message) in CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory))
+            {
+                Console.WriteLine(message);
+                Debug.Write(message);
+            }
             Console.ReadLine();
         }
 
@@ -70,18 +72,18 @@ namespace JBSnorro.GitTools.CI
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static (Status, string) CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, bool writeToTestsFile = true)
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, bool writeToTestsFile = true)
         {
             var error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
             {
-                return (Status.ArgumentError, error);
+                return (Status.ArgumentError, error).ToSingleton();
             }
 
             error = ValidateDestinationDirectory(baseDestinationDirectory);
             if (error != null)
             {
-                return (Status.ArgumentError, error);
+                return (Status.ArgumentError, error).ToSingleton();
             }
 
             bool mustDoCheckout = false;
@@ -99,7 +101,7 @@ namespace JBSnorro.GitTools.CI
                 }
                 if (error1 != null)
                 {
-                    return (Status.MiscellaneousError, error1);
+                    return (Status.MiscellaneousError, error1).ToSingleton();
                 }
             }
 
@@ -109,31 +111,33 @@ namespace JBSnorro.GitTools.CI
             {
                 if (error != null)
                 {
-                    return (Status.MiscellaneousError, error);
+                    return (Status.MiscellaneousError, error).ToSingleton();
                 }
 
-                var (resultStatus, resultError) = buildAndTest(resultsFile, out string commitMessage);
+                IEnumerable<(Status Status, string Error)> results = buildAndTest(resultsFile, out string commitMessage);
                 if (writeToTestsFile)
-                    resultsFile.Append(hash, resultStatus, commitMessage);
-                return (resultStatus, resultError);
+                {
+                    results = resultsFile.Append(results, hash, commitMessage);
+                }
+                return results;
             }
 
-            (Status, string) buildAndTest(TestResultsFile resultsFile, out string commitMessage)
+            IEnumerable<(Status Status, string Error)> buildAndTest(TestResultsFile resultsFile, out string commitMessage)
             {
                 var (skip, error_) = CheckCommitMessage(sourceDirectory, hash, resultsFile, out commitMessage);
                 if (skip)
                 {
-                    return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_);
+                    return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_).ToSingleton();
                 }
                 else if (error_ != null)
                 {
-                    return (Status.MiscellaneousError, error_);
+                    return (Status.MiscellaneousError, error_).ToSingleton();
                 }
 
                 var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
                 if (error2 != null)
                 {
-                    return (Status.MiscellaneousError, error2);
+                    return (Status.MiscellaneousError, error2).ToSingleton();
                 }
 
                 if (mustDoCheckout)
@@ -142,16 +146,16 @@ namespace JBSnorro.GitTools.CI
                 var (projectsInBuildOrder, error3) = TryBuildSolution(destinationSolutionFile);
                 if (error3 != null)
                 {
-                    return (Status.BuildError, error3);
+                    return (Status.BuildError, error3).ToSingleton();
                 }
 
                 var (totalCount, error4) = RunTests(projectsInBuildOrder);
                 if (error4 != null)
                 {
-                    return (Status.TestError, error4);
+                    return (Status.TestError, error4).ToSingleton();
                 }
 
-                return (Status.Success, totalCount.ToString() + " run successfully");
+                return (Status.Success, totalCount.ToString() + " run successfully").ToSingleton();
             }
         }
 
@@ -326,7 +330,6 @@ namespace JBSnorro.GitTools.CI
             {
                 return (null, e.Message);
             }
-
         }
         private static IEnumerable<ProjectInSolution> GetProjectFilesIn(string solutionFilePath)
         {

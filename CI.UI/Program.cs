@@ -120,23 +120,25 @@ namespace CI.UI
 
             icon.Status = NotificationIconStatus.Working;
             Logger.Log("Processing message");
-            var (status, message) = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
+            var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
-            Console.WriteLine(message);
-            if (status == Status.Success)
+            foreach ((Status status, string message) in log)
             {
-                Logger.Log("Processed message: OK");
-                icon.Status = NotificationIconStatus.Ok;
-            }
-            else if (status == Status.Skipped)
-            {
-                Logger.Log("Processed message: Skipped");
-                icon.Status = NotificationIconStatus.Default;
-            }
-            else
-            {
-                Logger.Log($"Processed message: {status.ToTitle()}: " + message);
-                icon.ShowErrorBalloon(message, status);
+                if (status == Status.Success)
+                {
+                    Logger.Log("Processed message: OK");
+                    icon.Status = NotificationIconStatus.Ok;
+                }
+                else if (status == Status.Skipped)
+                {
+                    Logger.Log("Processed message: Skipped");
+                    icon.Status = NotificationIconStatus.Default;
+                }
+                else
+                {
+                    Logger.Log($"Processed message: {status.ToTitle()}: " + message);
+                    icon.ShowErrorBalloon(message, status);
+                }
             }
         }
     }

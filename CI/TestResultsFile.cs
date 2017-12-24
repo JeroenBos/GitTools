@@ -77,6 +77,23 @@ namespace JBSnorro.GitTools.CI
             }
         }
         /// <summary>
+        /// Lazily writes the specified results to this files.
+        /// </summary>
+        public IEnumerable<(Status Status, string Message)> Append(IEnumerable<(Status Status, string Message)> results, string hash, string commitMessage)
+        {
+            bool first = true;
+            return results.Select(result =>
+            {
+                if (first)
+                {
+                    first = false;
+                    this.Append(hash, result.Status, commitMessage);
+                }
+                return result;
+            });
+        }
+
+        /// <summary>
         /// Writes the specified result and key to the current file.
         /// </summary>
         public void Append(string hash, Status status, string commitMessage)
