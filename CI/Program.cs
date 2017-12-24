@@ -260,7 +260,6 @@ namespace JBSnorro.GitTools.CI
             {
                 try
                 {
-                    SetAttributesNormal(destinationDirectory);
                     Directory.Delete(destinationDirectory, recursive: true);
                 }
                 catch { }
@@ -272,7 +271,6 @@ namespace JBSnorro.GitTools.CI
                 {
                     //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
                     CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
-                    SetAttributesNormal(destinationDirectory);
                 }
                 return (Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath)), null);
             }
@@ -291,19 +289,6 @@ namespace JBSnorro.GitTools.CI
                 if (file.Name != ".testresults") // can't copy because this program currently has a filestream opened on it
                     file.CopyTo(Path.Combine(target.FullName, file.Name), true);
         }
-        private static void SetAttributesNormal(string dirPath)
-        {
-            SetAttributesNormal(new DirectoryInfo(dirPath));
-        }
-        private static void SetAttributesNormal(DirectoryInfo dir)
-        {
-            foreach (var subDir in dir.GetDirectories())
-                SetAttributesNormal(subDir);
-            foreach (var file in dir.GetFiles())
-            {
-                file.Attributes = FileAttributes.Normal;
-            }
-        }
 
         /// <summary>
         /// Tries to build the solution and returns the projects if successful; otherwise an error message.
@@ -312,7 +297,6 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
                 using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
                 {
                     foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
