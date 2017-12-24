@@ -24,7 +24,11 @@ namespace CI.UI
         {
             Logger.Log("In UI.main");
             if (args.Length != 0)
-                throw new ArgumentException("Legacy direct call deprecated; call via CI.Dispatcher");
+            {
+                string s = "Legacy direct call deprecated; call via CI.Dispatcher";
+                Logger.Log(s);
+                throw new ArgumentException(s);
+            }
 
             try
             {
