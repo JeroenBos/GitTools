@@ -310,9 +310,9 @@ namespace JBSnorro.GitTools.CI
         /// </summary>
         private static (IEnumerable<Project>, string) TryBuildSolution(string destinationSolutionFile)
         {
-            SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
             try
             {
+                SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
                 using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
                 {
                     foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
