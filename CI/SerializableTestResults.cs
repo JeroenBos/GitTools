@@ -12,19 +12,16 @@ namespace JBSnorro.GitTools.CI
     [Serializable]
     sealed class SerializableTestResults
     {
-        public int SuccessfulTestCount { get; }
         public int TotalTestCount { get; }
         public string Error { get; }
 
-        public SerializableTestResults(int totalTestCount, int successfulTestCount)
+        public SerializableTestResults(int totalTestCount)
         {
-            this.SuccessfulTestCount = successfulTestCount;
             this.TotalTestCount = totalTestCount;
         }
         public SerializableTestResults(string error)
         {
-            this.SuccessfulTestCount = -1;
-            this.TotalTestCount = -1;
+            this.TotalTestCount = int.MinValue;
             this.Error = error;
         }
     }

@@ -380,13 +380,16 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                var (totalTestCount, successCount) = projectsInBuildOrder.Select(RunTests)
-                                                                         .Aggregate(Add);
+                int totalTestCount = 0;
+                foreach (var project in projectsInBuildOrder)
+                {
+                    var count = RunTests(project);
+                    if (count == -1)
+                        return (-1, "At least one test failed");
+                    totalTestCount += count;
+                }
 
-                if (totalTestCount == successCount)
-                    return (totalTestCount, null);
-                else
-                    return (totalTestCount, $"{totalTestCount - successCount}/{totalTestCount} tests failed");
+                return (totalTestCount, null);
             }
             catch (Exception e)
             {
@@ -394,7 +397,7 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static (int totalTestCount, int successfulTestCount) RunTests(Project assembly)
+        private static int RunTests(Project assembly)
         {
             string assemblyPath = GetAssemblyPath(assembly);
             string appDomainBase = Path.GetDirectoryName(assemblyPath);
@@ -415,11 +418,16 @@ namespace JBSnorro.GitTools.CI
                                                 .Where(TestClassExtensions.IsTestType)
                                                 .ToList();
                         if (testTypes.Count == 0)
-                            return new SerializableTestResults(0, 0);
+                            return new SerializableTestResults(0);
 
-                        var (totalTestCount, successfulTestCount) = testTypes.Select(RunTests)
-                                                                             .Aggregate(Add);
-                        return new SerializableTestResults(totalTestCount, successfulTestCount);
+                        int totalTestCount = 0;
+                        foreach (var successCount in testTypes.Select(RunTests))
+                        {
+                            if (successCount == -1)
+                                return new SerializableTestResults(-1);
+                            totalTestCount += successCount;
+                        }
+                        return new SerializableTestResults(totalTestCount);
                     }
                     catch (Exception e)
                     {
@@ -434,7 +442,7 @@ namespace JBSnorro.GitTools.CI
                 }
                 else
                 {
-                    return (result.TotalTestCount, result.SuccessfulTestCount);
+                    return result.TotalTestCount;
                 }
             }
         }
@@ -460,10 +468,20 @@ namespace JBSnorro.GitTools.CI
         {
             return (a.Item1 + b.Item1, a.Item2 + b.Item2);
         }
-        private static (int totalTestCount, int successfulTestCount) RunTests(Type testType)
+        /// <returns>the number of tests if all ran successfully; otherwise -1; </returns>
+        private static int RunTests(Type testType)
         {
-            var successes = testType.GetMethods().Where(TestClassExtensions.IsTestMethod).Select(RunTest).ToList();
-            return (successes.Count, successes.Count(_ => _));
+            int totalTestCount = 0;
+            foreach (var testMethod in testType.GetMethods().Where(TestClassExtensions.IsTestMethod))
+            {
+                bool result = RunTest(testMethod);
+                if (!result)
+                {
+                    return -1;
+                }
+                totalTestCount++;
+            }
+            return totalTestCount;
         }
         private static bool RunTest(MethodInfo testMethod)
         {
