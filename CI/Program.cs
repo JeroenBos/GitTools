@@ -35,7 +35,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = true;
+        private static readonly bool skipCopySolution = false;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
@@ -472,7 +472,7 @@ namespace JBSnorro.GitTools.CI
             var testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
 
             bool success = true;
-            if (!new ThreadStart(run).InvokeWithTimeout(MaxTestDuration))
+            if (!new Action(run).InvokeWithTimeout(MaxTestDuration, ApartmentState.STA))
                 return false;
 
             return success;
