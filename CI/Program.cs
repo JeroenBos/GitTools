@@ -35,7 +35,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = false;
+        private static readonly bool skipCopySolution = true;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
@@ -380,20 +380,28 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                int totalTestCount = 0;
-                foreach (var project in projectsInBuildOrder)
+                int successCount = 0;
+                var loopResult = Parallel.ForEach(projectsInBuildOrder, (project, state) =>
                 {
-                    var count = RunTests(project);
-                    if (count == -1)
-                        return (-1, "At least one test failed");
-                    totalTestCount += count;
-                }
+                    int result = RunTests(project);
+                    if (result == -1)
+                    {
+                        state.Break();
+                    }
+                    else
+                    {
+                        Interlocked.Add(ref successCount, result);
+                    }
+                });
 
-                return (totalTestCount, null);
+                if (loopResult.LowestBreakIteration != null)
+                    return (-1, "At least one test failed");
+
+                return (successCount, null);
             }
             catch (Exception e)
             {
-                return (-1, e.Message);
+                return (-1, e.InnerException.Message);
             }
         }
 
