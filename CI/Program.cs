@@ -18,6 +18,7 @@ using System.Threading;
 using AppDomainToolkit;
 using AppDomainContext = AppDomainToolkit.AppDomainContext<AppDomainToolkit.AssemblyTargetLoader, AppDomainToolkit.PathBasedAssemblyResolver>;
 using System.Configuration;
+using JBSnorro.Diagnostics;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -30,11 +31,24 @@ namespace JBSnorro.GitTools.CI
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
         /// </summary>
         public const int MaxTestDuration = 5000;
+#if DEBUG
+        /// <summary>
+        /// Debugging flag to disable copying the solution.
+        /// </summary>
+        private static readonly bool skipCopySolution = true;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
-        private const bool skipBuild = false;
-
+        private static readonly bool skipBuild = skipCopySolution && true;
+        /// <summary>
+        /// Debugging flag to disable the check if a hash already exists in the .testresults.
+        /// </summary>
+        private static readonly bool disregardTestResultsFile = true;
+#else
+        private static readonly bool skipBuild = false;
+        private static readonly bool skipCopySolution = false;
+        private static readonly bool disregardTestResultsFile = false;
+#endif
         /// <param name="args"> Must contain the path of the solution file, and the directory where to copy the solution to. </param>
         static void Main(string[] args)
         {
@@ -212,7 +226,7 @@ namespace JBSnorro.GitTools.CI
         }
         private static (bool skip, string error) CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile, out string commitMessage)
         {
-            if (resultsFile.Hashes.ContainsKey(hash))
+            if (resultsFile.Hashes.ContainsKey(hash) && !disregardTestResultsFile)
             {
                 commitMessage = null;
                 return (true, "It is present in .testresults");
@@ -242,17 +256,24 @@ namespace JBSnorro.GitTools.CI
         }
         private static (string destinationSolutionFile, string error) TryCopySolution(string solutionFilePath, string destinationDirectory)
         {
-            try
+            if (!skipCopySolution)
             {
-                SetAttributesNormal(destinationDirectory);
-                Directory.Delete(destinationDirectory, recursive: true);
+                try
+                {
+                    SetAttributesNormal(destinationDirectory);
+                    Directory.Delete(destinationDirectory, recursive: true);
+                }
+                catch { }
             }
-            catch { }
             try
             {
-                //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
-                CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
-                SetAttributesNormal(destinationDirectory);
+
+                if (!skipCopySolution)
+                {
+                    //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
+                    CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
+                    SetAttributesNormal(destinationDirectory);
+                }
                 return (Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath)), null);
             }
             catch (Exception e)
