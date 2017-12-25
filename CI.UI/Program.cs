@@ -122,9 +122,14 @@ namespace CI.UI
             icon.Status = NotificationIconStatus.Working;
             Logger.Log("Processing message");
             TestResultsFile resultsFile = null;
+            DateTime testingStarted = default(DateTime);
             try
             {
-                var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], out resultsFile, hash);
+                var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
+                                                                                   ConfigurationManager.AppSettings["destinationDirectory"],
+                                                                                   out resultsFile,
+                                                                                   out testingStarted,
+                                                                                   hash);
 
                 foreach ((Status status, string message) in log)
                 {
@@ -148,6 +153,10 @@ namespace CI.UI
             }
             finally
             {
+                if (testingStarted != default(DateTime))
+                {
+                    Logger.Log($"Testing took {(DateTime.Now - testingStarted).TotalSeconds}s");
+                }
                 if (resultsFile != null)
                     resultsFile.Dispose();
             }

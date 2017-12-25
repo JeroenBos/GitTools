@@ -75,7 +75,7 @@ namespace JBSnorro.GitTools.CI
             TestResultsFile resultsFile = null;
             try
             {
-                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, hash);
+                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out DateTime _,hash);
             }
             finally
             {
@@ -89,9 +89,10 @@ namespace JBSnorro.GitTools.CI
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, string hash = null)
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out DateTime testingStarted, string hash = null)
         {
             resultsFile = null;
+            testingStarted = default(DateTime);
             var error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
             {
@@ -155,7 +156,7 @@ namespace JBSnorro.GitTools.CI
             {
                 return (Status.BuildError, error3).ToSingleton();
             }
-
+            testingStarted = DateTime.Now;
             return RunTests(projectsInBuildOrder);
         }
 
