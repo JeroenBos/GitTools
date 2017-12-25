@@ -20,8 +20,6 @@ using AppDomainContext = AppDomainToolkit.AppDomainContext<AppDomainToolkit.Asse
 using System.Configuration;
 using JBSnorro.Diagnostics;
 using System.IO.Pipes;
-using System.Collections;
-using System.Collections.Concurrent;
 using Task = System.Threading.Tasks.Task;
 
 namespace JBSnorro.GitTools.CI
@@ -39,7 +37,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = false;
+        private static readonly bool skipCopySolution = true;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
@@ -436,7 +434,7 @@ namespace JBSnorro.GitTools.CI
 
 
 
-            var pipes = new PipeReaders(() => new NamedPipeServerStream(PIPE_NAME, PipeDirection.In, NamedPipeServerStream.MaxAllowedServerInstances), s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
+            var pipes = new PipesReader(() => new NamedPipeServerStream(PIPE_NAME, PipeDirection.In, NamedPipeServerStream.MaxAllowedServerInstances), s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
             return Read(pipes);
 
 
@@ -499,87 +497,6 @@ namespace JBSnorro.GitTools.CI
             Contract.Assert(ERROR_CODON.Length == STOP_CODON.Length);
 
             return s?.Replace('\n', '-').Replace('\r', '-');
-        }
-
-        private sealed class PipeReaders : System.IDisposable, IEnumerable<string>
-        {
-            private readonly List<NamedPipeServerStream> pipes = new List<NamedPipeServerStream>();
-            private readonly ConcurrentQueue<string> queue = new ConcurrentQueue<string>();
-            private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-            private readonly Func<NamedPipeServerStream> createReader;
-            private readonly Func<string, bool> isQuitSignal;
-            private int expectedNumberOfConnections;
-            private volatile int aliveConnections;
-            private readonly bool spawnLazily = false;
-
-            public PipeReaders(Func<NamedPipeServerStream> createReader, Func<string, bool> isQuitSignal, int expectedNumberOfConnections)
-            {
-                this.createReader = createReader;
-                this.isQuitSignal = isQuitSignal;
-                this.expectedNumberOfConnections = expectedNumberOfConnections;
-
-                this.Spawn();
-            }
-
-            private void Spawn()
-            {
-                if (expectedNumberOfConnections == 0)
-                    return;
-
-                Interlocked.Decrement(ref this.expectedNumberOfConnections);
-                Interlocked.Increment(ref this.aliveConnections);
-                var pipe = createReader();
-                new Thread(() =>
-                {
-                    pipe.WaitForConnection();
-                    if (spawnLazily)
-                        Spawn();
-                    Loop(pipe);
-                    Interlocked.Decrement(ref this.aliveConnections);
-                })
-                .Start();
-                if (!spawnLazily)
-                {
-                    Spawn();
-                }
-            }
-            private void Loop(NamedPipeServerStream pipe)
-            {
-                using (StreamReader reader = new StreamReader(pipe))
-                {
-                    string message;
-                    do
-                    {
-                        message = reader.ReadLine();
-                        this.queue.Enqueue(message);
-                    } while (!this.isQuitSignal(message));
-                }
-            }
-
-            public void Dispose()
-            {
-                cancellationTokenSource.Cancel();
-            }
-
-            public IEnumerator<string> GetEnumerator()
-            {
-                while ((this.aliveConnections != 0 || expectedNumberOfConnections != 0) && !this.cancellationTokenSource.IsCancellationRequested)
-                {
-                    if (queue.TryDequeue(out string result))
-                    {
-                        yield return result;
-                    }
-                    else
-                    {
-                        Thread.Sleep(10);
-                    }
-                }
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return GetEnumerator();
-            }
         }
         public const string PIPE_NAME = "CI_internal_pipe";
         public const string SUCCESS_CODON = "SUCCESS_CODON";
