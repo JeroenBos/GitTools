@@ -395,7 +395,9 @@ namespace JBSnorro.GitTools.CI
              })
              {
                  IsBackground = true,
+#pragma warning disable CS0618 // Type or member is obsolete
                  ApartmentState = ApartmentState.STA
+#pragma warning restore CS0618 // Type or member is obsolete
              }.Start();
             /* 
             //TODO: distribute over threads. This snippet causes thread.Aborts to seep through catch clauses
@@ -408,7 +410,9 @@ namespace JBSnorro.GitTools.CI
             })
                 {
                     IsBackground = true,
+#pragma warning disable CS0618 // Type or member is obsolete
                     ApartmentState = ApartmentState.STA
+#pragma warning restore CS0618 // Type or member is obsolete
                 }.Start();
             }*/
 
