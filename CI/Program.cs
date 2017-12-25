@@ -33,7 +33,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Gets the number of threads used for testing. At most one thread is used per test project.
         /// </summary>
-        const int TEST_THREAD_COUNT = 1;
+        const int TEST_THREAD_COUNT = 2;
         /// <summary>
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
         /// </summary>
@@ -568,37 +568,26 @@ namespace JBSnorro.GitTools.CI
         {
             if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
 
-            var testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
-
-            Exception exception = null;
-            if (!new Action(run).InvokeWithTimeout(MaxTestDuration))
-                if (!new Action(run).InvokeWithTimeout(MaxTestDuration))
-                    return "{0} timed out";
-            return exception?.Message;
-
-            void run()
+            object testClassInstance = null;
+            try
             {
+                testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
                 TestClassExtensions.RunInitializationMethod(testClassInstance);
-                try
+                testMethod.Invoke(testClassInstance, new object[0]);
+            }
+            catch (Exception e)
+            {
+                if (!TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
                 {
-                    testMethod.Invoke(testClassInstance, new object[0]);
-                }
-                catch (ThreadAbortException)
-                {
-                    Thread.ResetAbort();
-                }
-                catch (Exception e)
-                {
-                    if (!TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
-                    {
-                        exception = e;
-                    }
-                }
-                finally
-                {
-                    TestClassExtensions.RunCleanupMethod(testClassInstance);
+                    return e.Message;
                 }
             }
+            finally
+            {
+                TestClassExtensions.RunCleanupMethod(testClassInstance);
+            }
+
+            return null;
         }
         private static string GetAssemblyPath(Project project)
         {
