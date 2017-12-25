@@ -113,7 +113,7 @@ namespace JBSnorro.GitTools.CI
 
             if (hash == null)
             {
-                var (currentCommitHash, error1) = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath));
+                string currentCommitHash = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
                 if (hash == null)
                 {
                     hash = currentCommitHash;
@@ -123,9 +123,9 @@ namespace JBSnorro.GitTools.CI
                     mustDoCheckout = true;
                     hash = currentCommitHash;
                 }
-                if (error1 != null)
+                if (error != null)
                 {
-                    return (Status.MiscellaneousError, error1).ToSingleton();
+                    return (Status.MiscellaneousError, error).ToSingleton();
                 }
             }
 
@@ -134,29 +134,29 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, error).ToSingleton();
             }
 
-            var (skip, error_) = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage);
-            if (skip)
+            bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
+            if (skipCommit)
             {
-                return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_).ToSingleton();
+                return (Status.Skipped, error).ToSingleton();
             }
-            else if (error_ != null)
+            else if (error != null)
             {
-                return (Status.MiscellaneousError, error_).ToSingleton();
+                return (Status.MiscellaneousError, error).ToSingleton();
             }
 
-            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
-            if (error2 != null)
+            string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, out error);
+            if (error != null)
             {
-                return (Status.MiscellaneousError, error2).ToSingleton();
+                return (Status.MiscellaneousError, error).ToSingleton();
             }
 
             if (mustDoCheckout)
                 GitCommandLine.Checkout(destinationDirectory, hash);
 
-            var (projectsInBuildOrder, error3) = LoadSolution(destinationSolutionFile);
-            if (error3 != null)
+            var projectsInBuildOrder = LoadSolution(destinationSolutionFile, out error);
+            if (error != null)
             {
-                return (Status.ProjectLoadingError, error3).ToSingleton();
+                return (Status.ProjectLoadingError, error).ToSingleton();
             }
 
             return ConcatIfAllPreviouses(BuildSolution(projectsInBuildOrder), buildMessage => buildMessage.Item1 == Status.BuildSuccess, () => RunTests(projectsInBuildOrder));
@@ -223,8 +223,9 @@ namespace JBSnorro.GitTools.CI
                 return e.Message;
             }
         }
-        private static (string commitHash, string error) RetrieveCommitHash(string solutionDirectory)
+        private static string RetrieveCommitHash(string solutionDirectory, out string error)
         {
+            error = null;
             try
             {
                 var branchName = File.ReadAllText(Path.Combine(solutionDirectory, @".git\HEAD"));
@@ -232,16 +233,17 @@ namespace JBSnorro.GitTools.CI
 
                 branchName = branchName.Substring("ref: ".Length, branchName.Length - "\n".Length - "ref: ".Length);
                 var commitHash = File.ReadAllText(Path.Combine(solutionDirectory, @".git\", branchName)).Substring(0, 40);
-                return (commitHash, null);
+                return commitHash;
             }
             catch (DirectoryNotFoundException e) when (e.Message.Contains(".git"))
             {
                 // if there is no git, don't copy to a directory called "no-git"
-                return ("no-git", null);
+                return "no-git";
             }
             catch (Exception e)
             {
-                return (null, e.Message);
+                error = e.Message;
+                return null;
             }
         }
 
@@ -253,19 +255,21 @@ namespace JBSnorro.GitTools.CI
             return (sourceDirectory, destinationDirectory);
 
         }
-        private static (bool skip, string error) CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile, out string commitMessage)
+        private static bool CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile, out string commitMessage, out string error)
         {
             if (resultsFile.Hashes.ContainsKey(hash) && !disregardTestResultsFile)
             {
                 commitMessage = null;
-                return (true, "It is present in .testresults");
+                error = "It is present in .testresults";
+                return true;
             }
 
             try
             {
                 commitMessage = GitCommandLine.GetCommitMessage(sourceDirectory, hash);
                 bool skip = GetAllIgnorePrefixes().Any(commitMessage.StartsWith);
-                return (skip, skip ? "The commit message starts with a prefix signaling to ignore" : null);
+                error = skip ? "The commit message starts with a prefix signaling to ignore" : null;
+                return skip;
             }
             catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
             {
@@ -274,7 +278,8 @@ namespace JBSnorro.GitTools.CI
             catch (Exception e)
             {
                 commitMessage = null;
-                return (false, e.Message);
+                error = e.Message;
+                return false;
             }
         }
         private static IEnumerable<string> GetAllIgnorePrefixes()
@@ -283,7 +288,7 @@ namespace JBSnorro.GitTools.CI
                                                    .Where(key => key.StartsWith("ignore_prefix"))
                                                    .Select(key => ConfigurationManager.AppSettings[key]);
         }
-        private static (string destinationSolutionFile, string error) TryCopySolution(string solutionFilePath, string destinationDirectory)
+        private static string TryCopySolution(string solutionFilePath, string destinationDirectory, out string error)
         {
             if (!skipCopySolution)
             {
@@ -303,11 +308,13 @@ namespace JBSnorro.GitTools.CI
                     CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
                     SetAttributesNormal(destinationDirectory);
                 }
-                return (Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath)), null);
+                error = null;
+                return Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath));
             }
             catch (Exception e)
             {
-                return (null, e.Message);
+                error = e.Message;
+                return null;
             }
         }
         /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
@@ -334,29 +341,31 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static (IReadOnlyList<Project> Projects, string Error) LoadSolution(string destinationSolutionFile)
+        private static IReadOnlyList<Project> LoadSolution(string destinationSolutionFile, out string error)
         {
             try
             {
                 SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
             }
             catch { }
-
-            using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
+            try
             {
-                try
+                using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
                 {
+
                     foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
                     {
                         projects.LoadProject(projectPath.AbsolutePath);
                     }
                     IReadOnlyList<Project> projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
-                    return (projectsInBuildOrder, null);
+                    error = null;
+                    return projectsInBuildOrder;
                 }
-                catch (Exception e)
-                {
-                    return (null, e.Message);
-                }
+            }
+            catch (Exception e)
+            {
+                error = e.Message;
+                return null;
             }
         }
         /// <summary>

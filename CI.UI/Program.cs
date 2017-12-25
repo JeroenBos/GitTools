@@ -139,7 +139,7 @@ namespace CI.UI
                             break;
 
                         case Status.Skipped:
-                            Logger.Log($"Skipped: {message}");
+                            Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {message}");
                             icon.Status = NotificationIconStatus.Default;
                             break;
 
