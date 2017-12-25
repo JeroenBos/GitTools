@@ -434,7 +434,7 @@ namespace JBSnorro.GitTools.CI
 
 
 
-            var pipes = new PipesReader(() => new NamedPipeServerStream(PIPE_NAME, PipeDirection.In, NamedPipeServerStream.MaxAllowedServerInstances), s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
+            var pipes = new NamedPipesServerStream(PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
             return Read(pipes);
 
 
