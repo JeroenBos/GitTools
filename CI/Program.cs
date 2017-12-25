@@ -21,6 +21,7 @@ using System.Configuration;
 using JBSnorro.Diagnostics;
 using System.IO.Pipes;
 using Task = System.Threading.Tasks.Task;
+using System.Collections.Concurrent;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -29,6 +30,10 @@ namespace JBSnorro.GitTools.CI
     /// </summary>
     public sealed class Program
     {
+        /// <summary>
+        /// Gets the number of threads used for testing. At most one thread is used per test project.
+        /// </summary>
+        const int TEST_THREAD_COUNT = 4;
         /// <summary>
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
         /// </summary>
@@ -73,7 +78,7 @@ namespace JBSnorro.GitTools.CI
             TestResultsFile resultsFile = null;
             try
             {
-                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out DateTime _,hash);
+                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out DateTime _, hash);
             }
             finally
             {
@@ -401,41 +406,37 @@ namespace JBSnorro.GitTools.CI
                 CopyDependenciesToNewAppDomainBaseDirectory(appDomainBase);
             }
 
-             new Thread(() =>
-             {
-                 foreach (var project in projectsInBuildOrder)
-                 {
-                     RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
-                 }
-             })
-             {
-                 IsBackground = true,
-#pragma warning disable CS0618 // Type or member is obsolete
-                 ApartmentState = ApartmentState.STA
-#pragma warning restore CS0618 // Type or member is obsolete
-             }.Start();
-            /* 
-            //TODO: distribute over threads. This snippet causes thread.Aborts to seep through catch clauses
-            foreach (var project in projectsInBuildOrder)
-            {
+            int processedProjectsCount = 0;
+            var remainingProjects = new ConcurrentQueue<Project>(projectsInBuildOrder);
 
-                new Thread(() =>
+            for (int i = 0; i < TEST_THREAD_COUNT; i++)
             {
-                RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
-            })
+                new Thread(() =>
+                {
+                    while (remainingProjects.TryDequeue(out Project project))
+                    {
+                        Interlocked.Increment(ref processedProjectsCount);
+                        RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
+                    }
+                })
                 {
                     IsBackground = true,
 #pragma warning disable CS0618 // Type or member is obsolete
                     ApartmentState = ApartmentState.STA
 #pragma warning restore CS0618 // Type or member is obsolete
                 }.Start();
-            }*/
 
-
-
+            }
 
             var pipes = new NamedPipesServerStream(PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
-            return Read(pipes);
+            return Read(pipes).ModifyLast(_ =>
+            {
+                if (processedProjectsCount != projectsInBuildOrder.Count)
+                {
+                    throw new ContractException();
+                }
+                return _;
+            });
 
 
             void RunTasksAndWriteMessagesBack(string assemblyPath)
