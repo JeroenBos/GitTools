@@ -50,8 +50,7 @@ namespace CI.UI
                 if (e.PropertyName == nameof(Status)) OnStatusChanged();
             };
 
-            //set default icon
-            this.OnStatusChanged();
+            this.Status = NotificationIconStatus.Default;
         }
 
         private void OnStatusChanged()

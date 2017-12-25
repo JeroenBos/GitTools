@@ -119,7 +119,7 @@ namespace CI.UI
         {
             Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
 
-            icon.Status = NotificationIconStatus.Working;
+            icon.Status = NotificationIconStatus.Working(0);
             Logger.Log("Processing message");
             TestResultsFile resultsFile = null;
             try

@@ -21,7 +21,7 @@ namespace CI.UI
         {
             [NotificationIconStatus.Default] = Convert(Path.Combine(iconsPath, "default_status.png")),
             [NotificationIconStatus.Ok] = Convert(Path.Combine(iconsPath, "ok_status.png")),
-            [NotificationIconStatus.Working] = Convert(Path.Combine(iconsPath, "working_status.png")),
+            [NotificationIconStatus.Working()] = Convert(Path.Combine(iconsPath, "working_status.png")),
             [NotificationIconStatus.Bad] = Convert(Path.Combine(iconsPath, "bad_status.png")),
         };
 
@@ -30,7 +30,7 @@ namespace CI.UI
         /// </summary>
         public static Icon GetIcon(NotificationIconStatus status)
         {
-            Contract.RequiresEnumIsDefined(status);
+            Contract.Requires(status != null);
 
             return icons[status];
         }
@@ -43,7 +43,7 @@ namespace CI.UI
         private static Icon Convert(Stream iconImage)
         {
             Bitmap bitmap = (Bitmap)Image.FromStream(iconImage);
-            return System.Drawing.Icon.FromHandle(bitmap.GetHicon());
+            return Icon.FromHandle(bitmap.GetHicon());
         }
     }
 }
