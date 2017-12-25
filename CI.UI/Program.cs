@@ -135,27 +135,26 @@ namespace CI.UI
                 {
                     if (status == Status.Success)
                     {
-                        Logger.Log("Processed message: OK");
+                        Logger.Log("OK: " + message);
                         icon.Status = NotificationIconStatus.Ok;
                     }
                     else if (status == Status.Skipped)
                     {
-                        Logger.Log("Processed message: Skipped");
+                        Logger.Log($"Skipped: {message}");
                         icon.Status = NotificationIconStatus.Default;
                     }
                     else
                     {
-                        Logger.Log($"Processed message: {status.ToTitle()}: " + message);
+                        Logger.Log($"{status.ToTitle()}: " + message);
                         icon.ShowErrorBalloon(message, status);
                     }
-                    Logger.Log(message);
                 }
             }
             finally
             {
                 if (testingStarted != default(DateTime))
                 {
-                    Logger.Log($"Testing took {(DateTime.Now - testingStarted).TotalSeconds}s");
+                    Logger.Log($"Time elapsed during testing {(int)Math.Ceiling((DateTime.Now - testingStarted).TotalSeconds)}s");
                 }
                 if (resultsFile != null)
                     resultsFile.Dispose();
