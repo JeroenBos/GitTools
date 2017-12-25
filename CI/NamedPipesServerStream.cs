@@ -22,6 +22,8 @@ namespace JBSnorro.GitTools.CI
         private int expectedNumberOfConnections;
         private volatile int aliveConnections;
         private readonly bool spawnLazily;
+        private int readMessagesCount;
+        public int ReadMessagesCount => readMessagesCount;
 
         public NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, bool spawnLazily = false)
         {
@@ -74,6 +76,7 @@ namespace JBSnorro.GitTools.CI
                 do
                 {
                     message = await reader.ReadLineAsync();
+                    Interlocked.Increment(ref readMessagesCount);
                     this.queue.Enqueue(message);
                 } while (!this.isQuitSignal(message) && !CancellationTokenSource.IsCancellationRequested);
             }

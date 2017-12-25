@@ -33,7 +33,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Gets the number of threads used for testing. At most one thread is used per test project.
         /// </summary>
-        const int TEST_THREAD_COUNT = 4;
+        const int TEST_THREAD_COUNT = 1;
         /// <summary>
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
         /// </summary>
@@ -42,7 +42,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = true;
+        private static readonly bool skipCopySolution = false;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
@@ -435,6 +435,10 @@ namespace JBSnorro.GitTools.CI
                 {
                     throw new ContractException();
                 }
+                if (pipes.ReadMessagesCount != messagesWrittenCount)
+                {
+                    throw new ContractException();
+                }
                 return _;
             });
 
@@ -444,8 +448,9 @@ namespace JBSnorro.GitTools.CI
                 string appDomainBase = Path.GetDirectoryName(assemblyPath);
                 using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, }))
                 {
-                    RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
+                    int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
                     {
+                        int messagesCount = 0;
                         Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPathLocal), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPathLocal)}");
 
                         using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
@@ -470,6 +475,7 @@ namespace JBSnorro.GitTools.CI
                                         const string successMessage = "{0}";
                                         string message = string.Format(RemoveLineBreaks(methodError) ?? successMessage, $"{method.DeclaringType.FullName}.{method.Name}");
                                         writer.WriteLine(codon + message);
+                                        messagesCount++;
                                     }
                                 }
                                 catch (Exception e)
@@ -478,16 +484,19 @@ namespace JBSnorro.GitTools.CI
                                     if (e.InnerException != null)
                                     {
                                         writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks(e.InnerException.Message));
+                                        messagesCount++;
                                     }
                                 }
                                 finally
                                 {
                                     writer.WriteLine(STOP_CODON + totalTestCount.ToString());
+                                    messagesCount++;
                                 }
                             }
                         }
-                        return 0;
+                        return messagesCount;
                     });
+                    Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);
                 }
             }
         }
@@ -499,6 +508,7 @@ namespace JBSnorro.GitTools.CI
 
             return s?.Replace('\n', '-').Replace('\r', '-');
         }
+        private static int messagesWrittenCount;
         public const string PIPE_NAME = "CI_internal_pipe";
         public const string SUCCESS_CODON = "SUCCESS_CODON";
         public const string ERROR_CODON = "ERROR___CODON";
@@ -507,7 +517,7 @@ namespace JBSnorro.GitTools.CI
         public static IEnumerable<(Status, string)> Read(IEnumerable<string> lines)
         {
             bool hasErrors = false;
-            int totalSuccessCount = 0;
+            List<int> totalSuccessCounts = new List<int>();
             foreach (string line in lines)
             {
 
@@ -524,7 +534,8 @@ namespace JBSnorro.GitTools.CI
                         break;
                     case STOP_CODON:
                         int successCount = int.Parse(message);
-                        totalSuccessCount += successCount;
+                        if (successCount != 0)
+                            totalSuccessCounts.Add(successCount);
                         break;
                     default:
                         throw new ContractException("Wrong codon received");
@@ -532,7 +543,7 @@ namespace JBSnorro.GitTools.CI
             }
             if (!hasErrors)
             {
-                yield return (Status.Success, $"{totalSuccessCount} tests run successfully");
+                yield return (Status.Success, $"{totalSuccessCounts.Sum()} tests run successfully");
             }
         }
 
@@ -544,8 +555,8 @@ namespace JBSnorro.GitTools.CI
                 {
                     string destination = Path.Combine(appDomainBase, Path.GetFileName(source));
 
-                    if (source.EndsWith("JBSnorro.dll") && File.Exists(destination))
-                        continue;
+                    //if (source.EndsWith("JBSnorro.dll") && File.Exists(destination))
+                    //    continue;
 
                     File.Copy(source, destination, overwrite: true);
                 }
