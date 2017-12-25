@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using JBSnorro.Extensions;
+using JBSnorro.Diagnostics;
 
 namespace JBSnorro.GitTools
 {
@@ -44,6 +45,13 @@ namespace JBSnorro.GitTools
 
             return method.HasAttribute(TestMethodAttributeFullNames) && !method.HasAttribute(TestMethodIgnoreAttributeFullNames);
         }
+        public static IEnumerable<MethodInfo> GetTestMethods(Type testType)
+        {
+            Contract.Requires(testType != null);
+            Contract.Requires(IsTestType(testType));
+
+            return testType.GetMethods().Where(IsTestMethod);
+        }
         /// <summary>
         /// Gets whether the specified test method expects the specified exception to be thrown.
         /// </summary>
@@ -62,7 +70,7 @@ namespace JBSnorro.GitTools
 
             return result;
         }
-        
+
 
         private static bool IsTestInitializationMethod(MethodInfo method)
         {

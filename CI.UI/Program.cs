@@ -39,6 +39,7 @@ namespace CI.UI
                 {
                     Logger.Log($"Directly handling message {string.Join(" ", args)}");
                     HandleInput(args);
+                    Logger.Log("Done");
                     Console.ReadLine();
                     return;
                 }
@@ -120,25 +121,35 @@ namespace CI.UI
 
             icon.Status = NotificationIconStatus.Working;
             Logger.Log("Processing message");
-            var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
-
-            foreach ((Status status, string message) in log)
+            TestResultsFile resultsFile = null;
+            try
             {
-                if (status == Status.Success)
+                var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], out resultsFile, hash);
+
+                foreach ((Status status, string message) in log)
                 {
-                    Logger.Log("Processed message: OK");
-                    icon.Status = NotificationIconStatus.Ok;
+                    if (status == Status.Success)
+                    {
+                        Logger.Log("Processed message: OK");
+                        icon.Status = NotificationIconStatus.Ok;
+                    }
+                    else if (status == Status.Skipped)
+                    {
+                        Logger.Log("Processed message: Skipped");
+                        icon.Status = NotificationIconStatus.Default;
+                    }
+                    else
+                    {
+                        Logger.Log($"Processed message: {status.ToTitle()}: " + message);
+                        icon.ShowErrorBalloon(message, status);
+                    }
+                    Logger.Log(message);
                 }
-                else if (status == Status.Skipped)
-                {
-                    Logger.Log("Processed message: Skipped");
-                    icon.Status = NotificationIconStatus.Default;
-                }
-                else
-                {
-                    Logger.Log($"Processed message: {status.ToTitle()}: " + message);
-                    icon.ShowErrorBalloon(message, status);
-                }
+            }
+            finally
+            {
+                if (resultsFile != null)
+                    resultsFile.Dispose();
             }
         }
     }

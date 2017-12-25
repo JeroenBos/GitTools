@@ -1,4 +1,5 @@
 ﻿using Microsoft.Build.Construction;
+using System.Threading;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Logging;
@@ -14,11 +15,14 @@ using System.Threading.Tasks;
 using JBSnorro;
 using JBSnorro.Extensions;
 using System.Diagnostics;
-using System.Threading;
 using AppDomainToolkit;
 using AppDomainContext = AppDomainToolkit.AppDomainContext<AppDomainToolkit.AssemblyTargetLoader, AppDomainToolkit.PathBasedAssemblyResolver>;
 using System.Configuration;
 using JBSnorro.Diagnostics;
+using System.IO.Pipes;
+using System.Collections;
+using System.Collections.Concurrent;
+using Task = System.Threading.Tasks.Task;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -58,7 +62,7 @@ namespace JBSnorro.GitTools.CI
             string solutionFilePath = args[0];
             string destinationDirectory = args[1];
 
-            foreach((Status status, string message) in CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory))
+            foreach ((Status status, string message) in CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory))
             {
                 Console.WriteLine(message);
                 Debug.Write(message);
@@ -66,14 +70,28 @@ namespace JBSnorro.GitTools.CI
             Console.ReadLine();
         }
 
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null)
+        {
+            TestResultsFile resultsFile = null;
+            try
+            {
+                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, hash);
+            }
+            finally
+            {
+                if (resultsFile != null)
+                    resultsFile.Dispose();
+            }
+        }
         /// <summary>
         /// Copies the solution to a temporary destination directory, build the solution and executes the tests and returns any errors.
         /// </summary>
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, bool writeToTestsFile = true)
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, string hash = null)
         {
+            resultsFile = null;
             var error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
             {
@@ -87,6 +105,9 @@ namespace JBSnorro.GitTools.CI
             }
 
             bool mustDoCheckout = false;
+            (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
+            resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
+
             if (hash == null)
             {
                 var (currentCommitHash, error1) = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath));
@@ -105,58 +126,37 @@ namespace JBSnorro.GitTools.CI
                 }
             }
 
-
-            (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
-            using (TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error))
+            if (error != null)
             {
-                if (error != null)
-                {
-                    return (Status.MiscellaneousError, error).ToSingleton();
-                }
-
-                IEnumerable<(Status Status, string Error)> results = buildAndTest(resultsFile, out string commitMessage);
-                if (writeToTestsFile)
-                {
-                    results = resultsFile.Append(results, hash, commitMessage);
-                }
-                return results;
+                return (Status.MiscellaneousError, error).ToSingleton();
             }
 
-            IEnumerable<(Status Status, string Error)> buildAndTest(TestResultsFile resultsFile, out string commitMessage)
+            var (skip, error_) = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage);
+            if (skip)
             {
-                var (skip, error_) = CheckCommitMessage(sourceDirectory, hash, resultsFile, out commitMessage);
-                if (skip)
-                {
-                    return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_).ToSingleton();
-                }
-                else if (error_ != null)
-                {
-                    return (Status.MiscellaneousError, error_).ToSingleton();
-                }
-
-                var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
-                if (error2 != null)
-                {
-                    return (Status.MiscellaneousError, error2).ToSingleton();
-                }
-
-                if (mustDoCheckout)
-                    GitCommandLine.Checkout(destinationDirectory, hash);
-
-                var (projectsInBuildOrder, error3) = TryBuildSolution(destinationSolutionFile);
-                if (error3 != null)
-                {
-                    return (Status.BuildError, error3).ToSingleton();
-                }
-
-                var (totalCount, error4) = RunTests(projectsInBuildOrder);
-                if (error4 != null)
-                {
-                    return (Status.TestError, error4).ToSingleton();
-                }
-
-                return (Status.Success, totalCount.ToString() + " run successfully").ToSingleton();
+                return (Status.Skipped, "The specified commit does not satisfy the conditions to be built and tested. " + error_).ToSingleton();
             }
+            else if (error_ != null)
+            {
+                return (Status.MiscellaneousError, error_).ToSingleton();
+            }
+
+            var (destinationSolutionFile, error2) = TryCopySolution(solutionFilePath, destinationDirectory);
+            if (error2 != null)
+            {
+                return (Status.MiscellaneousError, error2).ToSingleton();
+            }
+
+            if (mustDoCheckout)
+                GitCommandLine.Checkout(destinationDirectory, hash);
+
+            var (projectsInBuildOrder, error3) = TryBuildSolution(destinationSolutionFile);
+            if (error3 != null)
+            {
+                return (Status.BuildError, error3).ToSingleton();
+            }
+
+            return RunTests(projectsInBuildOrder);
         }
 
         private static string ValidateSolutionFilePath(string solutionFilePath)
@@ -297,7 +297,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Tries to build the solution and returns the projects if successful; otherwise an error message.
         /// </summary>
-        private static (IEnumerable<Project>, string) TryBuildSolution(string destinationSolutionFile)
+        private static (IReadOnlyList<Project>, string) TryBuildSolution(string destinationSolutionFile)
         {
             try
             {
@@ -379,82 +379,207 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static (int totalTestCount, string error) RunTests(IEnumerable<Project> projectsInBuildOrder)
+        private static IEnumerable<(Status, string)> RunTests(IReadOnlyList<Project> projectsInBuildOrder)
         {
-            try
+            foreach (string appDomainBase in projectsInBuildOrder.Select(GetAssemblyPath).Select(Path.GetDirectoryName))
             {
-                int successCount = 0;
-                var loopResult = Parallel.ForEach(projectsInBuildOrder, (project, state) =>
-                {
-                    int result = RunTests(project);
-                    if (result == -1)
-                    {
-                        state.Break();
-                    }
-                    else
-                    {
-                        Interlocked.Add(ref successCount, result);
-                    }
-                });
-
-                if (loopResult.LowestBreakIteration != null)
-                    return (-1, "At least one test failed");
-
-                return (successCount, null);
+                CopyDependenciesToNewAppDomainBaseDirectory(appDomainBase);
             }
-            catch (Exception e)
+
+            //TODO: distribute over threads
+            new Thread(() =>
             {
-                return (-1, e.InnerException.Message);
+                foreach (var project in projectsInBuildOrder)
+                {
+                    RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
+                }
+            })
+            {
+                IsBackground = true,
+                ApartmentState = ApartmentState.STA
+            }.Start();
+
+
+
+            var pipes = new PipeReaders(() => new NamedPipeServerStream(PIPE_NAME, PipeDirection.In, NamedPipeServerStream.MaxAllowedServerInstances), s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
+            return Read(pipes);
+
+
+            void RunTasksAndWriteMessagesBack(string assemblyPath)
+            {
+                string appDomainBase = Path.GetDirectoryName(assemblyPath);
+                using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, }))
+                {
+                    RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
+                    {
+                        Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPathLocal), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPathLocal)}");
+
+                        using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
+                        {
+                            outPipe.Connect();
+                            using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
+                            {
+                                int totalTestCount = 0;
+                                try
+                                {
+                                    var tests = Assembly.LoadFrom(assemblyPathLocal)
+                                                        .GetTypes()
+                                                        .Where(TestClassExtensions.IsTestType)
+                                                        .SelectMany(TestClassExtensions.GetTestMethods)
+                                                        .Select(testMethod => (testMethod, RunTest(testMethod)));
+
+                                    foreach ((MethodInfo method, string methodError) in tests)
+                                    {
+                                        totalTestCount++;
+
+                                        string codon = methodError == null ? SUCCESS_CODON : ERROR_CODON;
+                                        const string successMessage = "{0}";
+                                        string message = string.Format(RemoveLineBreaks(methodError) ?? successMessage, $"{method.DeclaringType.FullName}.{method.Name}");
+                                        writer.WriteLine(codon + message);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    writer.WriteLine(ERROR_CODON + RemoveLineBreaks(e.Message));
+                                    if (e.InnerException != null)
+                                    {
+                                        writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks(e.InnerException.Message));
+                                    }
+                                }
+                                finally
+                                {
+                                    writer.WriteLine(STOP_CODON + totalTestCount.ToString());
+                                }
+                            }
+                        }
+                        return 0;
+                    });
+                }
             }
         }
 
-        private static int RunTests(Project assembly)
+        private static string RemoveLineBreaks(string s)
         {
-            string assemblyPath = GetAssemblyPath(assembly);
-            string appDomainBase = Path.GetDirectoryName(assemblyPath);
+            Contract.Assert(SUCCESS_CODON.Length == STOP_CODON.Length);
+            Contract.Assert(ERROR_CODON.Length == STOP_CODON.Length);
 
-            CopyDependenciesToNewAppDomainBaseDirectory(appDomainBase);
+            return s?.Replace('\n', '-').Replace('\r', '-');
+        }
 
-            using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, }))
+        private sealed class PipeReaders : System.IDisposable, IEnumerable<string>
+        {
+            private readonly List<NamedPipeServerStream> pipes = new List<NamedPipeServerStream>();
+            private readonly ConcurrentQueue<string> queue = new ConcurrentQueue<string>();
+            private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+            private readonly Func<NamedPipeServerStream> createReader;
+            private readonly Func<string, bool> isQuitSignal;
+            private int expectedNumberOfConnections;
+            private volatile int aliveConnections;
+            private readonly bool spawnLazily = false;
+
+            public PipeReaders(Func<NamedPipeServerStream> createReader, Func<string, bool> isQuitSignal, int expectedNumberOfConnections)
             {
-                SerializableTestResults result = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
+                this.createReader = createReader;
+                this.isQuitSignal = isQuitSignal;
+                this.expectedNumberOfConnections = expectedNumberOfConnections;
+
+                this.Spawn();
+            }
+
+            private void Spawn()
+            {
+                if (expectedNumberOfConnections == 0)
+                    return;
+
+                Interlocked.Decrement(ref this.expectedNumberOfConnections);
+                Interlocked.Increment(ref this.aliveConnections);
+                var pipe = createReader();
+                new Thread(() =>
                 {
-                    try
-                    {
-                        Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPathLocal), $"{AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPathLocal)}");
-                        Console.WriteLine("Testing " + Path.GetFileName(assemblyPathLocal));
-
-                        var testTypes = Assembly.LoadFrom(assemblyPathLocal)
-                                                .GetTypes()
-                                                .Where(TestClassExtensions.IsTestType)
-                                                .ToList();
-                        if (testTypes.Count == 0)
-                            return new SerializableTestResults(0);
-
-                        int totalTestCount = 0;
-                        foreach (var successCount in testTypes.Select(RunTests))
-                        {
-                            if (successCount == -1)
-                                return new SerializableTestResults(-1);
-                            totalTestCount += successCount;
-                        }
-                        return new SerializableTestResults(totalTestCount);
-                    }
-                    catch (Exception e)
-                    {
-                        return new SerializableTestResults(e.Message);
-                    }
-                });
-
-                if (result.Error != null)
+                    pipe.WaitForConnection();
+                    if (spawnLazily)
+                        Spawn();
+                    Loop(pipe);
+                    Interlocked.Decrement(ref this.aliveConnections);
+                })
+                .Start();
+                if (!spawnLazily)
                 {
-                    // rethrow exception in main AppDomain
-                    throw new Exception(result.Error);
+                    Spawn();
                 }
-                else
+            }
+            private void Loop(NamedPipeServerStream pipe)
+            {
+                using (StreamReader reader = new StreamReader(pipe))
                 {
-                    return result.TotalTestCount;
+                    string message;
+                    do
+                    {
+                        message = reader.ReadLine();
+                        this.queue.Enqueue(message);
+                    } while (!this.isQuitSignal(message));
                 }
+            }
+
+            public void Dispose()
+            {
+                cancellationTokenSource.Cancel();
+            }
+
+            public IEnumerator<string> GetEnumerator()
+            {
+                while ((this.aliveConnections != 0 || expectedNumberOfConnections != 0) && !this.cancellationTokenSource.IsCancellationRequested)
+                {
+                    if (queue.TryDequeue(out string result))
+                    {
+                        yield return result;
+                    }
+                    else
+                    {
+                        Thread.Sleep(10);
+                    }
+                }
+            }
+
+            IEnumerator IEnumerable.GetEnumerator()
+            {
+                return GetEnumerator();
+            }
+        }
+        public const string PIPE_NAME = "CI_internal_pipe";
+        public const string SUCCESS_CODON = "SUCCESS_CODON";
+        public const string ERROR_CODON = "ERROR___CODON";
+        public const string STOP_CODON = "STOPS___CODON";
+
+        public static IEnumerable<(Status, string)> Read(IEnumerable<string> lines)
+        {
+            bool hasErrors = false;
+            int totalSuccessCount = 0;
+            foreach (string line in lines)
+            {
+
+                string codon = line.Substring(0, ERROR_CODON.Length);
+                string message = line.Substring(ERROR_CODON.Length);
+
+                switch (codon)
+                {
+                    case SUCCESS_CODON:
+                        break;
+                    case ERROR_CODON:
+                        hasErrors = true;
+                        yield return (Status.TestError, message);
+                        break;
+                    case STOP_CODON:
+                        int successCount = int.Parse(message);
+                        totalSuccessCount += successCount;
+                        break;
+                    default:
+                        throw new ContractException("Wrong codon received");
+                }
+            }
+            if (!hasErrors)
+            {
+                yield return (Status.Success, $"{totalSuccessCount} tests run successfully");
             }
         }
 
@@ -474,38 +599,18 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-
-        static (int, int) Add((int, int) a, (int, int) b)
-        {
-            return (a.Item1 + b.Item1, a.Item2 + b.Item2);
-        }
-        /// <returns>the number of tests if all ran successfully; otherwise -1; </returns>
-        private static int RunTests(Type testType)
-        {
-            int totalTestCount = 0;
-            foreach (var testMethod in testType.GetMethods().Where(TestClassExtensions.IsTestMethod))
-            {
-                bool result = RunTest(testMethod);
-                if (!result)
-                {
-                    return -1;
-                }
-                totalTestCount++;
-            }
-            return totalTestCount;
-        }
-        private static bool RunTest(MethodInfo testMethod)
+        /// <returns>null means the test succeeded; otherwise the error message. </returns>
+        private static string RunTest(MethodInfo testMethod)
         {
             if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
 
             var testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
 
-            bool success = true;
-            if (!new Action(run).InvokeWithTimeout(MaxTestDuration, ApartmentState.STA))
-                return false;
-
-            return success;
-
+            Exception exception = null;
+            if (!new Action(run).InvokeWithTimeout(MaxTestDuration))
+                if (!new Action(run).InvokeWithTimeout(MaxTestDuration))
+                    return "{0} timed out";
+            return exception?.Message;
 
             void run()
             {
@@ -517,7 +622,9 @@ namespace JBSnorro.GitTools.CI
                 catch (Exception e)
                 {
                     if (!TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
-                        success = false;
+                    {
+                        exception = e;
+                    }
                 }
                 finally
                 {
