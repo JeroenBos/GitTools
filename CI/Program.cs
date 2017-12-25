@@ -39,7 +39,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = true;
+        private static readonly bool skipCopySolution = false;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
@@ -386,18 +386,32 @@ namespace JBSnorro.GitTools.CI
                 CopyDependenciesToNewAppDomainBaseDirectory(appDomainBase);
             }
 
-            //TODO: distribute over threads
-            new Thread(() =>
+             new Thread(() =>
+             {
+                 foreach (var project in projectsInBuildOrder)
+                 {
+                     RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
+                 }
+             })
+             {
+                 IsBackground = true,
+                 ApartmentState = ApartmentState.STA
+             }.Start();
+            /* 
+            //TODO: distribute over threads. This snippet causes thread.Aborts to seep through catch clauses
+            foreach (var project in projectsInBuildOrder)
             {
-                foreach (var project in projectsInBuildOrder)
-                {
-                    RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
-                }
+
+                new Thread(() =>
+            {
+                RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
             })
-            {
-                IsBackground = true,
-                ApartmentState = ApartmentState.STA
-            }.Start();
+                {
+                    IsBackground = true,
+                    ApartmentState = ApartmentState.STA
+                }.Start();
+            }*/
+
 
 
 
@@ -618,6 +632,10 @@ namespace JBSnorro.GitTools.CI
                 try
                 {
                     testMethod.Invoke(testClassInstance, new object[0]);
+                }
+                catch (ThreadAbortException)
+                {
+                    Thread.ResetAbort();
                 }
                 catch (Exception e)
                 {
