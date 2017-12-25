@@ -122,40 +122,51 @@ namespace CI.UI
             icon.Status = NotificationIconStatus.Working;
             Logger.Log("Processing message");
             TestResultsFile resultsFile = null;
-            DateTime testingStarted = default(DateTime);
             try
             {
                 var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
                                                                                    ConfigurationManager.AppSettings["destinationDirectory"],
                                                                                    out resultsFile,
-                                                                                   out testingStarted,
                                                                                    hash);
 
                 foreach ((Status status, string message) in log)
                 {
-                    if (status == Status.Success)
+                    switch (status)
                     {
-                        Logger.Log("OK: " + message);
-                        icon.Status = NotificationIconStatus.Ok;
-                    }
-                    else if (status == Status.Skipped)
-                    {
-                        Logger.Log($"Skipped: {message}");
-                        icon.Status = NotificationIconStatus.Default;
-                    }
-                    else
-                    {
-                        Logger.Log($"{status.ToTitle()}: " + message);
-                        icon.ShowErrorBalloon(message, status);
+                        case Status.Success:
+                            Logger.Log("OK: " + message);
+                            icon.Status = NotificationIconStatus.Ok;
+                            break;
+
+                        case Status.Skipped:
+                            Logger.Log($"Skipped: {message}");
+                            icon.Status = NotificationIconStatus.Default;
+                            break;
+
+                        case Status.TestSuccess:
+                            // TODO: some form of progress bar
+                            break;
+
+                        case Status.BuildSuccess:
+                            Logger.Log(message);
+                            break;
+
+                        case Status.ArgumentError:
+                        case Status.MiscellaneousError:
+                        case Status.ProjectLoadingError:
+                        case Status.BuildError:
+                        case Status.TestError:
+                        case Status.UnhandledException:
+                            Logger.Log($"{status.ToTitle()}: " + message);
+                            icon.ShowErrorBalloon(message, status);
+                            break;
+                        default:
+                            throw new DefaultSwitchCaseUnreachableException();
                     }
                 }
             }
             finally
             {
-                if (testingStarted != default(DateTime))
-                {
-                    Logger.Log($"Time elapsed during testing {(int)Math.Ceiling((DateTime.Now - testingStarted).TotalSeconds)}s");
-                }
                 if (resultsFile != null)
                     resultsFile.Dispose();
             }

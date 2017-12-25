@@ -78,7 +78,7 @@ namespace JBSnorro.GitTools.CI
             TestResultsFile resultsFile = null;
             try
             {
-                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out DateTime _, hash);
+                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, hash);
             }
             finally
             {
@@ -92,10 +92,9 @@ namespace JBSnorro.GitTools.CI
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out DateTime testingStarted, string hash = null)
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, string hash = null)
         {
             resultsFile = null;
-            testingStarted = default(DateTime);
             var error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
             {
@@ -154,15 +153,37 @@ namespace JBSnorro.GitTools.CI
             if (mustDoCheckout)
                 GitCommandLine.Checkout(destinationDirectory, hash);
 
-            var (projectsInBuildOrder, error3) = TryBuildSolution(destinationSolutionFile);
+            var (projectsInBuildOrder, error3) = LoadSolution(destinationSolutionFile);
             if (error3 != null)
             {
-                return (Status.BuildError, error3).ToSingleton();
+                return (Status.ProjectLoadingError, error3).ToSingleton();
             }
-            testingStarted = DateTime.Now;
-            return RunTests(projectsInBuildOrder);
-        }
 
+            return ConcatIfAllPreviouses(BuildSolution(projectsInBuildOrder), buildMessage => buildMessage.Item1 == Status.BuildSuccess, () => RunTests(projectsInBuildOrder));
+        }
+        /// <summary>
+        /// Yields the elements of the second sequence only if all elements in the first sequence match the specified predicate.
+        /// </summary>
+        public static IEnumerable<T> ConcatIfAllPreviouses<T>(IEnumerable<T> firstSequence, Func<T, bool> predicate, Func<IEnumerable<T>> secondSequence)
+        {
+            Contract.Requires(firstSequence != null);
+            Contract.Requires(predicate != null);
+            Contract.Requires(secondSequence != null);
+
+            bool allMatchPredicate = true;
+            foreach (T element in firstSequence)
+            {
+                allMatchPredicate = allMatchPredicate && predicate(element);
+                yield return element;
+            }
+            if (allMatchPredicate)
+            {
+                foreach (T element in secondSequence())
+                {
+                    yield return element;
+                }
+            }
+        }
         private static string ValidateSolutionFilePath(string solutionFilePath)
         {
             if (solutionFilePath == null) { throw new ArgumentNullException(nameof(solutionFilePath)); }
@@ -313,42 +334,61 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        /// <summary>
-        /// Tries to build the solution and returns the projects if successful; otherwise an error message.
-        /// </summary>
-        private static (IReadOnlyList<Project>, string) TryBuildSolution(string destinationSolutionFile)
+        private static (IReadOnlyList<Project> Projects, string Error) LoadSolution(string destinationSolutionFile)
         {
             try
             {
                 SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
-                using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
+            }
+            catch { }
+
+            using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
+            {
+                try
                 {
                     foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
                     {
                         projects.LoadProject(projectPath.AbsolutePath);
                     }
-                    var projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
-
-                    if (!skipBuild)
-                    {
-#pragma warning disable CS0162 // Unreachable code detected
-                        foreach (var project in projectsInBuildOrder)
-                        {
-                            bool success = project.Build(new ConsoleLogger());
-                            if (!success)
-                            {
-                                return (null, "Build failed");
-                            }
-                        }
-#pragma warning restore CS0162 // Unreachable code detected
-                    }
-
+                    IReadOnlyList<Project> projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
                     return (projectsInBuildOrder, null);
                 }
+                catch (Exception e)
+                {
+                    return (null, e.Message);
+                }
             }
-            catch (Exception e)
+        }
+        /// <summary>
+        /// Tries to build the solution and returns the projects if successful; otherwise an error message.
+        /// </summary>
+        private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<Project> projectsInBuildOrder)
+        {
+            if (skipBuild)
+                yield break;
+
+            foreach (var project in projectsInBuildOrder)
             {
-                return (null, e.Message);
+                string errorMessage = null;
+                bool success = false;
+                try
+                {
+                    success = project.Build(new ConsoleLogger());
+                }
+                catch (Exception e)
+                {
+                    errorMessage = e.Message;
+                }
+
+                if (success)
+                {
+                    yield return (Status.BuildSuccess, $"Assembly {Path.GetFileName(project.FullPath)} built successfully");
+                }
+                else
+                {
+                    yield return (Status.BuildError, errorMessage ?? "Unknown error");
+                    yield break;
+                }
             }
         }
         private static IEnumerable<ProjectInSolution> GetProjectFilesIn(string solutionFilePath)
@@ -401,47 +441,42 @@ namespace JBSnorro.GitTools.CI
 
         private static IEnumerable<(Status, string)> RunTests(IReadOnlyList<Project> projectsInBuildOrder)
         {
-            foreach (string appDomainBase in projectsInBuildOrder.Select(GetAssemblyPath).Select(Path.GetDirectoryName))
+            try
             {
-                CopyDependenciesToNewAppDomainBaseDirectory(appDomainBase);
-            }
-
-            int processedProjectsCount = 0;
-            var remainingProjects = new ConcurrentQueue<Project>(projectsInBuildOrder);
-
-            for (int i = 0; i < TEST_THREAD_COUNT; i++)
-            {
-                new Thread(() =>
+                foreach (string appDomainBase in projectsInBuildOrder.Select(GetAssemblyPath).Select(Path.GetDirectoryName))
                 {
-                    while (remainingProjects.TryDequeue(out Project project))
+                    CopyDependenciesToNewAppDomainBaseDirectory(appDomainBase);
+                }
+
+                int processedProjectsCount = 0;
+                var remainingProjects = new ConcurrentQueue<Project>(projectsInBuildOrder);
+
+                for (int i = 0; i < TEST_THREAD_COUNT; i++)
+                {
+                    new Thread(() =>
                     {
-                        Interlocked.Increment(ref processedProjectsCount);
-                        RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
-                    }
-                })
-                {
-                    IsBackground = true,
+                        while (remainingProjects.TryDequeue(out Project project))
+                        {
+                            Interlocked.Increment(ref processedProjectsCount);
+                            RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
+                        }
+                    })
+                    {
+                        IsBackground = true,
 #pragma warning disable CS0618 // Type or member is obsolete
-                    ApartmentState = ApartmentState.STA
+                        ApartmentState = ApartmentState.STA
 #pragma warning restore CS0618 // Type or member is obsolete
-                }.Start();
+                    }.Start();
 
+                }
+
+                var pipes = new NamedPipesServerStream(PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
+                return Read(pipes);
             }
-
-            var pipes = new NamedPipesServerStream(PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
-            return Read(pipes).ModifyLast(_ =>
+            catch (Exception e)
             {
-                if (processedProjectsCount != projectsInBuildOrder.Count)
-                {
-                    throw new ContractException();
-                }
-                if (pipes.ReadMessagesCount != messagesWrittenCount)
-                {
-                    throw new ContractException();
-                }
-                return _;
-            });
-
+                return (Status.MiscellaneousError, e.Message).ToSingleton();
+            }
 
             void RunTasksAndWriteMessagesBack(string assemblyPath)
             {

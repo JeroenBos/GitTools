@@ -145,12 +145,15 @@ namespace JBSnorro.GitTools.CI
             switch (status)
             {
                 case Status.Success:
+                case Status.BuildSuccess:
+                case Status.TestSuccess:
                     return TestResult.Success;
                 case Status.ArgumentError:
                 case Status.MiscellaneousError:
                 case Status.BuildError:
                 case Status.TestError:
                 case Status.UnhandledException:
+                case Status.ProjectLoadingError:
                     return TestResult.Failure;
                 case Status.Skipped:
                     return TestResult.Ignored;

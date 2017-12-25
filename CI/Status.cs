@@ -13,8 +13,11 @@ namespace JBSnorro.GitTools.CI
     public enum Status
     {
         Success,
+        TestSuccess,
+        BuildSuccess,
         ArgumentError,
         MiscellaneousError,
+        ProjectLoadingError,
         BuildError,
         TestError,
         UnhandledException,
@@ -30,11 +33,17 @@ namespace JBSnorro.GitTools.CI
             switch (status)
             {
                 case Status.Success:
-                    return "Tests run successfully";
+                    return "All tests successful";
+                case Status.TestSuccess:
+                    return "Test successful";
+                case Status.BuildSuccess:
+                    return "Build successful";
                 case Status.ArgumentError:
                     return "Input invalid";
                 case Status.MiscellaneousError:
                     return "Unknown error";
+                case Status.ProjectLoadingError:
+                    return "Loading project failed";
                 case Status.BuildError:
                     return "Build failed";
                 case Status.TestError:
