@@ -120,16 +120,20 @@ namespace CI.UI
             Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
 
             Logger.Log("Processing message");
-            icon.Status = NotificationIconStatus.Working(0);
+            DateTime start = DateTime.Now;
+            icon.Status = NotificationIconStatus.Working(0, "Starting...");
             TestResultsFile resultsFile = null;
             string commitMessage = null;
             TestResult overallStatus = TestResult.Failure;
+            int builtProjectsCount = 0;
+            int successfulTestsCount = 0;
             try
             {
                 var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
                                                                                    ConfigurationManager.AppSettings["destinationDirectory"],
                                                                                    out resultsFile,
                                                                                    out commitMessage,
+                                                                                   out int projectCount,
                                                                                    hash);
 
                 foreach ((Status status, string message) in log)
@@ -148,12 +152,15 @@ namespace CI.UI
                             overallStatus = TestResult.Ignored;
                             break;
 
-                        case Status.TestSuccess:
-                            // TODO: some form of progress bar
+                        case Status.BuildSuccess:
+                            builtProjectsCount++;
+                            icon.Status = NotificationIconStatus.Working(GetEstimatedPercentage(), $"{builtProjectsCount}/{projectCount} projects built");
+                            Logger.Log(message);
                             break;
 
-                        case Status.BuildSuccess:
-                            Logger.Log(message);
+                        case Status.TestSuccess:
+                            successfulTestsCount++;
+                            icon.Status = NotificationIconStatus.Working(GetEstimatedPercentage(), $"{successfulTestsCount}/{getTotalTestCount()} tests successful");
                             break;
 
                         case Status.ArgumentError:
@@ -176,11 +183,34 @@ namespace CI.UI
                 {
                     try
                     {
-                        resultsFile.Append(hash, overallStatus, commitMessage);
+                        resultsFile.Append(hash, overallStatus, commitMessage, (int)Math.Ceiling((DateTime.Now - start).TotalSeconds), successfulTestsCount);
                     }
                     catch { }
 
                     resultsFile.Dispose();
+                }
+            }
+
+            float GetEstimatedPercentage()
+            {
+                if (resultsFile.Estimate == TimingEstimator.UnknownEstimate)
+                    return 0;
+
+                float result = (float)(DateTime.Now - start).TotalSeconds / resultsFile.Estimate;
+                if (result > 1)
+                    return 1;
+                else
+                    return result;
+            }
+            string getTotalTestCount()
+            {
+                if (successfulTestsCount >= resultsFile.TestCount)
+                {
+                    return "?";
+                }
+                else
+                {
+                    return resultsFile.TestCount.ToString();
                 }
             }
         }

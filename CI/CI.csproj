@@ -91,6 +91,7 @@
     <Compile Include="SerializableTestResults.cs" />
     <Compile Include="Status.cs" />
     <Compile Include="TestResultsFile.cs" />
+    <Compile Include="TimingEstimator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">

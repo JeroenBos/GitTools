@@ -10,14 +10,17 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using JBSnorro.GitTools.CI;
 using System.Windows.Threading;
+using System.ComponentModel;
 
 namespace CI.UI
 {
     /// <summary>
     /// Wraps around the notification area.
     /// </summary>
-    public sealed class NotificationIcon : DefaultINotifyPropertyChanged, IDisposable
+    public sealed class NotificationIcon : INotifyPropertyChanged, IDisposable
     {
+        public event PropertyChangedEventHandler PropertyChanged;
+
         /// <summary>
         /// Gets the duration to show the error balloon in ms.
         /// </summary>
@@ -30,7 +33,14 @@ namespace CI.UI
         public NotificationIconStatus Status
         {
             get => this._status;
-            set => base.Set(ref this._status, value);
+            set
+            {
+                if (!NotificationIconStatus.EqualityComparerIncludingText.Equals(this._status, value))
+                {
+                    this._status = value;
+                    this.PropertyChanged(this, new PropertyChangedEventArgs(nameof(Status)));
+                }
+            }
         }
 
         /// <summary>
@@ -55,7 +65,9 @@ namespace CI.UI
 
         private void OnStatusChanged()
         {
-            this.Icon.Icon = Icons.GetIcon(this.Status);
+            var status = this.Status;
+            this.Icon.Icon = Icons.GetIcon(status);
+            this.Icon.Text = status.IsWorking ? status.WorkingHoverText : null;
         }
 
         /// <summary>
@@ -85,5 +97,6 @@ namespace CI.UI
         }
 
         private NotificationIconStatus _status;
+
     }
 }

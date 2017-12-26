@@ -1,5 +1,7 @@
-﻿using JBSnorro.Diagnostics;
+﻿using JBSnorro;
+using JBSnorro.Diagnostics;
 using System;
+using System.Collections.Generic;
 
 namespace CI.UI
 {
@@ -8,30 +10,43 @@ namespace CI.UI
     /// </summary>
     public sealed class NotificationIconStatus
     {
+        public static IEqualityComparer<NotificationIconStatus> EqualityComparerIncludingText = InterfaceWraps.ToEqualityComparer<NotificationIconStatus>((left, right) => ReferenceEquals(left, right) || (left != null && right != null && left.IsWorking && right.IsWorking && left.WorkingHoverText == right.WorkingHoverText));
         public static readonly NotificationIconStatus Default = new NotificationIconStatus();
         public static readonly NotificationIconStatus Ok = new NotificationIconStatus();
         public static readonly NotificationIconStatus Bad = new NotificationIconStatus();
 
-        public static NotificationIconStatus Working(float percentage = 0) => new NotificationIconStatus(percentage);
+        public static NotificationIconStatus Working(float percentage = 0, string hoverText = null) => new NotificationIconStatus(percentage, hoverText);
 
-        internal float WorkingPercentage
+        public float WorkingPercentage
         {
             get
             {
-                Contract.Requires<InvalidOperationException>(this != Default && this != Ok && this != Bad, "Can only obtain percentage of working status");
+                Contract.Requires<InvalidOperationException>(this.IsWorking, "Can only obtain percentage of working status");
 
                 return this._percentage;
             }
         }
+        public string WorkingHoverText
+        {
+            get
+            {
+                Contract.Requires<InvalidOperationException>(this.IsWorking, "Can only obtain percentage of working status");
+
+                return this._text;
+            }
+        }
+        public bool IsWorking => this != Default && this != Ok && this != Bad;
         private readonly float _percentage;
+        private readonly string _text;
 
         private NotificationIconStatus() { }
-        private NotificationIconStatus(float percentage)
+        private NotificationIconStatus(float percentage, string text)
         {
             Contract.Requires(0 <= percentage);
             Contract.Requires(percentage <= 1);
 
             this._percentage = percentage;
+            this._text = text;
         }
 
         /// <summary>
@@ -39,7 +54,7 @@ namespace CI.UI
         /// </summary>
         public override bool Equals(object obj)
         {
-            if (this != Default && this != Ok && this != Bad)
+            if (this.IsWorking)
                 return obj != Default && obj != Ok && obj != Bad;
             return base.Equals(obj);
         }

@@ -42,7 +42,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = false;
+        private static readonly bool skipCopySolution = true;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
@@ -78,7 +78,7 @@ namespace JBSnorro.GitTools.CI
             TestResultsFile resultsFile = null;
             try
             {
-                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, hash);
+                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, out int projectCount ,hash);
             }
             finally
             {
@@ -92,8 +92,9 @@ namespace JBSnorro.GitTools.CI
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out string commitMessage, string hash = null)
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out string commitMessage, out int projectCount, string hash = null)
         {
+            projectCount = -1;
             resultsFile = null;
             commitMessage = "";
             var error = ValidateSolutionFilePath(solutionFilePath);
@@ -160,6 +161,7 @@ namespace JBSnorro.GitTools.CI
                 return (Status.ProjectLoadingError, error).ToSingleton();
             }
 
+            projectCount = projectsInBuildOrder.Count;
             return ConcatIfAllPreviouses(BuildSolution(projectsInBuildOrder), buildMessage => buildMessage.Item1 == Status.BuildSuccess, () => RunTests(projectsInBuildOrder));
         }
         /// <summary>
@@ -516,11 +518,18 @@ namespace JBSnorro.GitTools.CI
                                     {
                                         totalTestCount++;
 
-                                        string codon = methodError == null ? SUCCESS_CODON : ERROR_CODON;
-                                        const string successMessage = "{0}";
-                                        string message = string.Format(RemoveLineBreaks(methodError) ?? successMessage, $"{method.DeclaringType.FullName}.{method.Name}");
-                                        writer.WriteLine(codon + message);
-                                        messagesCount++;
+                                        if(methodError == null)
+                                        {
+                                            const string successMessage = "";
+                                            writer.WriteLine(SUCCESS_CODON + successMessage);
+                                            messagesCount++;
+                                        }
+                                        else
+                                        {
+                                            string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
+                                            writer.WriteLine(ERROR_CODON + message);
+                                            messagesCount++;
+                                        }
                                     }
                                 }
                                 catch (Exception e)
@@ -572,6 +581,7 @@ namespace JBSnorro.GitTools.CI
                 switch (codon)
                 {
                     case SUCCESS_CODON:
+                        yield return (Status.TestSuccess, message);
                         break;
                     case ERROR_CODON:
                         hasErrors = true;
@@ -599,9 +609,6 @@ namespace JBSnorro.GitTools.CI
                 if (source.EndsWith(".dll") || source.EndsWith(".exe"))
                 {
                     string destination = Path.Combine(appDomainBase, Path.GetFileName(source));
-
-                    //if (source.EndsWith("JBSnorro.dll") && File.Exists(destination))
-                    //    continue;
 
                     File.Copy(source, destination, overwrite: true);
                 }
