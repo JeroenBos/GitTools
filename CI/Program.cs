@@ -42,7 +42,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = true;
+        private static readonly bool skipCopySolution = false;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>

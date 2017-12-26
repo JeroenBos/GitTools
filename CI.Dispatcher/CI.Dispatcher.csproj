@@ -61,6 +61,20 @@
     <Reference Include="JBSnorro">
       <HintPath>D:\ASDE\JBSnorro\bin\x86\Debug\JBSnorro.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Build">
+      <HintPath>..\CI.UI\bin\x86\Debug\Microsoft.Build.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Build.Framework">
+      <HintPath>..\CI.UI\bin\x86\Debug\Microsoft.Build.Framework.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\CI.UI\bin\x86\Debug\Microsoft.Build.Tasks.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Build.Utilities.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\CI.UI\bin\x86\Debug\Microsoft.Build.Utilities.Core.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
   </ItemGroup>

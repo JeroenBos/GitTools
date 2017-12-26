@@ -18,6 +18,7 @@ namespace CI
         private static bool inProcessMessageProcesserIsRunning;
         private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new ContractException();
         private const int timeout = 1000;
+        private const string START_UI_ARG = "Start UI";
 
         /// <summary>
         /// The purpose of this application is for each time it is executed, dispatch the message to the only running instance of CI.UI.
@@ -28,6 +29,12 @@ namespace CI
             Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
             try
             {
+                if (args.Length > 0 && args[0] == START_UI_ARG)
+                {
+                    StartCIUI(inProcess: true);
+                    args = args.Skip(1).ToArray();
+                }
+
                 var message = ComposeMessage(args);
                 if (message != null)
                 {
@@ -83,9 +90,12 @@ namespace CI
             // TODO: implement CancellationToken and async/returning task 
             if (inProcess)
             {
-                inProcessMessageProcesserIsRunning = true;
-                Logger.Log("Starting CI.UI in process");
-                Task.Run(() => Program.Main(Array.Empty<string>())).ContinueWith(t => inProcessMessageProcesserIsRunning = false);
+                if (!inProcessMessageProcesserIsRunning)
+                {
+                    inProcessMessageProcesserIsRunning = true;
+                    Logger.Log("Starting CI.UI in process");
+                    Task.Run(() => Program.Main(Array.Empty<string>())).ContinueWith(t => inProcessMessageProcesserIsRunning = false);
+                }
             }
             else if (Process.GetProcessesByName("CI.UI").Length != 0)
             {
