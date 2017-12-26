@@ -388,7 +388,7 @@ namespace JBSnorro.GitTools.CI
                     success = project.Build(new ConsoleLogger());
                 }
                 catch (Exception e)
-                {
+                { //TODO: cancellationtoken
                     errorMessage = e.Message;
                 }
 

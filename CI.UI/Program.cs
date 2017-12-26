@@ -115,38 +115,49 @@ namespace CI.UI
 
             HandleCommit(solutionFilePath, hash);
         }
+
         private static void HandleCommit(string solutionFilePath, string hash)
         {
             Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
 
+            var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
+                                                                               ConfigurationManager.AppSettings["destinationDirectory"],
+                                                                               out TestResultsFile resultsFile,
+                                                                               out string commitMessage,
+                                                                               out int projectCount,
+                                                                               hash);
+
+            HandleCommit(log, icon, resultsFile, commitMessage, projectCount, hash);
+        }
+        internal static void HandleCommit(IEnumerable<(Status, string)> log, NotificationIcon icon, TestResultsFile resultsFile = null, string commitMessage = "", int projectCount = 0, string hash = null)
+        {
+            bool cancelRequested = false;
+            icon.CancellationRequested += onOperationCanceled;
+
             Logger.Log("Processing message");
             DateTime start = DateTime.Now;
-            icon.Status = NotificationIconStatus.Working(0, "Starting...");
-            TestResultsFile resultsFile = null;
-            string commitMessage = null;
+            icon.Text = "Starting...";
+            icon.Percentage = 0;
+            icon.Status = NotificationIconStatus.Working;
             TestResult overallStatus = TestResult.Failure;
             int builtProjectsCount = 0;
             int successfulTestsCount = 0;
+            int failedTestCount = 0;
             string balloonMessage = "";
             try
             {
-                var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
-                                                                                   ConfigurationManager.AppSettings["destinationDirectory"],
-                                                                                   out resultsFile,
-                                                                                   out commitMessage,
-                                                                                   out int projectCount,
-                                                                                   hash);
-
                 foreach ((Status status, string message) in log)
                 {
+                    if (cancelRequested)
+                    {
+                        Logger.Log("Processing message canceled by user");
+                        icon.Status = NotificationIconStatus.Default;
+                        icon.Text = null;
+                        return;
+                    }
+
                     switch (status)
                     {
-                        case Status.Success:
-                            Logger.Log("OK: " + message);
-                            icon.Status = NotificationIconStatus.Ok;
-                            overallStatus = TestResult.Success;
-                            break;
-
                         case Status.Skipped:
                             Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {message}");
                             icon.Status = NotificationIconStatus.Default;
@@ -155,15 +166,33 @@ namespace CI.UI
 
                         case Status.BuildSuccess:
                             builtProjectsCount++;
-                            icon.Status = NotificationIconStatus.Working(GetEstimatedPercentage(), $"{builtProjectsCount}/{projectCount} projects built");
+                            icon.Status = NotificationIconStatus.Working;
+                            icon.Percentage = GetEstimatedPercentage();
+                            icon.Text = $"{builtProjectsCount}/{projectCount} projects built";
                             Logger.Log(message);
                             break;
 
                         case Status.TestSuccess:
                             successfulTestsCount++;
                             if (icon.Status != NotificationIconStatus.Bad)
-                                icon.Status = NotificationIconStatus.Working(GetEstimatedPercentage(), $"{successfulTestsCount}/{getTotalTestCount()} tests successful");
+                            {
+                                icon.Status = NotificationIconStatus.Working;
+                                icon.Text = $"{successfulTestsCount}/{getTotalTestCount()} tests successful";
+                            }
+                            icon.Percentage = GetEstimatedPercentage();
                             break;
+
+                        case Status.TestError:
+                            Logger.Log($"{status.ToTitle()}: " + message);
+
+                            failedTestCount++;
+                            balloonMessage += message + "\n";
+
+                            icon.Percentage = GetEstimatedPercentage();
+                            icon.Text = $"{failedTestCount}/{getTotalTestCount()} tests failed";
+                            icon.ShowErrorBalloon(balloonMessage, status);
+                            break;
+
 
                         case Status.ArgumentError:
                         case Status.MiscellaneousError:
@@ -171,13 +200,17 @@ namespace CI.UI
                         case Status.BuildError:
                         case Status.UnhandledException:
                             Logger.Log($"{status.ToTitle()}: " + message);
+                            icon.Percentage = 1;
+                            icon.Text = null;
                             icon.ShowErrorBalloon(message, status);
                             return;
 
-                        case Status.TestError:
-                            Logger.Log($"{status.ToTitle()}: " + message);
-                            balloonMessage += message + "\n";
-                            icon.ShowErrorBalloon(balloonMessage, status);
+                        case Status.Success:
+                            Logger.Log("OK: " + message);
+                            icon.Percentage = 1;
+                            icon.Text = null;
+                            icon.Status = NotificationIconStatus.Ok;
+                            overallStatus = TestResult.Success;
                             break;
                         default:
                             throw new DefaultSwitchCaseUnreachableException();
@@ -186,11 +219,19 @@ namespace CI.UI
             }
             finally
             {
+                icon.Percentage = 1; // removes the cancel button
+                icon.CancellationRequested -= onOperationCanceled;
+                if (icon.Status == NotificationIconStatus.Working)
+                    icon.Status = NotificationIconStatus.Ok;
+
                 if (resultsFile != null)
                 {
                     try
                     {
-                        resultsFile.Append(hash, overallStatus, commitMessage, (int)Math.Ceiling((DateTime.Now - start).TotalSeconds), successfulTestsCount);
+                        if (hash != null)
+                        {
+                            resultsFile.Append(hash, overallStatus, commitMessage, (int)Math.Ceiling((DateTime.Now - start).TotalSeconds), successfulTestsCount);
+                        }
                     }
                     catch { }
 
@@ -198,20 +239,20 @@ namespace CI.UI
                 }
             }
 
-            float GetEstimatedPercentage()
+            double GetEstimatedPercentage()
             {
-                if (resultsFile.Estimate == TimingEstimator.UnknownEstimate)
+                if (resultsFile == null || resultsFile.Estimate == TimingEstimator.UnknownEstimate)
                     return 0;
 
                 float result = (float)(DateTime.Now - start).TotalSeconds / resultsFile.Estimate;
                 if (result > 1)
-                    return 1;
+                    return 0.99; // cannot be equal to 1, because that means done and things would get updated
                 else
                     return result;
             }
             string getTotalTestCount()
             {
-                if (successfulTestsCount >= resultsFile.TestCount)
+                if (resultsFile == null || successfulTestsCount >= resultsFile.TestCount)
                 {
                     return "?";
                 }
@@ -219,6 +260,10 @@ namespace CI.UI
                 {
                     return resultsFile.TestCount.ToString();
                 }
+            }
+            void onOperationCanceled(object sender, EventArgs e)
+            {
+                cancelRequested = true;
             }
         }
     }

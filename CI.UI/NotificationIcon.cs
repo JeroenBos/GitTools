@@ -1,4 +1,5 @@
 ﻿using JBSnorro;
+using JBSnorro.Extensions;
 using JBSnorro.Diagnostics;
 using System;
 using System.Collections.Generic;
@@ -17,9 +18,9 @@ namespace CI.UI
     /// <summary>
     /// Wraps around the notification area.
     /// </summary>
-    public sealed class NotificationIcon : INotifyPropertyChanged, IDisposable
+    public sealed class NotificationIcon : DefaultINotifyPropertyChanged, IDisposable
     {
-        public event PropertyChangedEventHandler PropertyChanged;
+        public event EventHandler CancellationRequested;
 
         /// <summary>
         /// Gets the duration to show the error balloon in ms.
@@ -33,12 +34,38 @@ namespace CI.UI
         public NotificationIconStatus Status
         {
             get => this._status;
+            set => base.Set(ref _status, value);
+        }
+        /// <summary>
+        /// Gets or sets the estimated percentage of the operation.
+        /// </summary>
+        public double Percentage
+        {
+            get => _percentage;
             set
             {
-                if (!NotificationIconStatus.EqualityComparerIncludingText.Equals(this._status, value))
+                Contract.Requires(0 <= value && value <= 1);
+
+                base.Set(ref _percentage, value);
+            }
+        }
+        /// <summary>
+        /// Gets or sets the text displayed when hovering over the notification icon.
+        /// </summary>
+        public string Text
+        {
+            get => _text;
+            set => base.Set(ref _text, value);
+        }
+
+        internal NotificationIconContextMenuItems ContextMenuItems
+        {
+            get => NotificationIconContextMenus.From(this.Icon.ContextMenu);
+            set
+            {
+                if (value != this.ContextMenuItems)
                 {
-                    this._status = value;
-                    this.PropertyChanged(this, new PropertyChangedEventArgs(nameof(Status)));
+                    this.Icon.ContextMenu = NotificationIconContextMenus.Create(value, this);
                 }
             }
         }
@@ -46,28 +73,46 @@ namespace CI.UI
         /// <summary>
         /// Creates a new nofication icon in the notification area.
         /// </summary>
-        public NotificationIcon()
+        public NotificationIcon(bool isVisible = true)
         {
             ProcessExit.Event += onProcessExit;
             this.Icon = new NotifyIcon()
             {
-                Visible = true,
-                ContextMenu = new ContextMenu(new[] { new MenuItem("Exit", (sender, e) => Dispatcher.CurrentDispatcher.InvokeShutdown()) })
+                Visible = isVisible,
             };
+
+
+            this.Status = NotificationIconStatus.Default;
+            this.Percentage = 1;
 
             this.PropertyChanged += (sender, e) =>
             {
                 if (e.PropertyName == nameof(Status)) OnStatusChanged();
+                if (e.PropertyName == nameof(Text)) { this.Icon.Text = this.Text; }
+                if (e.PropertyName == nameof(Percentage)) RefreshContextMenuItems();
             };
 
-            this.Status = NotificationIconStatus.Default;
+            OnStatusChanged(); //sets exit button and default icon
         }
 
         private void OnStatusChanged()
         {
             var status = this.Status;
             this.Icon.Icon = Icons.GetIcon(status);
-            this.Icon.Text = status.IsWorking ? status.WorkingHoverText : null;
+
+            RefreshContextMenuItems();
+        }
+        private void RefreshContextMenuItems()
+        {
+            bool menuShouldHaveCancel = this.Percentage != 1;
+            if (menuShouldHaveCancel)
+            {
+                this.ContextMenuItems = NotificationIconContextMenuItems.Exit | NotificationIconContextMenuItems.Cancel;
+            }
+            else
+            {
+                this.ContextMenuItems = NotificationIconContextMenuItems.Exit;
+            }
         }
 
         /// <summary>
@@ -77,12 +122,17 @@ namespace CI.UI
         {
             Contract.RequiresEnumIsDefined(status);
             Contract.Requires(status != JBSnorro.GitTools.CI.Status.Success);
+            Contract.Requires(!string.IsNullOrEmpty(message));
 
             this.Status = NotificationIconStatus.Bad;
 
             this.Icon.ShowBalloonTip(ErrorBalloonShowDuration, status.ToTitle(), message, ToolTipIcon.Error);
         }
 
+        internal void RequestCancellation()
+        {
+            CancellationRequested?.Invoke(this, new EventArgs());
+        }
         public void Dispose()
         {
             this.Icon.Dispose();
@@ -97,6 +147,7 @@ namespace CI.UI
         }
 
         private NotificationIconStatus _status;
-
+        private double _percentage;
+        private string _text;
     }
 }
