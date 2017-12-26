@@ -16,12 +16,12 @@ namespace CI.UI
     public static class Icons
     {
         private static string executingAssemblyDirectory => Path.GetDirectoryName(new Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBa‌​se).LocalPath);
-        private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"]);
+        private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"] ?? throw new ContractException("AppSetting 'iconsPath' not found"));
         private static Dictionary<NotificationIconStatus, Icon> icons = new Dictionary<NotificationIconStatus, Icon>
         {
             [NotificationIconStatus.Default] = Convert(Path.Combine(iconsPath, "default_status.png")),
             [NotificationIconStatus.Ok] = Convert(Path.Combine(iconsPath, "ok_status.png")),
-            [NotificationIconStatus.Working()] = Convert(Path.Combine(iconsPath, "working_status.png")),
+            [NotificationIconStatus.Working] = Convert(Path.Combine(iconsPath, "working_status.png")),
             [NotificationIconStatus.Bad] = Convert(Path.Combine(iconsPath, "bad_status.png")),
         };
 
@@ -30,7 +30,7 @@ namespace CI.UI
         /// </summary>
         public static Icon GetIcon(NotificationIconStatus status)
         {
-            Contract.Requires(status != null);
+            Contract.RequiresEnumIsDefined(status);
 
             return icons[status];
         }
