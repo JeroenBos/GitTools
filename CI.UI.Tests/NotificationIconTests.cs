@@ -51,7 +51,7 @@ namespace CI.UI.Tests
                     assertBeforeFinallyBlockInHandleCommit();
                 };
 
-                Program.HandleCommit(getLog(), icon, projectCount: 2);
+                Program.HandleCommit(getLog, icon, projectCount: 2);
 
                 void assertBeforeFinallyBlockInHandleCommit()
                 {
