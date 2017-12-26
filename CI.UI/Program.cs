@@ -127,6 +127,7 @@ namespace CI.UI
             TestResult overallStatus = TestResult.Failure;
             int builtProjectsCount = 0;
             int successfulTestsCount = 0;
+            string balloonMessage = "";
             try
             {
                 var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
@@ -167,10 +168,15 @@ namespace CI.UI
                         case Status.MiscellaneousError:
                         case Status.ProjectLoadingError:
                         case Status.BuildError:
-                        case Status.TestError:
                         case Status.UnhandledException:
                             Logger.Log($"{status.ToTitle()}: " + message);
                             icon.ShowErrorBalloon(message, status);
+                            break;
+
+                        case Status.TestError:
+                            Logger.Log($"{status.ToTitle()}: " + message);
+                            balloonMessage += message + "\n";
+                            icon.ShowErrorBalloon(balloonMessage, status);
                             break;
                         default:
                             throw new DefaultSwitchCaseUnreachableException();
