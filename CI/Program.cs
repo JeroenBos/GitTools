@@ -627,12 +627,16 @@ namespace JBSnorro.GitTools.CI
                 TestClassExtensions.RunInitializationMethod(testClassInstance);
                 testMethod.Invoke(testClassInstance, new object[0]);
             }
-            catch (Exception e)
+            catch (TargetInvocationException e)
             {
                 if (!TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
                 {
-                    return e.Message;
+                    return e.InnerException.Message;
                 }
+            }
+            catch (Exception e)
+            {
+                return e.Message;
             }
             finally
             {
