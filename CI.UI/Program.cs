@@ -119,14 +119,17 @@ namespace CI.UI
         {
             Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
 
-            icon.Status = NotificationIconStatus.Working(0);
             Logger.Log("Processing message");
+            icon.Status = NotificationIconStatus.Working(0);
             TestResultsFile resultsFile = null;
+            string commitMessage = null;
+            TestResult overallStatus = TestResult.Failure;
             try
             {
                 var log = JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
                                                                                    ConfigurationManager.AppSettings["destinationDirectory"],
                                                                                    out resultsFile,
+                                                                                   out commitMessage,
                                                                                    hash);
 
                 foreach ((Status status, string message) in log)
@@ -136,11 +139,13 @@ namespace CI.UI
                         case Status.Success:
                             Logger.Log("OK: " + message);
                             icon.Status = NotificationIconStatus.Ok;
+                            overallStatus = TestResult.Success;
                             break;
 
                         case Status.Skipped:
                             Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {message}");
                             icon.Status = NotificationIconStatus.Default;
+                            overallStatus = TestResult.Ignored;
                             break;
 
                         case Status.TestSuccess:
@@ -168,7 +173,15 @@ namespace CI.UI
             finally
             {
                 if (resultsFile != null)
+                {
+                    try
+                    {
+                        resultsFile.Append(hash, overallStatus, commitMessage);
+                    }
+                    catch { }
+
                     resultsFile.Dispose();
+                }
             }
         }
     }

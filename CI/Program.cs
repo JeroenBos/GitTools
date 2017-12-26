@@ -78,7 +78,7 @@ namespace JBSnorro.GitTools.CI
             TestResultsFile resultsFile = null;
             try
             {
-                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, hash);
+                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, hash);
             }
             finally
             {
@@ -92,9 +92,10 @@ namespace JBSnorro.GitTools.CI
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, string hash = null)
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out string commitMessage, string hash = null)
         {
             resultsFile = null;
+            commitMessage = "";
             var error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
             {
@@ -134,7 +135,7 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, error).ToSingleton();
             }
 
-            bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
+            bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out commitMessage, out error);
             if (skipCommit)
             {
                 return (Status.Skipped, error).ToSingleton();
