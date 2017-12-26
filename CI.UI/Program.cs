@@ -161,7 +161,8 @@ namespace CI.UI
 
                         case Status.TestSuccess:
                             successfulTestsCount++;
-                            icon.Status = NotificationIconStatus.Working(GetEstimatedPercentage(), $"{successfulTestsCount}/{getTotalTestCount()} tests successful");
+                            if (icon.Status != NotificationIconStatus.Bad)
+                                icon.Status = NotificationIconStatus.Working(GetEstimatedPercentage(), $"{successfulTestsCount}/{getTotalTestCount()} tests successful");
                             break;
 
                         case Status.ArgumentError:
@@ -171,7 +172,7 @@ namespace CI.UI
                         case Status.UnhandledException:
                             Logger.Log($"{status.ToTitle()}: " + message);
                             icon.ShowErrorBalloon(message, status);
-                            break;
+                            return;
 
                         case Status.TestError:
                             Logger.Log($"{status.ToTitle()}: " + message);
