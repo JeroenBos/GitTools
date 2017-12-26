@@ -33,7 +33,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Opens or creates the file at the specified path and reads the existing hashes and results.
         /// </summary>
-        public TestResultsFile(string path)
+        public static TestResultsFile Read(string path)
         {
             Contract.Requires(!string.IsNullOrEmpty(path));
 
@@ -49,28 +49,44 @@ namespace JBSnorro.GitTools.CI
             var stream = File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite);
             var timingEstimator = new TimingEstimator();
             var hashes = new Dictionary<string, TestResult>();
-            this.Hashes = new ReadOnlyDictionary<string, TestResult>(hashes);
-
-            var reader = new StreamReader(stream);
-            while (!reader.EndOfStream)
+            int testCount = 0;
+            try
             {
-                var (key, result, timing, testCount) = TestResultExtensions.FromLine(reader.ReadLine());
-                hashes[key] = result;
-                timingEstimator.Add(timing, result);
+                var reader = new StreamReader(stream);
+                while (!reader.EndOfStream)
+                {
+                    var (key, result, timing, testCountEntry) = TestResultExtensions.FromLine(reader.ReadLine());
+                    hashes[key] = result;
+                    timingEstimator.Add(timing, result);
 
-                // use latest all tests successful result, or, if larger, the number of failures an attempt after that
-                this.TestCount = result == TestResult.Success ? testCount : Math.Max(this.TestCount, testCount); 
+                    // use latest all tests successful result, or, if larger, the number of failures an attempt after that
+                    testCount = result == TestResult.Success ? testCountEntry : Math.Max(testCount, testCountEntry);
+                }
+            }
+            catch
+            {
+                // release the stream, because an error has occurred and the file will otherwise not be disposed of
+                // if no exception is thrown, the stream will be released through disposing the returned IDisposable
+                stream.Dispose();
+                throw;
             }
 
-            this.stream = new StreamWriter(stream);
-            this.Estimate = timingEstimator.Estimate;
+            return new TestResultsFile(new StreamWriter(stream), new ReadOnlyDictionary<string, TestResult>(hashes), timingEstimator.Estimate, testCount);
+        }
+
+        private TestResultsFile(StreamWriter stream, ReadOnlyDictionary<string, TestResult> hashes, int estimate, int testCount)
+        {
+            this.stream = stream;
+            this.Hashes = hashes;
+            this.Estimate = estimate;
+            this.TestCount = testCount;
         }
         public static TestResultsFile TryReadFile(string path, out string errorMessage)
         {
             try
             {
                 errorMessage = null;
-                return new TestResultsFile(path);
+                return Read(path);
             }
             catch (Exception e)
             {
