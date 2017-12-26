@@ -11,32 +11,27 @@ using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CI.Dispatcher
+namespace CI
 {
-    class Dispatcher
+    internal class Dispatcher
     {
-        private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"];
+        private static bool inProcessMessageProcesserIsRunning;
+        private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new ContractException();
         private const int timeout = 1000;
 
         /// <summary>
         /// The purpose of this application is for each time it is executed, dispatch the message to the only running instance of CI.UI.
         /// Once the message has been sent to CI.UI, execution stops.
         /// </summary>
-        static void Main(string[] args)
+        internal static void Main(string[] args)
         {
-            NamedPipeServerStream pipe = null;
             Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
             try
             {
                 var message = ComposeMessage(args);
                 if (message != null)
                 {
-                    pipe = SetupConnection();
-                    if (pipe != null)
-                    {
-                        Logger.Log("trying to send message");
-                        TrySendMessage(pipe, message);
-                    }
+                    TrySendMessage(message);
                 }
             }
             catch (Exception e)
@@ -45,8 +40,6 @@ namespace CI.Dispatcher
             }
             finally
             {
-                if (pipe != null)
-                    pipe.Dispose();
 #if DEBUG
                 Console.ReadLine();
 #endif
@@ -61,9 +54,9 @@ namespace CI.Dispatcher
             return string.Join(ReceivingPipe.Separator, args);
         }
 
-        private static NamedPipeServerStream SetupConnection()
+        private static NamedPipeServerStream TrySetupConnection()
         {
-            if (Process.GetProcessesByName("CI.UI").Length == 0)
+            if (!inProcessMessageProcesserIsRunning && Process.GetProcessesByName("CI.UI").Length == 0)
             {
                 Logger.Log("The receiving end of the pipe is not running");
                 return null;
@@ -85,7 +78,39 @@ namespace CI.Dispatcher
             }
         }
 
-        private static void TrySendMessage(NamedPipeServerStream pipe, string message)
+        internal static void StartCIUI(bool inProcess = false)
+        {
+            // TODO: implement CancellationToken and async/returning task 
+            if (inProcess)
+            {
+                inProcessMessageProcesserIsRunning = true;
+                Logger.Log("Starting CI.UI in process");
+                Task.Run(() => Program.Main(Array.Empty<string>())).ContinueWith(t => inProcessMessageProcesserIsRunning = false);
+            }
+            else if (Process.GetProcessesByName("CI.UI").Length != 0)
+            {
+                return;
+            }
+            else
+            {
+                Logger.Log($"Starting CI.UI out of process. Executing '{CI_UI_Path}'");
+                Process.Start(CI_UI_Path);
+            }
+        }
+
+        internal static bool TrySendMessage(string message)
+        {
+            using (var pipe = TrySetupConnection())
+            {
+                if (pipe != null)
+                {
+                    Logger.Log("trying to send message");
+                    return TrySendMessage(pipe, message);
+                }
+                return false;
+            }
+        }
+        private static bool TrySendMessage(NamedPipeServerStream pipe, string message)
         {
             try
             {
@@ -95,12 +120,14 @@ namespace CI.Dispatcher
                     writer.WriteLine(message);
                     Console.WriteLine("Written message");
                     Logger.Log("written message");
+                    return true;
                 }
             }
             catch (IOException e)
             {
                 Console.WriteLine("ERROR: {0}", e.Message);
                 Logger.Log(e.Message);
+                return false;
             }
         }
     }

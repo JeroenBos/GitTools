@@ -16,7 +16,7 @@ namespace CI.UI
     public static class Icons
     {
         private static string executingAssemblyDirectory => Path.GetDirectoryName(new Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBa‌​se).LocalPath);
-        private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"] ?? throw new ContractException("AppSetting 'iconsPath' not found"));
+        private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"] ?? throw new AppSettingNotFoundException("iconsPath"));
         private static Dictionary<NotificationIconStatus, Icon> icons = new Dictionary<NotificationIconStatus, Icon>
         {
             [NotificationIconStatus.Default] = Convert(Path.Combine(iconsPath, "default_status.png")),
