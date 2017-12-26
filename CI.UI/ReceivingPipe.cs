@@ -56,12 +56,12 @@ namespace CI.UI
                         }
                         catch (TimeoutException)
                         {
-                            await Task.Delay(100);
+                            await Task.Delay(10);
                         }
                     }
 
                     Logger.Log($"Received message {processedMessageCount}");
-                    await executingDispatcher.InvokeAsync(() =>
+                    var warningCS4014SuppressingVariable = executingDispatcher.InvokeAsync(() =>
                         {
                             try
                             {
