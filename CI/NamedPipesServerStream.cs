@@ -64,10 +64,12 @@ namespace JBSnorro.GitTools.CI
                     await Loop(pipe);
                     Interlocked.Decrement(ref this.aliveConnections);
                 }
-                catch (TaskCanceledException)
-                {
-                }
+                catch (TaskCanceledException) { }
+                catch (ObjectDisposedException) { }
+                catch (IOException) { }
+                finally { pipe.Dispose(); }
             }, this.CancellationTokenSource.Token);
+
             if (!spawnLazily)
             {
                 Spawn();

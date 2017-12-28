@@ -88,7 +88,6 @@
     <Compile Include="NamedPipesServerStream.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SerializableTestResults.cs" />
     <Compile Include="Status.cs" />
     <Compile Include="TestResultsFile.cs" />
     <Compile Include="TimingEstimator.cs" />
