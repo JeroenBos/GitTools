@@ -122,6 +122,8 @@ namespace CI.UI
         {
             if (this.Status == NotificationIconStatus.Working)
             {
+                //TODO: find out if the icon must be disposed of (which it should if it doesn't dispose of the bitmap it's created from)
+                // For non-reusable icons, it should never
                 this.Icon.Icon = Icons.GetIcon(NotificationIconStatus.Working, NotificationIconStatus.Ok, this.Percentage);
             }
         }
