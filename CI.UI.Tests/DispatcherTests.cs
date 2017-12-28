@@ -25,5 +25,26 @@ namespace CI.UI.Tests
                 Assert.IsTrue(messageSent);
             }
         }
+        [TestMethod, Timeout(100)]
+        public void TestDispatchReceipt()
+        {
+            const string testMessage = "hi";
+
+            Dispatcher.StartCIUI(inProcess: true);
+            {
+                string receivedMessage = null;
+                ReceivingPipe.OnReceiveMessage += (sender, message) => receivedMessage = message;
+
+                Dispatcher.TrySendMessage(testMessage);
+
+                while (receivedMessage == null) //canceled by TimeoutAttribute
+                {
+                    Thread.Sleep(1);
+                }
+
+                Assert.AreEqual(testMessage, receivedMessage);
+            }
+        }
+
     }
 }
