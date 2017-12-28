@@ -75,7 +75,7 @@ namespace CI
             Contract.Requires(args != null);
             Contract.Requires(args.Length > 0);
 
-            return string.Join(ReceivingPipe.Separator, args);
+            return string.Join(CIReceivingPipe.PipeMessageSeparator, args);
         }
 
         private static NamedPipeServerStream TrySetupConnection()
@@ -86,7 +86,7 @@ namespace CI
                 return null;
             }
 
-            var pipe = new NamedPipeServerStream(ReceivingPipe.PipeName, PipeDirection.Out);
+            var pipe = new NamedPipeServerStream(CIReceivingPipe.PipeName, PipeDirection.Out);
             // try to make connection, or start the executable in case it's not responding
             Task makeConnectionTask = pipe.WaitForConnectionAsync();
             Task timeoutTask = Task.Delay(timeout);

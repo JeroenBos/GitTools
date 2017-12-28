@@ -80,6 +80,7 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CIReceivingPipe.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="NotificationIconContextMenus.cs" />
     <Compile Include="NotificationIconStatus.cs" />

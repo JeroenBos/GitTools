@@ -58,7 +58,7 @@ namespace CI.UI
             {
                 try
                 {
-                    await ReceivingPipe.Start();
+                    await CIReceivingPipe.Start();
                 }
                 catch (Exception e)
                 {
