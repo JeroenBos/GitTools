@@ -45,7 +45,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = true;
+        private static readonly bool skipCopySolution = false;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
@@ -410,7 +410,7 @@ namespace JBSnorro.GitTools.CI
                     }
                 }
                 catch (Exception e)
-                { //TODO: cancellationtoken
+                {
                     errorMessage = e.Message;
                 }
 
@@ -685,7 +685,10 @@ namespace JBSnorro.GitTools.CI
             string path = Path.Combine(project.DirectoryPath, relativePath);
 
             if (!File.Exists(path))
-                throw new NotImplementedException("Couldn't find assembly " + relativePath);
+                if (skipCopySolution || skipBuild)
+                    throw new Exception($"Coulnd't find assembly {path}. skipCopySolution or skipBuild was true. Are you sure that is correct?");
+                else
+                    throw new NotImplementedException("Couldn't find assembly " + path);
             return path;
         }
     }

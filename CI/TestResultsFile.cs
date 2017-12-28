@@ -85,6 +85,11 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
+                if (Directory.Exists(path))
+                {
+                    path = Path.Combine(path, RelativePath);
+                }
+
                 errorMessage = null;
                 return Read(path);
             }
