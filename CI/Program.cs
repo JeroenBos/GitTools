@@ -491,21 +491,18 @@ namespace JBSnorro.GitTools.CI
 
                 for (int i = 0; i < TEST_THREAD_COUNT; i++)
                 {
-                    new Thread(() =>
+                    void processRemainingProjects()
                     {
                         while (remainingProjects.TryDequeue(out Project project) && !cancellationToken.IsCancellationRequested)
                         {
                             Interlocked.Increment(ref processedProjectsCount);
-                            RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
+                            RunTestsAndWriteMessagesBack(GetAssemblyPath(project));
                         }
-                    })
-                    {
-                        IsBackground = true,
-#pragma warning disable CS0618 // Type or member is obsolete
-                        ApartmentState = ApartmentState.STA
-#pragma warning restore CS0618 // Type or member is obsolete
-                    }.Start();
+                    }
 
+                    var staThread = new Thread(processRemainingProjects) { IsBackground = true };
+                    staThread.SetApartmentState(ApartmentState.STA);
+                    staThread.Start();
                 }
 
                 var pipes = new NamedPipesServerStream(PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count, cancellationToken);
@@ -520,14 +517,13 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, e.Message).ToSingleton();
             }
 
-            void RunTasksAndWriteMessagesBack(string assemblyPath)
+            void RunTestsAndWriteMessagesBack(string assemblyPath)
             {
                 string appDomainBase = Path.GetDirectoryName(assemblyPath);
                 using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, }))
                 {
                     int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
                     {
-                        int messagesCount = 0;
                         Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPathLocal), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPathLocal)}");
 
                         try
@@ -538,6 +534,7 @@ namespace JBSnorro.GitTools.CI
                                 using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
                                 {
                                     int totalTestCount = 0;
+                                    int messagesCount = 0;
                                     try
                                     {
                                         var tests = Assembly.LoadFrom(assemblyPathLocal)
@@ -580,12 +577,13 @@ namespace JBSnorro.GitTools.CI
                                         writer.WriteLine(STOP_CODON + totalTestCount.ToString());
                                         messagesCount++;
                                     }
+                                    return messagesCount;
                                 }
                             }
                         }
                         catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
                         catch (IOException e) { Console.WriteLine(e.Message); }
-                        return messagesCount;
+                        return 0;
                     });
                     Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);
                 }
