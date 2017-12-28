@@ -1,6 +1,7 @@
 ﻿using JBSnorro.Diagnostics;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Drawing;
 using System.IO;
@@ -17,14 +18,14 @@ namespace CI.UI
     {
         private static string executingAssemblyDirectory => Path.GetDirectoryName(new Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBa‌​se).LocalPath);
         private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"] ?? throw new AppSettingNotFoundException("iconsPath"));
-        private static Dictionary<NotificationIconStatus, Bitmap> bitmaps = new Dictionary<NotificationIconStatus, Bitmap>
+        private static readonly ReadOnlyDictionary<NotificationIconStatus, Bitmap> bitmaps = new ReadOnlyDictionary<NotificationIconStatus, Bitmap>(new Dictionary<NotificationIconStatus, Bitmap>
         {
             [NotificationIconStatus.Default] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "default_status.png")),
             [NotificationIconStatus.Ok] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "ok_status.png")),
             [NotificationIconStatus.Working] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "working_status.png")),
             [NotificationIconStatus.Bad] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "bad_status.png")),
-        };
-        private static Dictionary<NotificationIconStatus, Icon> icons = bitmaps.ToDictionary(kvp => kvp.Key, kvp => Convert(kvp.Value));
+        });
+        private static readonly ReadOnlyDictionary<NotificationIconStatus, Icon> icons = new ReadOnlyDictionary<NotificationIconStatus, Icon>(bitmaps.ToDictionary(kvp => kvp.Key, kvp => Convert(kvp.Value)));
 
         /// <summary>
         /// Gets the icon representing the specified status.
