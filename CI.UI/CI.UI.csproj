@@ -85,7 +85,7 @@
     <Compile Include="NotificationIconStatus.cs" />
     <Compile Include="NotificationIcon.cs" />
     <Compile Include="Icons.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="UI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ReceivingPipe.cs" />
   </ItemGroup>
