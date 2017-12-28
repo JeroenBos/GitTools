@@ -25,13 +25,15 @@ namespace JBSnorro.GitTools.CI
         private int readMessagesCount;
         public int ReadMessagesCount => readMessagesCount;
 
-        public NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, bool spawnLazily = false)
+        public NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, CancellationToken cancellationToken = default(CancellationToken), bool spawnLazily = false)
         {
             this.PipeName = pipeName;
             this.isQuitSignal = isQuitSignal;
             this.expectedNumberOfConnections = expectedNumberOfConnections;
             this.spawnLazily = spawnLazily;
             this.CancellationTokenSource = new CancellationTokenSource();
+
+            cancellationToken.Register(this.CancellationTokenSource.Cancel);
 
             this.Spawn();
         }
@@ -45,6 +47,9 @@ namespace JBSnorro.GitTools.CI
         {
             if (expectedNumberOfConnections == 0)
                 return;
+
+            if (this.CancellationTokenSource.IsCancellationRequested)
+                throw new TaskCanceledException();
 
             Interlocked.Decrement(ref this.expectedNumberOfConnections);
             Interlocked.Increment(ref this.aliveConnections);
@@ -62,7 +67,7 @@ namespace JBSnorro.GitTools.CI
                 catch (TaskCanceledException)
                 {
                 }
-            }, CancellationTokenSource.Token);
+            }, this.CancellationTokenSource.Token);
             if (!spawnLazily)
             {
                 Spawn();
@@ -78,13 +83,13 @@ namespace JBSnorro.GitTools.CI
                     message = await reader.ReadLineAsync();
                     Interlocked.Increment(ref readMessagesCount);
                     this.queue.Enqueue(message);
-                } while (!this.isQuitSignal(message) && !CancellationTokenSource.IsCancellationRequested);
+                } while (!this.isQuitSignal(message) && !this.CancellationTokenSource.IsCancellationRequested);
             }
         }
 
         public void Dispose()
         {
-            CancellationTokenSource.Cancel();
+            this.CancellationTokenSource.Cancel();
             foreach (var pipe in this.pipes)
                 pipe.Dispose();
         }

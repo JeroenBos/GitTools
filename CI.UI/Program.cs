@@ -120,14 +120,15 @@ namespace CI.UI
         {
             Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
 
-            IEnumerable<(Status Status, string Message)> getLog(out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
+            IEnumerable<(Status Status, string Message)> getLog(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
             {
                 return JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
                                                                                 ConfigurationManager.AppSettings["destinationDirectory"],
                                                                                 out resultsFile,
                                                                                 out commitMessage,
                                                                                 out projectCount,
-                                                                                hash);
+                                                                                hash,
+                                                                                cancellationToken);
             }
 
             HandleCommit(icon, getLog, hash);
@@ -139,7 +140,7 @@ namespace CI.UI
         internal static void HandleCommit(Func<IEnumerable<(Status, string)>> getLog, NotificationIcon icon, TestResultsFile resultsFile = null, string commitMessage = null, int projectCount = 0, string hash = null)
         {
             var wrappedGetlog = new CopySolutionAndExecuteTestsDelegate(implementation);
-            IEnumerable<(Status, string)> implementation(out TestResultsFile resultsFile_out, out string commitMessage_out, out int projectCount_out)
+            IEnumerable<(Status, string)> implementation(CancellationToken cancellationToken, out TestResultsFile resultsFile_out, out string commitMessage_out, out int projectCount_out)
             {
                 resultsFile_out = resultsFile;
                 commitMessage_out = commitMessage;
@@ -151,6 +152,7 @@ namespace CI.UI
         private static void HandleCommit(NotificationIcon icon, CopySolutionAndExecuteTestsDelegate getLog, string hash)
         {
             bool cancelRequested = false;
+            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             icon.CancellationRequested += onOperationCanceled;
 
             Logger.Log("Processing message");
@@ -167,7 +169,7 @@ namespace CI.UI
             string commitMessage = "";
             try
             {
-                foreach ((Status status, string message) in getLog(out resultsFile, out commitMessage, out int projectCount))
+                foreach ((Status status, string message) in getLog(cancellationTokenSource.Token, out resultsFile, out commitMessage, out int projectCount))
                 {
                     if (cancelRequested)
                     {
@@ -285,12 +287,13 @@ namespace CI.UI
             void onOperationCanceled(object sender, EventArgs e)
             {
                 cancelRequested = true;
+                cancellationTokenSource.Cancel();
             }
         }
 
         /// <summary>
         /// An abstraction such that HandleCommit can be tested more easily.
         /// </summary>
-        internal delegate IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTestsDelegate(out TestResultsFile resultsFile, out string commitMessage, out int projectCount);
+        internal delegate IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTestsDelegate(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount);
     }
 }

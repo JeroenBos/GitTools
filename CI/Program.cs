@@ -38,6 +38,9 @@ namespace JBSnorro.GitTools.CI
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
         /// </summary>
         public const int MaxTestDuration = 5000;
+
+        private const string TaskCanceledMessage = "Task canceled";
+
 #if DEBUG
         /// <summary>
         /// Debugging flag to disable copying the solution.
@@ -73,12 +76,12 @@ namespace JBSnorro.GitTools.CI
             Console.ReadLine();
         }
 
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null)
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             TestResultsFile resultsFile = null;
             try
             {
-                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, out int projectCount ,hash);
+                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, out int projectCount, hash, cancellationToken);
             }
             finally
             {
@@ -92,7 +95,7 @@ namespace JBSnorro.GitTools.CI
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
         /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out string commitMessage, out int projectCount, string hash = null)
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out string commitMessage, out int projectCount, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             projectCount = -1;
             resultsFile = null;
@@ -146,7 +149,7 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, error).ToSingleton();
             }
 
-            string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, out error);
+            string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out error);
             if (error != null)
             {
                 return (Status.MiscellaneousError, error).ToSingleton();
@@ -155,14 +158,14 @@ namespace JBSnorro.GitTools.CI
             if (mustDoCheckout)
                 GitCommandLine.Checkout(destinationDirectory, hash);
 
-            var projectsInBuildOrder = LoadSolution(destinationSolutionFile, out error);
+            var projectsInBuildOrder = LoadSolution(destinationSolutionFile, cancellationToken, out error);
             if (error != null)
             {
                 return (Status.ProjectLoadingError, error).ToSingleton();
             }
 
             projectCount = projectsInBuildOrder.Count;
-            return ConcatIfAllPreviouses(BuildSolution(projectsInBuildOrder), buildMessage => buildMessage.Item1 == Status.BuildSuccess, () => RunTests(projectsInBuildOrder));
+            return ConcatIfAllPreviouses(BuildSolution(projectsInBuildOrder, cancellationToken), buildMessage => buildMessage.Item1 == Status.BuildSuccess, () => RunTests(projectsInBuildOrder, cancellationToken));
         }
         /// <summary>
         /// Yields the elements of the second sequence only if all elements in the first sequence match the specified predicate.
@@ -291,7 +294,7 @@ namespace JBSnorro.GitTools.CI
                                                    .Where(key => key.StartsWith("ignore_prefix"))
                                                    .Select(key => ConfigurationManager.AppSettings[key]);
         }
-        private static string TryCopySolution(string solutionFilePath, string destinationDirectory, out string error)
+        private static string TryCopySolution(string solutionFilePath, string destinationDirectory, CancellationToken cancellationToken, out string error)
         {
             if (!skipCopySolution)
             {
@@ -304,11 +307,14 @@ namespace JBSnorro.GitTools.CI
             }
             try
             {
-
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    throw new TaskCanceledException();
+                }
                 if (!skipCopySolution)
                 {
                     //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
-                    CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory));
+                    CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory), cancellationToken);
                     SetAttributesNormal(destinationDirectory);
                 }
                 error = null;
@@ -321,14 +327,24 @@ namespace JBSnorro.GitTools.CI
             }
         }
         /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
-        private static void CopyDirectory(DirectoryInfo source, DirectoryInfo target)
+        private static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
         {
             foreach (DirectoryInfo dir in source.GetDirectories())
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    throw new TaskCanceledException();
+
                 if (!(dir.Name.StartsWith(".vs") || dir.Name == "bin" || dir.Name == "obj"))
-                    CopyDirectory(dir, target.CreateSubdirectory(dir.Name));
+                    CopyDirectory(dir, target.CreateSubdirectory(dir.Name), cancellationToken);
+            }
             foreach (FileInfo file in source.GetFiles())
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    throw new TaskCanceledException();
+
                 if (file.Name != ".testresults") // can't copy because this program currently has a filestream opened on it
                     file.CopyTo(Path.Combine(target.FullName, file.Name), true);
+            }
         }
         private static void SetAttributesNormal(string dirPath)
         {
@@ -344,7 +360,7 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static IReadOnlyList<Project> LoadSolution(string destinationSolutionFile, out string error)
+        private static IReadOnlyList<Project> LoadSolution(string destinationSolutionFile, CancellationToken cancellationToken, out string error)
         {
             try
             {
@@ -355,10 +371,12 @@ namespace JBSnorro.GitTools.CI
             {
                 using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
                 {
-
                     foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
                     {
                         projects.LoadProject(projectPath.AbsolutePath);
+
+                        if (cancellationToken.IsCancellationRequested)
+                            throw new TaskCanceledException();
                     }
                     IReadOnlyList<Project> projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
                     error = null;
@@ -374,7 +392,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Tries to build the solution and returns the projects if successful; otherwise an error message.
         /// </summary>
-        private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<Project> projectsInBuildOrder)
+        private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<Project> projectsInBuildOrder, CancellationToken cancellationToken)
         {
             if (skipBuild)
                 yield break;
@@ -386,6 +404,10 @@ namespace JBSnorro.GitTools.CI
                 try
                 {
                     success = project.Build(new ConsoleLogger());
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        break;
+                    }
                 }
                 catch (Exception e)
                 { //TODO: cancellationtoken
@@ -401,6 +423,10 @@ namespace JBSnorro.GitTools.CI
                     yield return (Status.BuildError, errorMessage ?? "Unknown error");
                     yield break;
                 }
+            }
+            if (cancellationToken.IsCancellationRequested)
+            {
+                yield return (Status.Canceled, TaskCanceledMessage);
             }
         }
         private static IEnumerable<ProjectInSolution> GetProjectFilesIn(string solutionFilePath)
@@ -451,7 +477,7 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static IEnumerable<(Status, string)> RunTests(IReadOnlyList<Project> projectsInBuildOrder)
+        private static IEnumerable<(Status, string)> RunTests(IReadOnlyList<Project> projectsInBuildOrder, CancellationToken cancellationToken)
         {
             try
             {
@@ -467,7 +493,7 @@ namespace JBSnorro.GitTools.CI
                 {
                     new Thread(() =>
                     {
-                        while (remainingProjects.TryDequeue(out Project project))
+                        while (remainingProjects.TryDequeue(out Project project) && !cancellationToken.IsCancellationRequested)
                         {
                             Interlocked.Increment(ref processedProjectsCount);
                             RunTasksAndWriteMessagesBack(GetAssemblyPath(project));
@@ -482,8 +508,12 @@ namespace JBSnorro.GitTools.CI
 
                 }
 
-                var pipes = new NamedPipesServerStream(PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count);
+                var pipes = new NamedPipesServerStream(PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count, cancellationToken);
                 return Read(pipes);
+            }
+            catch (TaskCanceledException)
+            {
+                return (Status.Canceled, TaskCanceledMessage).ToSingleton();
             }
             catch (Exception e)
             {
@@ -516,9 +546,10 @@ namespace JBSnorro.GitTools.CI
 
                                     foreach ((MethodInfo method, string methodError) in tests)
                                     {
+                                        //TODO: get cancellationToken.IsCancelRequested here
                                         totalTestCount++;
 
-                                        if(methodError == null)
+                                        if (methodError == null)
                                         {
                                             const string successMessage = "";
                                             writer.WriteLine(SUCCESS_CODON + successMessage);
@@ -574,7 +605,6 @@ namespace JBSnorro.GitTools.CI
             List<int> totalSuccessCounts = new List<int>();
             foreach (string line in lines)
             {
-
                 string codon = line.Substring(0, ERROR_CODON.Length);
                 string message = line.Substring(ERROR_CODON.Length);
 

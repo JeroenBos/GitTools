@@ -22,6 +22,7 @@ namespace JBSnorro.GitTools.CI
         TestError,
         UnhandledException,
         Skipped,
+        Canceled,
     }
 
     public static class StatusExtensions
@@ -52,6 +53,8 @@ namespace JBSnorro.GitTools.CI
                     return "Unhandled exception occurred";
                 case Status.Skipped:
                     return "Build and test skipped";
+                case Status.Canceled:
+                    return "Canceled";
                 default:
                     throw new DefaultSwitchCaseUnreachableException();
             }
