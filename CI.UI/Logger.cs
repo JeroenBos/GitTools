@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,7 @@ namespace JBSnorro.GitTools.CI
 {
     public static class Logger
     {
+        [DebuggerHidden]
         public static void Log(string message)
         {
             Console.WriteLine(message);
