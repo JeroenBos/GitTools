@@ -31,7 +31,7 @@ namespace CI
                 throw new ContractException($"Invalid 'app.config': '{key}' ({timeout_string}) is invalid");
 
         }
-        private const string START_UI_ARG = "Start UI";
+        private const string START_UI_ARG = "UI";
 
         /// <summary>
         /// The purpose of this application is for each time it is executed, dispatch the message to the only running instance of CI.UI.
