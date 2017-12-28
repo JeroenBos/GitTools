@@ -45,7 +45,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Debugging flag to disable copying the solution.
         /// </summary>
-        private static readonly bool skipCopySolution = false;
+        private static readonly bool skipCopySolution = true;
         /// <summary>
         /// Debugging flag to disable building.
         /// </summary>
@@ -530,55 +530,61 @@ namespace JBSnorro.GitTools.CI
                         int messagesCount = 0;
                         Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPathLocal), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPathLocal)}");
 
-                        using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
+                        try
                         {
-                            outPipe.Connect();
-                            using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
+                            using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
                             {
-                                int totalTestCount = 0;
-                                try
+                                outPipe.Connect();
+                                using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
                                 {
-                                    var tests = Assembly.LoadFrom(assemblyPathLocal)
-                                                        .GetTypes()
-                                                        .Where(TestClassExtensions.IsTestType)
-                                                        .SelectMany(TestClassExtensions.GetTestMethods)
-                                                        .Select(testMethod => (testMethod, RunTest(testMethod)));
-
-                                    foreach ((MethodInfo method, string methodError) in tests)
+                                    int totalTestCount = 0;
+                                    try
                                     {
-                                        //TODO: get cancellationToken.IsCancelRequested here
-                                        totalTestCount++;
+                                        var tests = Assembly.LoadFrom(assemblyPathLocal)
+                                                            .GetTypes()
+                                                            .Where(TestClassExtensions.IsTestType)
+                                                            .SelectMany(TestClassExtensions.GetTestMethods)
+                                                            .Select(testMethod => (testMethod, RunTest(testMethod)));
 
-                                        if (methodError == null)
+                                        foreach ((MethodInfo method, string methodError) in tests)
                                         {
-                                            const string successMessage = "";
-                                            writer.WriteLine(SUCCESS_CODON + successMessage);
-                                            messagesCount++;
+                                            if (!outPipe.IsConnected)
+                                                break;
+
+                                            totalTestCount++;
+                                            if (methodError == null)
+                                            {
+                                                const string successMessage = "";
+                                                writer.WriteLine(SUCCESS_CODON + successMessage);
+                                                messagesCount++;
+                                            }
+                                            else
+                                            {
+                                                string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
+                                                writer.WriteLine(ERROR_CODON + message);
+                                                messagesCount++;
+                                            }
                                         }
-                                        else
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        writer.WriteLine(ERROR_CODON + RemoveLineBreaks(e.Message));
+                                        if (e.InnerException != null)
                                         {
-                                            string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
-                                            writer.WriteLine(ERROR_CODON + message);
+                                            writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks(e.InnerException.Message));
                                             messagesCount++;
                                         }
                                     }
-                                }
-                                catch (Exception e)
-                                {
-                                    writer.WriteLine(ERROR_CODON + RemoveLineBreaks(e.Message));
-                                    if (e.InnerException != null)
+                                    finally
                                     {
-                                        writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks(e.InnerException.Message));
+                                        writer.WriteLine(STOP_CODON + totalTestCount.ToString());
                                         messagesCount++;
                                     }
                                 }
-                                finally
-                                {
-                                    writer.WriteLine(STOP_CODON + totalTestCount.ToString());
-                                    messagesCount++;
-                                }
                             }
                         }
+                        catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
+                        catch (IOException e) { Console.WriteLine(e.Message); }
                         return messagesCount;
                     });
                     Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);

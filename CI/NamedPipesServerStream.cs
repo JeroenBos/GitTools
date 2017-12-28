@@ -33,7 +33,7 @@ namespace JBSnorro.GitTools.CI
             this.spawnLazily = spawnLazily;
             this.CancellationTokenSource = new CancellationTokenSource();
 
-            cancellationToken.Register(this.CancellationTokenSource.Cancel);
+            cancellationToken.Register(this.Dispose);
 
             this.Spawn();
         }
@@ -89,6 +89,7 @@ namespace JBSnorro.GitTools.CI
 
         public void Dispose()
         {
+            Console.WriteLine("Disposing reader");
             this.CancellationTokenSource.Cancel();
             foreach (var pipe in this.pipes)
                 pipe.Dispose();
