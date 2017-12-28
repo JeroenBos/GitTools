@@ -89,7 +89,7 @@ namespace CI.UI
             {
                 if (e.PropertyName == nameof(Status)) OnStatusChanged();
                 if (e.PropertyName == nameof(Text)) { this.Icon.Text = this.Text; }
-                if (e.PropertyName == nameof(Percentage)) RefreshContextMenuItems();
+                if (e.PropertyName == nameof(Percentage)) OnPercentageChanged();
             };
 
             OnStatusChanged(); //sets exit button and default icon
@@ -97,10 +97,14 @@ namespace CI.UI
 
         private void OnStatusChanged()
         {
-            var status = this.Status;
-            this.Icon.Icon = Icons.GetIcon(status);
+            this.Icon.Icon = Icons.GetIcon(this.Status);
 
             RefreshContextMenuItems();
+        }
+        private void OnPercentageChanged()
+        {
+            RefreshContextMenuItems();
+            SetPartialIcon();
         }
         private void RefreshContextMenuItems()
         {
@@ -112,6 +116,13 @@ namespace CI.UI
             else
             {
                 this.ContextMenuItems = NotificationIconContextMenuItems.Exit;
+            }
+        }
+        private void SetPartialIcon()
+        {
+            if (this.Status == NotificationIconStatus.Working)
+            {
+                this.Icon.Icon = Icons.GetIcon(NotificationIconStatus.Working, NotificationIconStatus.Ok, this.Percentage);
             }
         }
 
