@@ -216,7 +216,6 @@ namespace CI.UI
                             icon.ShowErrorBalloon(balloonMessage, status);
                             break;
 
-
                         case Status.ArgumentError:
                         case Status.MiscellaneousError:
                         case Status.ProjectLoadingError:
@@ -231,7 +230,7 @@ namespace CI.UI
                         case Status.Success:
                             Logger.Log("OK: " + message);
                             icon.Percentage = 1;
-                            icon.Text = null;
+                            icon.Text = $"Done. {successfulTestsCount} tests successful";
                             icon.Status = NotificationIconStatus.Ok;
                             overallStatus = TestResult.Success;
                             break;
