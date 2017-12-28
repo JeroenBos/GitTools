@@ -1,5 +1,7 @@
-﻿using System;
+﻿using JBSnorro.Diagnostics;
+using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -11,6 +13,7 @@ namespace JBSnorro.GitTools.CI
 {
     public static class Logger
     {
+        public static readonly string LogPath = ConfigurationManager.AppSettings["logPath"] ?? throw new AppSettingNotFoundException("logPath");
         [DebuggerHidden]
         public static void Log(string message)
         {
@@ -24,18 +27,17 @@ namespace JBSnorro.GitTools.CI
                 Thread.Sleep(10);
                 try
                 {
-                    log("couldnt log before");
                     log(message);
                 }
-                catch
+                catch (Exception e)
                 {
-                    File.WriteAllText("D:\\tmp\\unableTolog.txt", "");
+                    File.WriteAllText(Path.Combine(Path.GetDirectoryName(LogPath), "unableToLog.txt"), DateTime.Now.ToString("hh: mm:ss") + " " + e.Message + "\r\n");
                 }
             }
 
             void log(string m)
             {
-                File.AppendAllText("D:\\tmp\\log.txt", DateTime.Now.ToString("hh:mm:ss") + " " + m + "\r\n");
+                File.AppendAllText(LogPath, DateTime.Now.ToString("hh:mm:ss") + " " + m + "\r\n");
             }
         }
     }
