@@ -537,14 +537,10 @@ namespace JBSnorro.GitTools.CI
                                     int messagesCount = 0;
                                     try
                                     {
-                                        var tests = Assembly.LoadFrom(assemblyPathLocal)
-                                                            .GetTypes()
-                                                            .Where(TestClassExtensions.IsTestType)
-                                                            .SelectMany(TestClassExtensions.GetTestMethods)
-                                                            .Select(testMethod => (testMethod, RunTest(testMethod)));
-
-                                        foreach ((MethodInfo method, string methodError) in tests)
+                                        foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPathLocal))
                                         {
+                                            string methodError = RunTest(method);
+
                                             if (!outPipe.IsConnected)
                                                 break;
 
