@@ -16,7 +16,7 @@ namespace CI
     internal class Dispatcher
     {
         private static bool inProcessMessageProcesserIsRunning;
-        private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new ContractException();
+        private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new AppSettingNotFoundException("CI_UI_Path");
         private const int timeout = 1000;
         private const string START_UI_ARG = "Start UI";
 
