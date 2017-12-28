@@ -45,6 +45,23 @@ namespace JBSnorro.GitTools
 
             return method.HasAttribute(TestMethodAttributeFullNames) && !method.HasAttribute(TestMethodIgnoreAttributeFullNames);
         }
+        /// <summary>
+        /// Gets all test methods in the specified assembly.
+        /// </summary>
+        public static IEnumerable<MethodInfo> GetTestMethods(string assemblyPath)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(assemblyPath));
+
+            return Assembly.LoadFrom(assemblyPath)
+                           .GetTypes()
+                           .Where(IsTestType)
+                           .SelectMany(GetTestMethods);
+        }
+        /// <summary>
+        /// Gets all test methods in the specified type.
+        /// </summary>
+        /// <param name="testType"></param>
+        /// <returns></returns>
         public static IEnumerable<MethodInfo> GetTestMethods(Type testType)
         {
             Contract.Requires(testType != null);

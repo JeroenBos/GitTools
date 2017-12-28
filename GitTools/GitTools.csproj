@@ -72,7 +72,7 @@
     <Compile Include="GitCommandException .cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestClassWrapper.cs" />
+    <Compile Include="TestClassExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
