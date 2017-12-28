@@ -17,22 +17,32 @@ namespace CI.UI
     {
         private static string executingAssemblyDirectory => Path.GetDirectoryName(new Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBa‌​se).LocalPath);
         private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"] ?? throw new AppSettingNotFoundException("iconsPath"));
-        private static Dictionary<NotificationIconStatus, Icon> icons = new Dictionary<NotificationIconStatus, Icon>
+        private static Dictionary<NotificationIconStatus, Bitmap> bitmaps = new Dictionary<NotificationIconStatus, Bitmap>
         {
-            [NotificationIconStatus.Default] = Convert(Path.Combine(iconsPath, "default_status.png")),
-            [NotificationIconStatus.Ok] = Convert(Path.Combine(iconsPath, "ok_status.png")),
-            [NotificationIconStatus.Working] = Convert(Path.Combine(iconsPath, "working_status.png")),
-            [NotificationIconStatus.Bad] = Convert(Path.Combine(iconsPath, "bad_status.png")),
+            [NotificationIconStatus.Default] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "default_status.png")),
+            [NotificationIconStatus.Ok] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "ok_status.png")),
+            [NotificationIconStatus.Working] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "working_status.png")),
+            [NotificationIconStatus.Bad] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "bad_status.png")),
         };
+        private static Dictionary<NotificationIconStatus, Icon> icons = bitmaps.ToDictionary(kvp => kvp.Key, kvp => Convert(kvp.Value));
 
         /// <summary>
-        /// Gets the icon representing the specified status/
+        /// Gets the icon representing the specified status.
         /// </summary>
         public static Icon GetIcon(NotificationIconStatus status)
         {
             Contract.RequiresEnumIsDefined(status);
 
             return icons[status];
+        }
+        /// <summary>
+        /// Gets the icon representing the specified status.
+        /// </summary>
+        public static Bitmap GetBitmap(NotificationIconStatus status)
+        {
+            Contract.RequiresEnumIsDefined(status);
+
+            return bitmaps[status];
         }
 
         private static Icon Convert(string file)
@@ -44,6 +54,10 @@ namespace CI.UI
         {
             Bitmap bitmap = (Bitmap)Image.FromStream(iconImage);
             return Icon.FromHandle(bitmap.GetHicon());
+        }
+        private static Icon Convert(Bitmap image)
+        {
+            return Icon.FromHandle(image.GetHicon());
         }
     }
 }
