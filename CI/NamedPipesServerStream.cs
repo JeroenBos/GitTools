@@ -54,6 +54,7 @@ namespace JBSnorro.GitTools.CI
             Interlocked.Decrement(ref this.expectedNumberOfConnections);
             Interlocked.Increment(ref this.aliveConnections);
             var pipe = this.CreateReader();
+            this.pipes.Add(pipe);
             Task.Run(async () =>
             {
                 try
