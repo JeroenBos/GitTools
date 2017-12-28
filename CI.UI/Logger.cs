@@ -31,13 +31,21 @@ namespace JBSnorro.GitTools.CI
                 }
                 catch (Exception e)
                 {
-                    File.WriteAllText(Path.Combine(Path.GetDirectoryName(LogPath), "unableToLog.txt"), DateTime.Now.ToString("hh: mm:ss") + " " + e.Message + "\r\n");
+                    try
+                    {
+                        logAt(Path.Combine(Path.GetDirectoryName(LogPath), "unableToLog.txt"), e.Message);
+                    }
+                    catch { }
                 }
             }
 
             void log(string m)
             {
-                File.AppendAllText(LogPath, DateTime.Now.ToString("hh:mm:ss") + " " + m + "\r\n");
+                logAt(LogPath, message);
+            }
+            void logAt(string path, string m)
+            {
+                File.AppendAllText(path, DateTime.Now.ToString("hh:mm:ss") + " " + m + "\r\n");
             }
         }
     }
