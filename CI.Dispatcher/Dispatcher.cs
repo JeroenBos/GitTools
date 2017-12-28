@@ -44,7 +44,11 @@ namespace CI
             {
                 if (args.Length > 0 && args[0] == START_UI_ARG)
                 {
+#if DEBUG
                     StartCIUI(inProcess: true);
+#else
+                    StartCIUI(inProcess: false);
+#endif
                     args = args.Skip(1).ToArray();
                 }
 
