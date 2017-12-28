@@ -17,7 +17,20 @@ namespace CI
     {
         private static bool inProcessMessageProcesserIsRunning;
         private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new AppSettingNotFoundException("CI_UI_Path");
-        private const int timeout = 1000;
+        /// <summary>
+        /// Gets the timeout in milliseconds after which the dispatch receiver may be presumed absent.
+        /// </summary>
+        private static readonly int timeout = readTimeoutFromSettings();
+        private static int readTimeoutFromSettings()
+        {
+            const string key = "timeout_ms";
+            string timeout_string = ConfigurationManager.AppSettings[key] ?? throw new AppSettingNotFoundException(key);
+            if (int.TryParse(timeout_string, out int result))
+                return result;
+            else
+                throw new ContractException($"Invalid 'app.config': '{key}' ({timeout_string}) is invalid");
+
+        }
         private const string START_UI_ARG = "Start UI";
 
         /// <summary>
