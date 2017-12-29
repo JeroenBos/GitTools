@@ -96,7 +96,7 @@ namespace CI.UI
             icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
 #endif
         }
-        internal void HandleInput(string[] input)
+        internal void HandleInput(string[] input, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
 
@@ -117,14 +117,14 @@ namespace CI.UI
                 hash = input[1];
             }
 
-            HandleCommit(solutionFilePath, hash);
+            HandleCommit(solutionFilePath, hash, cancellationToken);
         }
 
-        private void HandleCommit(string solutionFilePath, string hash)
+        private void HandleCommit(string solutionFilePath, string hash, CancellationToken externalCancellationToken)
         {
             Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
 
-            IEnumerable<(Status Status, string Message)> getLog(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
+            IEnumerable<(Status Status, string Message)> getLog(CancellationToken internalCancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
             {
                 return JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
                                                                                 ConfigurationManager.AppSettings["destinationDirectory"],
@@ -132,32 +132,32 @@ namespace CI.UI
                                                                                 out commitMessage,
                                                                                 out projectCount,
                                                                                 hash,
-                                                                                cancellationToken);
+                                                                                internalCancellationToken);
             }
 
-            HandleCommit(icon, getLog, hash);
+            HandleCommit(icon, getLog, hash, externalCancellationToken);
         }
-        internal static void HandleCommit(IEnumerable<(Status, string)> log, NotificationIcon icon, TestResultsFile resultsFile = null, string commitMessage = null, int projectCount = 0, string hash = null)
+        internal static void HandleCommit(IEnumerable<(Status, string)> log, NotificationIcon icon, TestResultsFile resultsFile = null, string commitMessage = null, int projectCount = 0, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            HandleCommit(() => log, icon, resultsFile, commitMessage, projectCount, hash);
+            HandleCommit(() => log, icon, resultsFile, commitMessage, projectCount, hash, cancellationToken);
         }
-        internal static void HandleCommit(Func<IEnumerable<(Status, string)>> getLog, NotificationIcon icon, TestResultsFile resultsFile = null, string commitMessage = null, int projectCount = 0, string hash = null)
+        internal static void HandleCommit(Func<IEnumerable<(Status, string)>> getLog, NotificationIcon icon, TestResultsFile resultsFile = null, string commitMessage = null, int projectCount = 0, string hash = null, CancellationToken externalCancellationToken = default(CancellationToken))
         {
             var wrappedGetlog = new CopySolutionAndExecuteTestsDelegate(implementation);
-            IEnumerable<(Status, string)> implementation(CancellationToken cancellationToken, out TestResultsFile resultsFile_out, out string commitMessage_out, out int projectCount_out)
+            IEnumerable<(Status, string)> implementation(CancellationToken internalCancellationToken, out TestResultsFile resultsFile_out, out string commitMessage_out, out int projectCount_out)
             {
                 resultsFile_out = resultsFile;
                 commitMessage_out = commitMessage;
                 projectCount_out = projectCount;
                 return getLog();
             }
-            HandleCommit(icon, wrappedGetlog, hash);
+            HandleCommit(icon, wrappedGetlog, hash, externalCancellationToken);
         }
-        private static void HandleCommit(NotificationIcon icon, CopySolutionAndExecuteTestsDelegate getLog, string hash)
+        private static void HandleCommit(NotificationIcon icon, CopySolutionAndExecuteTestsDelegate getLog, string hash, CancellationToken externalCancellationToken)
         {
-            bool cancelRequested = false;
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             icon.CancellationRequested += onOperationCanceled;
+            externalCancellationToken.Register(cancellationTokenSource.Cancel);
 
             Logger.Log("Processing message");
             DateTime start = DateTime.Now;
@@ -175,7 +175,7 @@ namespace CI.UI
             {
                 foreach ((Status status, string message) in getLog(cancellationTokenSource.Token, out resultsFile, out commitMessage, out int projectCount))
                 {
-                    if (cancelRequested)
+                    if (cancellationTokenSource.IsCancellationRequested)
                     {
                         Logger.Log("Processing message canceled by user");
                         icon.Status = NotificationIconStatus.Default;
@@ -247,6 +247,7 @@ namespace CI.UI
             {
                 icon.Percentage = 1; // removes the cancel button
                 icon.CancellationRequested -= onOperationCanceled;
+                cancellationTokenSource.Dispose();
                 if (icon.Status == NotificationIconStatus.Working)
                     icon.Status = NotificationIconStatus.Ok;
 
@@ -289,7 +290,6 @@ namespace CI.UI
             }
             void onOperationCanceled(object sender, EventArgs e)
             {
-                cancelRequested = true;
                 cancellationTokenSource.Cancel();
             }
         }

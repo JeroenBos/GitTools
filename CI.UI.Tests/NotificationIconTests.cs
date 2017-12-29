@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using JBSnorro.GitTools.CI;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -163,18 +164,19 @@ namespace CI.UI.Tests
         [TestMethod]
         public void TestIconStatusAfterCancellation()
         {
+            using (var tokenSource = new CancellationTokenSource())
             using (var icon = new NotificationIcon(isVisible: false))
             {
                 IEnumerable<(Status, string)> getLog()
                 {
                     yield return (Status.BuildSuccess, "test");
 
-                    icon.RequestCancellation();
+                    tokenSource.Cancel();
 
                     yield return (Status.Skipped, null); //dummy
                 };
 
-                Program.HandleCommit(getLog(), icon);
+                Program.HandleCommit(getLog(), icon, cancellationToken: tokenSource.Token);
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Default);
                 Assert.AreEqual(1, icon.Percentage);
