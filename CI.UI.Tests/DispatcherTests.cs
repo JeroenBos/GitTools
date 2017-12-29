@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using JBSnorro;
 using JBSnorro.Diagnostics;
 using System.Threading;
+using JBSnorro.GitTools.CI;
 
 namespace CI.UI.Tests
 {
@@ -18,33 +19,35 @@ namespace CI.UI.Tests
         [TestMethod]
         public void TestDispatch()
         {
-            Dispatcher.StartCIUI(inProcess: true);
+            using (Dispatcher.StartCIUI(inProcess: true))
             {
                 bool messageSent = Dispatcher.TrySendMessage("hi");
 
                 Assert.IsTrue(messageSent);
             }
         }
-        [TestMethod, Timeout(100)]
+        [TestMethod, Timeout(1000)]
         public void TestDispatchReceipt()
         {
+            Logger.Log("TestDispatchReceipt started");
             const string testMessage = "hi";
 
-            Dispatcher.StartCIUI(inProcess: true);
+            using (Dispatcher.StartCIUI(inProcess: true))
             {
                 string receivedMessage = null;
-                ReceivingPipe.OnReceivedMessage += (sender, message) => receivedMessage = message;
+                ReceivingPipe.OnHandledMessage += (sender, message) => receivedMessage = message;
 
                 Dispatcher.TrySendMessage(testMessage);
 
+                Logger.Log("finished sending");
                 while (receivedMessage == null) //canceled by TimeoutAttribute
                 {
                     Thread.Sleep(1);
                 }
-
                 Assert.AreEqual(testMessage, receivedMessage);
+                Logger.Log("finished assertion");
             }
+            Logger.Log("finished disposing");
         }
-
     }
 }

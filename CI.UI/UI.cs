@@ -16,65 +16,68 @@ using System.Windows.Threading;
 
 namespace CI.UI
 {
-    public class Program
+    public class Program : IDisposable
     {
-        private readonly static NotificationIcon icon = new NotificationIcon();
-
         public static void Main(string[] args)
         {
             Logger.Log("In UI.main");
-#if !DEBUG
+
             if (args.Length != 0)
             {
+#if DEBUG
+                using (var program = new Program())
+                {
+                    Logger.Log($"Directly handling message {string.Join(" ", args)}");
+                    program.HandleInput(args);
+                    Logger.Log("Done directly handling");
+                }
+                Console.ReadLine();
+#else
                 string s = "Legacy direct call deprecated; call via CI.Dispatcher";
                 Logger.Log(s);
                 throw new ArgumentException(s);
-            }
 #endif
+            }
+            else
+            {
+                Start();
+            }
+        }
 
+        public static void Start(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            using (var program = new Program())
+                program.start(cancellationToken);
+        }
+        private void start(CancellationToken cancellationToken = default(CancellationToken))
+        {
             try
             {
-#if DEBUG
-                if (args.Length != 0)
-                {
-                    Logger.Log($"Directly handling message {string.Join(" ", args)}");
-                    HandleInput(args);
-                    Logger.Log("Done");
-                    Console.ReadLine();
-                    return;
-                }
-#endif
-                Logger.Log("Starting message pump");
-                Dispatcher.CurrentDispatcher.InvokeAsync(LoggedReceivingPipeStart);
-                Dispatcher.Run(); //required for buttons on Notify Icon
+                var uiDispatcher = Dispatcher.CurrentDispatcher;
+                cancellationToken.Register(() => uiDispatcher.InvokeShutdown());
+                CIReceivingPipe.Start(this, cancellationToken);
+                Dispatcher.Run(); // for icon etc
+            }
+            catch (Exception e)
+            {
+                Logger.Log("Exited message pump with error");
+                OutputError(e);
             }
             finally
             {
-                icon.Dispose();
                 Logger.Log("Disposing UI");
             }
-
-            async void LoggedReceivingPipeStart()
-            {
-                try
-                {
-                    await CIReceivingPipe.Start();
-                }
-                catch (Exception e)
-                {
-                    Logger.Log("Exited message pump with error");
-                    OutputError(e);
-                }
-            }
         }
-        public static void OutputError(Task task)
+
+        private readonly NotificationIcon icon = new NotificationIcon();
+        public void OutputError(Task task)
         {
             Contract.Requires(task != null);
             Contract.Requires(task.IsFaulted);
 
             OutputError(task.Exception);
         }
-        public static void OutputError(Exception e)
+        public void OutputError(Exception e)
         {
             if (e is AggregateException agr)
             {
@@ -87,12 +90,13 @@ namespace CI.UI
             Logger.Log(e.StackTrace);
 #if DEBUG
             icon.Status = NotificationIconStatus.Bad;
-            Console.ReadLine();
+            if (!TestClassExtensions.IsRunningFromUnitTest)
+                Console.ReadLine();
 #else
             icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
 #endif
         }
-        internal static void HandleInput(string[] input)
+        internal void HandleInput(string[] input)
         {
             if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
 
@@ -116,7 +120,7 @@ namespace CI.UI
             HandleCommit(solutionFilePath, hash);
         }
 
-        private static void HandleCommit(string solutionFilePath, string hash)
+        private void HandleCommit(string solutionFilePath, string hash)
         {
             Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
 
@@ -288,6 +292,11 @@ namespace CI.UI
                 cancelRequested = true;
                 cancellationTokenSource.Cancel();
             }
+        }
+
+        void IDisposable.Dispose()
+        {
+            this.icon?.Dispose();
         }
 
         /// <summary>

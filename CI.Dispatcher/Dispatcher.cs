@@ -15,7 +15,8 @@ namespace CI
 {
     internal class Dispatcher
     {
-        private static bool inProcessMessageProcesserIsRunning;
+        private static CancellableByDisposalCancellationTokenSource inProcessMessageProcesserCancellationTokenSource;
+        private static bool inProcessMessageProcesserIsRunning => inProcessMessageProcesserCancellationTokenSource != null;
         private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new AppSettingNotFoundException("CI_UI_Path");
         /// <summary>
         /// Gets the timeout in milliseconds after which the dispatch receiver may be presumed absent.
@@ -102,26 +103,48 @@ namespace CI
             }
         }
 
-        internal static void StartCIUI(bool inProcess = false)
+        internal static IDisposable StartCIUI(bool inProcess = false)
         {
-            // TODO: implement CancellationToken and async/returning task 
             if (inProcess)
             {
                 if (!inProcessMessageProcesserIsRunning)
                 {
-                    inProcessMessageProcesserIsRunning = true;
+                    inProcessMessageProcesserCancellationTokenSource = new CancellableByDisposalCancellationTokenSource(() => inProcessMessageProcesserCancellationTokenSource == null);
                     Logger.Log("Starting CI.UI in process");
-                    Task.Run(() => Program.Main(Array.Empty<string>())).ContinueWith(t => inProcessMessageProcesserIsRunning = false);
+                    Task.Run(() => Program.Start(inProcessMessageProcesserCancellationTokenSource.Token))
+                        .ContinueWith(t => inProcessMessageProcesserCancellationTokenSource = null);
                 }
+                return inProcessMessageProcesserCancellationTokenSource;
             }
             else if (Process.GetProcessesByName("CI.UI").Length != 0)
             {
-                return;
+                return null;
             }
             else
             {
                 Logger.Log($"Starting CI.UI out of process. Executing '{CI_UI_Path}'");
-                Process.Start(CI_UI_Path);
+                return Process.Start(CI_UI_Path);
+            }
+        }
+        private sealed class CancellableByDisposalCancellationTokenSource : CancellationTokenSource
+        {
+            private readonly Func<bool> isCanceled;
+            public CancellableByDisposalCancellationTokenSource(Func<bool> isCanceled = null)
+            {
+                this.isCanceled = isCanceled;
+            }
+            protected override void Dispose(bool disposing)
+            {
+                Logger.Log("Cancelling UI");
+                this.Cancel();
+                base.Dispose(disposing);
+                if (isCanceled != null)
+                {
+                    while (!isCanceled())
+                    {
+                        Thread.Sleep(1);
+                    }
+                }
             }
         }
 

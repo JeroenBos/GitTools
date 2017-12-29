@@ -20,44 +20,19 @@ namespace JBSnorro
         /// </summary>
         /// <param name="pipeName"> The name of the pipe to receive on. </param>
         /// <param name="separator"> The separator character sequence between messages on this pipe. </param>
-        /// <param name="ownDispatcher"> True indicates the pipe reader is executed on a new dispatcher; otherwise the calling dispatcher is used. </param>
-        public static async Task<ReceivingPipe> Start(string pipeName, string separator, bool ownDispatcher = false)
+        /// <param name="cancellationToken"> A token with which reading from the pipe can be canceled. </param>
+        public static ReceivingPipe Start(string pipeName, string separator, CancellationToken cancellationToken = default(CancellationToken))
         {
-            ReceivingPipe ctor(string arg0, string arg1, Dispatcher arg2) => new ReceivingPipe(arg0, arg1, arg2);
-            return await Start<ReceivingPipe>(pipeName, separator, ownDispatcher, ctor);
+            ReceivingPipe ctor(string arg0, string arg1) => new ReceivingPipe(arg0, arg1);
+            return Start<ReceivingPipe>(pipeName, separator, ctor, cancellationToken);
         }
-        protected static async Task<TReceivingPipe> Start<TReceivingPipe>(string pipeName, string separator, bool ownDispatcher, Func<string, string, Dispatcher, TReceivingPipe> ctor) where TReceivingPipe : ReceivingPipe
+        protected static TReceivingPipe Start<TReceivingPipe>(string pipeName, string separator, Func<string, string, TReceivingPipe> ctor, CancellationToken cancellationToken = default(CancellationToken)) where TReceivingPipe : ReceivingPipe
         {
             Contract.Requires(ctor != null);
 
-            var executingDispatcher = ownDispatcher ? StartDispatcher(timeout: TimeSpan.FromMilliseconds(100)) : Dispatcher.CurrentDispatcher;
-            var result = ctor(pipeName, separator, executingDispatcher);
-            await executingDispatcher.InvokeAsync(result.Loop);
+            var result = ctor(pipeName, separator);
+            ThreadPool.QueueUserWorkItem(async _ => await result.loop(cancellationToken));
             return result;
-        }
-        private static Dispatcher StartDispatcher(TimeSpan timeout = default(TimeSpan))
-        {
-            Dispatcher executingDispatcher = null;
-            ThreadPool.QueueUserWorkItem(_ =>
-            {
-                executingDispatcher = Dispatcher.CurrentDispatcher;
-                Dispatcher.Run();
-            });
-
-            DateTime start = DateTime.Now;
-
-            while (executingDispatcher == null)
-            {
-                Thread.Sleep(1);
-
-                bool isTimedOut = timeout != default(TimeSpan) && DateTime.Now - start > timeout;
-                if (isTimedOut)
-                    break;
-            }
-
-            if (executingDispatcher == null)
-                throw new TimeoutException("Running a new dispatcher failed");
-            return executingDispatcher;
         }
         /// <summary>
         /// This event notifies whenever a messages is received. Testing purposes only.
@@ -89,35 +64,25 @@ namespace JBSnorro
         public string Separator { get; }
 
         /// <summary>
-        /// Gets the dispatcher running the receiver loop.
-        /// </summary>
-        public Dispatcher ExecutingDispatcher { get; }
-
-        /// <summary>
         /// Creates a new receiving pipe.
         /// </summary>
         /// <param name="pipeName"> The name of the pipe to receive on. </param>
         /// <param name="separator"> The separator character sequence between messages on this pipe. </param>
-        /// <param name="executingDispatcher"> The dispatcher running the receiver loop. </param>
-        protected ReceivingPipe(string pipeName, string separator, Dispatcher executingDispatcher)
+        protected ReceivingPipe(string pipeName, string separator)
         {
             Contract.Requires(!string.IsNullOrEmpty(pipeName));
             Contract.Requires(!string.IsNullOrEmpty(separator));
             Contract.Requires(separator.Length != 0);
-            Contract.Requires(executingDispatcher != null);
 
             this.PipeName = pipeName;
             this.Separator = separator;
-            this.ExecutingDispatcher = executingDispatcher;
         }
 
-        protected async Task Loop()
+        private async Task loop(CancellationToken cancellationToken)
         {
-            Contract.Requires<InvalidOperationException>(this.ExecutingDispatcher == Dispatcher.CurrentDispatcher, "Called from wrong dispatcher");
-
             int processedMessageCount = 0;
-            Logger.Log("Starting client pipe");
-            while (true)
+            Logger.Log("Starting message pump client pipe");
+            while (!cancellationToken.IsCancellationRequested)
             {
                 using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
                 using (StreamReader reader = new StreamReader(pipe))
@@ -127,24 +92,32 @@ namespace JBSnorro
                     {
                         try
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                                break;
                             pipe.Connect(0);
+
+                            if (cancellationToken.IsCancellationRequested)
+                                break;
                             message = reader.ReadLine();
-                            InvokeOnReceivedMessage(this, message);
                         }
                         catch (TimeoutException)
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                                break;
                             await Task.Delay(10);
+                            continue;
                         }
-                    }
-                    Logger.Log($"Received message {processedMessageCount}");
 
-                    var warningCS4014SuppressingVariable = this.ExecutingDispatcher.InvokeAsync(() =>
-                        {
-                            string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
-                            HandleMessage(messageParts);
-                            InvokeOnHandledMessage(this, message);
-                        });
-                    processedMessageCount++;
+                        Logger.Log($"Received message {processedMessageCount}");
+                        InvokeOnReceivedMessage(this, message);
+
+                        Logger.Log($"Handling message '{message}'");
+                        string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
+                        HandleMessage(messageParts);
+                        InvokeOnHandledMessage(this, message);
+                        Logger.Log($"Handled message '{message}'");
+                        processedMessageCount++;
+                    }
                 }
             }
         }
