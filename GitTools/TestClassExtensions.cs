@@ -12,6 +12,11 @@ namespace JBSnorro.GitTools
     public static class TestClassExtensions
     {
         /// <summary>
+        /// Gets whether the code is running from a unit test.
+        /// </summary>
+        public static readonly bool IsRunningFromUnitTest = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.FullName).Any(assemblyName => TestingAssemblies.Any(assemblyName.StartsWith));
+
+        /// <summary>
         /// Gets whether the type is a type containing tests.
         /// </summary>
         public static bool IsTestType(Type type)
@@ -125,6 +130,7 @@ namespace JBSnorro.GitTools
         private static List<string> TestMethodInitializationAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestInitializeAttribute" };
         private static List<string> TestMethodCleanupAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestCleanupAttribute" };
         private static List<string> TestMethodIgnoreAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.IgnoreAttribute" };
+        private static List<string> TestingAssemblies = new List<string> { "Microsoft.VisualStudio.TestPlatform" };
         private static Dictionary<string, Func<Attribute, Exception, bool>> TestMethodExpectedExceptionAttributeFullNames = new Dictionary<string, Func<Attribute, Exception, bool>> { ["Microsoft.VisualStudio.TestTools.UnitTesting.ExpectedExceptionBaseAttribute"] = verifyExpectedExceptionBaseAttribute };
         //TODO: implement timeout
         private static bool verifyExpectedExceptionBaseAttribute(Attribute attribute, Exception e)
