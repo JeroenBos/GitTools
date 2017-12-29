@@ -57,6 +57,10 @@ namespace CI.UI
             get => _text;
             set => base.Set(ref _text, value);
         }
+        /// <summary>
+        /// Gets whether this <see cref="NotificationIcon"/> has been disposed of.
+        /// </summary>
+        public bool IsDisposed { get; private set; }
 
         internal NotificationIconContextMenuItems ContextMenuItems
         {
@@ -148,6 +152,7 @@ namespace CI.UI
         }
         public void Dispose()
         {
+            IsDisposed = true;
             this.Icon.Dispose();
             ProcessExit.Event -= onProcessExit;
         }
