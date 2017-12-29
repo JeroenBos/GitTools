@@ -33,7 +33,7 @@ namespace CI.UI.Tests
             Dispatcher.StartCIUI(inProcess: true);
             {
                 string receivedMessage = null;
-                ReceivingPipe.OnReceiveMessage += (sender, message) => receivedMessage = message;
+                ReceivingPipe.OnReceivedMessage += (sender, message) => receivedMessage = message;
 
                 Dispatcher.TrySendMessage(testMessage);
 

@@ -9,6 +9,7 @@ using System.Threading;
 using JBSnorro.GitTools.CI;
 using System.Windows.Threading;
 using JBSnorro.Diagnostics;
+using System.Diagnostics;
 
 namespace JBSnorro
 {
@@ -61,7 +62,22 @@ namespace JBSnorro
         /// <summary>
         /// This event notifies whenever a messages is received. Testing purposes only.
         /// </summary>
-        internal static event Action<object, string> OnReceiveMessage;
+        internal static event Action<object, string> OnReceivedMessage;
+        /// <summary>
+        /// This event notifies whenever a messages has been handled. Testing purposes only.
+        /// </summary>
+        internal static event Action<object, string> OnHandledMessage;
+
+        [Conditional("DEBUG")]
+        private static void InvokeOnReceivedMessage(ReceivingPipe pipe, string message)
+        {
+            OnReceivedMessage?.Invoke(pipe, message);
+        }
+        [Conditional("DEBUG")]
+        private static void InvokeOnHandledMessage(ReceivingPipe pipe, string message)
+        {
+            OnHandledMessage?.Invoke(pipe, message);
+        }
 
         /// <summary>
         /// Gets the name of this pipe.
@@ -113,6 +129,7 @@ namespace JBSnorro
                         {
                             pipe.Connect(0);
                             message = reader.ReadLine();
+                            InvokeOnReceivedMessage(this, message);
                         }
                         catch (TimeoutException)
                         {
@@ -125,6 +142,7 @@ namespace JBSnorro
                         {
                             string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
                             HandleMessage(messageParts);
+                            InvokeOnHandledMessage(this, message);
                         });
                     processedMessageCount++;
                 }
