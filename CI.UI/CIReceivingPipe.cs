@@ -17,7 +17,7 @@ namespace CI.UI
 
         public static CIReceivingPipe Start(Program program, CancellationToken cancellationToken = default(CancellationToken))
         {
-            CIReceivingPipe ctor(string arg0, string arg1) => new CIReceivingPipe(arg0, arg1, program, cancellationToken);
+            CIReceivingPipe ctor(string arg0, string arg1) => new CIReceivingPipe(arg0, arg1, program);
 
             return Start<CIReceivingPipe>(PipeName, PipeMessageSeparator, ctor: ctor, cancellationToken: cancellationToken);
         }
@@ -35,21 +35,20 @@ namespace CI.UI
         /// </summary>
         public CancellationToken CancellationToken { get; }
 
-        private CIReceivingPipe(string arg0, string arg1, Program program, CancellationToken cancellationToken)
+        private CIReceivingPipe(string arg0, string arg1, Program program)
             : base(arg0, arg1)
         {
             Contract.Requires(program != null);
 
             this.Program = program;
             this.MainDispatcher = Dispatcher.CurrentDispatcher;
-            this.CancellationToken = cancellationToken;
         }
 
-        protected override void HandleMessage(string[] message)
+        protected override void HandleMessage(string[] message, CancellationToken cancellationToken)
         {
             try
             {
-                Program.HandleInput(message, this.CancellationToken);
+                Program.HandleInput(message, cancellationToken);
             }
             catch (Exception e)
             {

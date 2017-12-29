@@ -113,7 +113,7 @@ namespace JBSnorro
 
                         Logger.Log($"Handling message '{message}'");
                         string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
-                        HandleMessage(messageParts);
+                        HandleMessage(messageParts, cancellationToken);
                         InvokeOnHandledMessage(this, message);
                         Logger.Log($"Handled message '{message}'");
                         processedMessageCount++;
@@ -125,7 +125,7 @@ namespace JBSnorro
         /// Handles a received message.
         /// </summary>
         /// <param name="message"> The message, already split by the specified separator. </param>
-        protected virtual void HandleMessage(string[] message)
+        protected virtual void HandleMessage(string[] message, CancellationToken cancellationToken)
         {
             Contract.Requires(message != null);
         }
