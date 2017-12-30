@@ -89,5 +89,33 @@ namespace CI.UI.Tests
             Assert.AreEqual(2, receivedMessageCount);
             Assert.AreEqual(0, handledMessageCount);
         }
+        [Test, Timeout(1000)]
+        public void MessagesAreHandledAfterCancellation()
+        {
+            const string test_message = "hi";
+            string handledMessage = null;
+            ReceivingPipe.OnHandledMessage += (sender, message) => handledMessage = message;
+            using (Dispatcher.StartCIUI(inProcess: true))
+            {
+                Dispatcher.TrySendMessage(ComposeDummyWorkMessage(timeout_ms: int.MaxValue));           // send message
+
+                while (Program.Icon_TESTING == null)
+                {
+                    Thread.Sleep(10);
+                }
+
+                Thread.Sleep(100);
+                Program.Icon_TESTING.RequestCancellation();                                             // which is then cancelled.
+
+                Contract.Assert(handledMessage == null);
+                Dispatcher.TrySendMessage(test_message);                                                // Then send another message
+                while (handledMessage == null)
+                {
+                    Thread.Sleep(10);
+                }
+            }
+
+            Assert.AreEqual(test_message, handledMessage);                                              // which then should be handled
+        }
     }
 }

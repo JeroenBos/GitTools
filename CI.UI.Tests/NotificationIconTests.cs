@@ -15,7 +15,7 @@ namespace CI.UI.Tests
     {
         static void Main(string[] args)
         {
-            new DispatcherTests().TestReceiptMultipleMessages();
+            new DispatcherTests().MessagesAreHandledAfterCancellation();
 
 
             Console.WriteLine("Done");

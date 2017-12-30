@@ -19,6 +19,11 @@ namespace CI.UI
     public class Program : IDisposable
     {
         internal const string TEST_ARGUMENT = "TEST_ARGUMENT";
+        /// <summary>
+        /// Gets the latest icon created. For testint purposes only.
+        /// </summary>
+        internal static NotificationIcon Icon_TESTING => icon_TESTING;
+        private static NotificationIcon icon_TESTING;
         public static void Main(string[] args)
         {
             if (args.Length != 0)
@@ -46,7 +51,10 @@ namespace CI.UI
         public static void Start(CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var program = new Program())
+            {
+                icon_TESTING = program.icon;
                 program.start(cancellationToken);
+            }
         }
         private void start(CancellationToken cancellationToken = default(CancellationToken))
         {
