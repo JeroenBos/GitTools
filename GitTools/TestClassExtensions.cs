@@ -2,19 +2,23 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Threading.Tasks;
 using JBSnorro.Extensions;
 using JBSnorro.Diagnostics;
+using System.Diagnostics;
 
 namespace JBSnorro.GitTools
 {
     public static class TestClassExtensions
     {
+        static TestClassExtensions()
+        {
+            IsRunningFromUnitTest = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.FullName).Any(assemblyName => TestingAssemblies.Any(assemblyName.StartsWith));
+        }
         /// <summary>
         /// Gets whether the code is running from a unit test.
         /// </summary>
-        public static readonly bool IsRunningFromUnitTest = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.FullName).Any(assemblyName => TestingAssemblies.Any(assemblyName.StartsWith));
+        public static readonly bool IsRunningFromUnitTest;
 
         /// <summary>
         /// Gets whether the type is a type containing tests.
