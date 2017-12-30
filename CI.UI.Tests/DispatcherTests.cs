@@ -58,5 +58,36 @@ namespace CI.UI.Tests
             // which is precisely what we're not testing here. I assume this is a NUnit thing, but in case it isn't, this may explain why I didn't understand everything
             Assert.AreEqual(testMessage, receivedMessage);
         }
+        [Test, Timeout(1000)]
+        public void TestReceiptMultipleMessages()
+        {
+            Logger.Prefix = "Test - ";
+            const int timeout_ms = 500;
+            string message = ComposeDummyWorkMessage(timeout_ms);
+            int receivedMessageCount = 0;
+            int handledMessageCount = 0;
+            ReceivingPipe.OnReceivedMessage += (sender, e) => receivedMessageCount++;
+            ReceivingPipe.OnHandledMessage += (sender, e) => handledMessageCount++;
+
+            using (Dispatcher.StartCIUI(inProcess: true))
+            {
+                //Act
+                Dispatcher.TrySendMessage(message);
+                while (receivedMessageCount != 1)
+                {
+                    Thread.Sleep(10);
+                }
+                Logger.Log("received message count became 1. Handled: " + handledMessageCount);
+                Dispatcher.TrySendMessage(message);
+                while (receivedMessageCount != 2)
+                {
+                    Thread.Sleep(10);
+                }
+                Logger.Log("received message count became 2. Handled: " + handledMessageCount);
+            }
+
+            Assert.AreEqual(2, receivedMessageCount);
+            Assert.AreEqual(0, handledMessageCount);
+        }
     }
 }

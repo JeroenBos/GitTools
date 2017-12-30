@@ -114,8 +114,6 @@ namespace JBSnorro
                         Logger.Log($"Handling message '{message}'");
                         string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
                         HandleMessage(messageParts, cancellationToken);
-                        InvokeOnHandledMessage(this, message);
-                        Logger.Log($"Handled message '{message}'");
                     }
                 }
             }
@@ -127,6 +125,10 @@ namespace JBSnorro
         protected virtual void HandleMessage(string[] message, CancellationToken cancellationToken)
         {
             Contract.Requires(message != null);
+
+            var completeMessage = string.Join(" ", message);
+            InvokeOnHandledMessage(this, completeMessage);
+            Logger.Log($"Handled message '{completeMessage}'");
         }
     }
 }

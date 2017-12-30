@@ -15,9 +15,8 @@ namespace CI.UI.Tests
     {
         static void Main(string[] args)
         {
-            new DispatcherTests().TestDispatch();
+            new DispatcherTests().TestReceiptMultipleMessages();
 
-            new NotificationIconTests().TestCancelButtonExistence();
 
             Console.WriteLine("Done");
             Console.ReadLine();

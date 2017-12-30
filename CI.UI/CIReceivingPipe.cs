@@ -46,14 +46,21 @@ namespace CI.UI
 
         protected override void HandleMessage(string[] message, CancellationToken cancellationToken)
         {
-            try
+            ThreadPool.QueueUserWorkItem(_ =>
             {
-                Program.HandleInput(message, cancellationToken);
-            }
-            catch (Exception e)
-            {
-                MainDispatcher.InvokeAsync(() => Program.OutputError(e));
-            }
+                try
+                {
+                    Program.HandleInput(message, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    MainDispatcher.InvokeAsync(() => Program.OutputError(e));
+                }
+                finally
+                {
+                    base.HandleMessage(message, cancellationToken);
+                }
+            });
         }
     }
 }
