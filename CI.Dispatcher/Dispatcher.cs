@@ -96,7 +96,6 @@ namespace CI
             var pipe = new NamedPipeServerStream(CIReceivingPipe.PipeName, PipeDirection.Out);
             // try to make connection, or start the executable in case it's not responding
             Task makeConnectionTask = pipe.WaitForConnectionAsync();
-            Task timeoutTask = Task.Delay(timeout);
             if (makeConnectionTask.Wait(timeout))
             {
                 Logger.Log("Found listener");
