@@ -368,11 +368,6 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                SetAttributesNormal(Path.GetDirectoryName(destinationSolutionFile));
-            }
-            catch { }
-            try
-            {
                 using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
                 {
                     foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
