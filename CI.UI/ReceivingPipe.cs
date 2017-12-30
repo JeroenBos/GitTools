@@ -79,7 +79,7 @@ namespace JBSnorro
 
         private async Task loop(CancellationToken cancellationToken)
         {
-            int processedMessageCount = 0;
+            int receivedMessageCount = 0;
             Logger.Log("Starting message pump client pipe");
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -108,7 +108,7 @@ namespace JBSnorro
                             continue;
                         }
 
-                        Logger.Log($"Received message {processedMessageCount}");
+                        Logger.Log($"Received message {receivedMessageCount++}");
                         InvokeOnReceivedMessage(this, message);
 
                         Logger.Log($"Handling message '{message}'");
@@ -116,7 +116,6 @@ namespace JBSnorro
                         HandleMessage(messageParts, cancellationToken);
                         InvokeOnHandledMessage(this, message);
                         Logger.Log($"Handled message '{message}'");
-                        processedMessageCount++;
                     }
                 }
             }
