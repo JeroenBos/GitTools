@@ -22,7 +22,11 @@ namespace CI.UI.Tests
             Console.WriteLine("Done");
             Console.ReadLine();
         }
-
+        [TestInitialize]
+        public void ResetPrefix()
+        {
+            Logger.Prefix = "";
+        }
         [TestMethod]
         public void TestIconStatusAfterBuildError()
         {
