@@ -40,15 +40,16 @@ namespace CI
         /// </summary>
         internal static void Main(string[] args)
         {
+            IDisposable disposable = null;
             Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
             try
             {
                 if (args.Length > 0 && args[0] == START_UI_ARG)
                 {
 #if DEBUG
-                    StartCIUI(inProcess: true);
+                    disposable = StartCIUI(inProcess: true);
 #else
-                    StartCIUI(inProcess: false);
+                    disposable = StartCIUI(inProcess: false);
 #endif
                     args = args.Skip(1).ToArray();
                 }
@@ -65,6 +66,11 @@ namespace CI
             }
             finally
             {
+                if (disposable != null)
+                {
+                    Logger.Log("Disposing started UI");
+                    disposable.Dispose();
+                }
 #if DEBUG
                 Console.ReadLine();
 #endif
