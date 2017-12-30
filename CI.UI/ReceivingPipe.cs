@@ -79,43 +79,54 @@ namespace JBSnorro
 
         private async Task loop(CancellationToken cancellationToken)
         {
-            int receivedMessageCount = 0;
-            Logger.Log("Starting message pump client pipe");
-            while (!cancellationToken.IsCancellationRequested)
+            try
             {
-                using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
-                using (StreamReader reader = new StreamReader(pipe))
+                int receivedMessageCount = 0;
+                Logger.Log("Starting message pump client pipe");
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    string message = null;
-                    while (!pipe.IsConnected && message == null)
+                    using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
+                    using (StreamReader reader = new StreamReader(pipe))
                     {
-                        try
+                        string message = null;
+                        while (!pipe.IsConnected && message == null)
                         {
-                            if (cancellationToken.IsCancellationRequested)
-                                break;
-                            pipe.Connect(0);
+                            try
+                            {
+                                if (cancellationToken.IsCancellationRequested)
+                                    break;
+                                pipe.Connect(0);
 
-                            if (cancellationToken.IsCancellationRequested)
-                                break;
-                            message = reader.ReadLine();
+                                if (cancellationToken.IsCancellationRequested)
+                                    break;
+                                message = reader.ReadLine();
+                            }
+                            catch (TimeoutException)
+                            {
+                                if (cancellationToken.IsCancellationRequested)
+                                    break;
+
+                                await Dispatcher.Yield(DispatcherPriority.Background);
+                                continue;
+                            }
+
+                            Logger.Log($"Received message {receivedMessageCount++}");
+                            InvokeOnReceivedMessage(this, message);
+
+                            Logger.Log($"Handling message '{message}'");
+                            string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
+                            HandleMessage(messageParts, cancellationToken);
                         }
-                        catch (TimeoutException)
-                        {
-                            if (cancellationToken.IsCancellationRequested)
-                                break;
-
-                            await Dispatcher.Yield(DispatcherPriority.Background);
-                            continue;
-                        }
-
-                        Logger.Log($"Received message {receivedMessageCount++}");
-                        InvokeOnReceivedMessage(this, message);
-
-                        Logger.Log($"Handling message '{message}'");
-                        string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
-                        HandleMessage(messageParts, cancellationToken);
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                Logger.Log("Message pump experienced unexpected error: " + e.Message);
+            }
+            finally
+            {
+                Logger.Log("Stopped message pump client pipe");
             }
         }
         /// <summary>
