@@ -21,8 +21,6 @@ namespace CI.UI
         internal const string TEST_ARGUMENT = "TEST_ARGUMENT";
         public static void Main(string[] args)
         {
-            Logger.Log("In UI.main");
-
             if (args.Length != 0)
             {
 #if DEBUG
@@ -52,10 +50,14 @@ namespace CI.UI
         }
         private void start(CancellationToken cancellationToken = default(CancellationToken))
         {
+            Logger.Log("In UI.start");
+
+            var uiDispatcher = Dispatcher.CurrentDispatcher;
+            Contract.Requires(!uiDispatcher.HasShutdownFinished, "The dispatcher has already shut down");
+
             try
             {
-                var uiDispatcher = Dispatcher.CurrentDispatcher;
-                cancellationToken.Register(() => uiDispatcher.InvokeShutdown());
+                cancellationToken.Register(() => { Logger.Log("Shutting down uiDispatcher"); uiDispatcher.InvokeShutdown(); });
                 Dispatcher.CurrentDispatcher.InvokeAsync(async () => await CIReceivingPipe.Start(this, cancellationToken));
                 Dispatcher.Run(); // for icon and pipe reading
             }

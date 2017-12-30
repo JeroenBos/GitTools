@@ -118,7 +118,15 @@ namespace CI
                     inProcessMessageProcesserCancellationTokenSource = new CancellableByDisposalCancellationTokenSource(() => inProcessMessageProcesserCancellationTokenSource == null);
                     Logger.Log("Starting CI.UI in process");
                     Task.Run(() => Program.Start(inProcessMessageProcesserCancellationTokenSource.Token))
-                        .ContinueWith(t => inProcessMessageProcesserCancellationTokenSource = null);
+                        .ContinueWith(t =>
+                        {
+                            Contract.Assume(!t.IsCanceled || inProcessMessageProcesserCancellationTokenSource.IsCancellationRequested);
+
+                            string reason = t.IsCanceled ? "Cancel requested" : t.IsFaulted ? "Error occurred: " + t.Exception.InnerException.Message : "succeeded";
+                            Logger.Log("Stopping CI.UI in process. " + reason);
+                            inProcessMessageProcesserCancellationTokenSource = null;
+                        });
+
                 }
                 return inProcessMessageProcesserCancellationTokenSource;
             }

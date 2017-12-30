@@ -16,6 +16,15 @@ namespace CI.UI.Tests
     [TestClass]
     public class DispatcherTests
     {
+        private static string ComposeDummyWorkMessage(int timeout_ms)
+        {
+            return $"{Program.TEST_ARGUMENT}{CIReceivingPipe.PipeMessageSeparator}{timeout_ms}";
+        }
+        [TestInitialize]
+        public void ResetPrefix()
+        {
+            Logger.Prefix = "";
+        }
         [TestMethod]
         public void TestDispatch()
         {
@@ -29,7 +38,6 @@ namespace CI.UI.Tests
         [TestMethod, Timeout(1000)]
         public void TestDispatchReceipt()
         {
-            Logger.Log("TestDispatchReceipt started");
             const string testMessage = "hi";
 
             using (Dispatcher.StartCIUI(inProcess: true))
@@ -39,15 +47,12 @@ namespace CI.UI.Tests
 
                 Dispatcher.TrySendMessage(testMessage);
 
-                Logger.Log("finished sending");
                 while (receivedMessage == null) //canceled by TimeoutAttribute
                 {
                     Thread.Sleep(1);
                 }
                 Assert.AreEqual(testMessage, receivedMessage);
-                Logger.Log("finished assertion");
             }
-            Logger.Log("finished disposing");
         }
     }
 }
