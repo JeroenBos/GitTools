@@ -65,7 +65,7 @@ namespace CI.UI
 
             try
             {
-                cancellationToken.Register(() => { Logger.Log("Shutting down uiDispatcher"); uiDispatcher.InvokeShutdown(); });
+                cancellationToken.Register(() => { Logger.Log("Shutting down uiDispatcher"); uiDispatcher.InvokeAsync(() => Dispatcher.ExitAllFrames()); });
                 Dispatcher.CurrentDispatcher.InvokeAsync(async () => await CIReceivingPipe.Start(this, cancellationToken));
                 Dispatcher.Run(); // for icon and pipe reading
             }
