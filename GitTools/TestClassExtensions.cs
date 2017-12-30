@@ -125,12 +125,12 @@ namespace JBSnorro.GitTools
                                    .FirstOrDefault();
         }
 
-        private static List<string> TestClassFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute" };
-        private static List<string> TestMethodAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute" };
-        private static List<string> TestMethodInitializationAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestInitializeAttribute" };
-        private static List<string> TestMethodCleanupAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestCleanupAttribute" };
-        private static List<string> TestMethodIgnoreAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.IgnoreAttribute" };
-        private static List<string> TestingAssemblies = new List<string> { "Microsoft.VisualStudio.TestPlatform" };
+        private static List<string> TestClassFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute", "NUnit.Framework.TestFixtureAttribute" };
+        private static List<string> TestMethodAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute", "NUnit.Framework.TestAttribute" };
+        private static List<string> TestMethodInitializationAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestInitializeAttribute", "NUnit.Framework.SetUpAttribute" }; // TODO: implement NUnit.Framework.SetUpFixtureAttribute
+        private static List<string> TestMethodCleanupAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.TestCleanupAttribute", "NUnit.Framework.TearDownAttribute" };
+        private static List<string> TestMethodIgnoreAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.IgnoreAttribute", "NUnit.Framework.IgnoreAttribute" };
+        private static List<string> TestingAssemblies = new List<string> { "Microsoft.VisualStudio.TestPlatform", "nunit.framework" };
         private static Dictionary<string, Func<Attribute, Exception, bool>> TestMethodExpectedExceptionAttributeFullNames = new Dictionary<string, Func<Attribute, Exception, bool>> { ["Microsoft.VisualStudio.TestTools.UnitTesting.ExpectedExceptionBaseAttribute"] = verifyExpectedExceptionBaseAttribute };
         //TODO: implement timeout
         private static bool verifyExpectedExceptionBaseAttribute(Attribute attribute, Exception e)
