@@ -5,12 +5,12 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JBSnorro.GitTools.CI;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NUnit.Framework;
 using static CI.UI.NotificationIcon;
 
 namespace CI.UI.Tests
 {
-    [TestClass]
+    [TestFixture]
     public class NotificationIconTests
     {
         static void Main(string[] args)
@@ -22,12 +22,13 @@ namespace CI.UI.Tests
             Console.WriteLine("Done");
             Console.ReadLine();
         }
-        [TestInitialize]
+        [SetUp]
         public void ResetPrefix()
         {
             Logger.Prefix = "";
         }
-        [TestMethod]
+
+        [Test]
         public void TestIconStatusAfterBuildError()
         {
             using (var icon = new NotificationIcon(isVisible: false))
@@ -45,8 +46,7 @@ namespace CI.UI.Tests
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
-
-        [TestMethod]
+        [Test]
         public void TestIconStatusAfterBuildingOneOutOfTwoProjects()
         {
             using (var icon = new NotificationIcon(isVisible: false))
@@ -68,7 +68,7 @@ namespace CI.UI.Tests
                 }
             }
         }
-        [TestMethod]
+        [Test]
         public void TestIconStatusAfterBuildingTwoOutOfTwoProjects()
         {
             using (var icon = new NotificationIcon(isVisible: false))
@@ -86,7 +86,7 @@ namespace CI.UI.Tests
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
-        [TestMethod]
+        [Test]
         public void TestIconStatusAfterTestSucceeds()
         {
             using (var icon = new NotificationIcon(isVisible: false))
@@ -104,8 +104,7 @@ namespace CI.UI.Tests
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
-
-        [TestMethod]
+        [Test]
         public void TestIconStatusAfterTestFails()
         {
             using (var icon = new NotificationIcon(isVisible: false))
@@ -123,8 +122,7 @@ namespace CI.UI.Tests
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
-
-        [TestMethod]
+        [Test]
         public void TestIconStatusAfterOneTestFailsAndAnotherOneSucceeds()
         {
             using (var icon = new NotificationIcon(isVisible: false))
@@ -143,8 +141,7 @@ namespace CI.UI.Tests
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
-
-        [TestMethod]
+        [Test]
         public void TestIconStatusAfterOneTestSucceedsOneFailsAndAnotherOneSucceeds()
         {
             using (var icon = new NotificationIcon(isVisible: false))
@@ -164,8 +161,7 @@ namespace CI.UI.Tests
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
-
-        [TestMethod]
+        [Test]
         public void TestIconStatusAfterCancellation()
         {
             using (var tokenSource = new CancellationTokenSource())
@@ -188,9 +184,7 @@ namespace CI.UI.Tests
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
-
-
-        [TestMethod]
+        [Test]
         public void TestCancelButtonExistence()
         {
             using (var icon = new NotificationIcon(isVisible: false))

@@ -1,5 +1,4 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
@@ -10,22 +9,24 @@ using JBSnorro;
 using JBSnorro.Diagnostics;
 using System.Threading;
 using JBSnorro.GitTools.CI;
+using NUnit.Framework;
 
 namespace CI.UI.Tests
 {
-    [TestClass]
+    [TestFixture]
     public class DispatcherTests
     {
+
         private static string ComposeDummyWorkMessage(int timeout_ms)
         {
             return $"{Program.TEST_ARGUMENT}{CIReceivingPipe.PipeMessageSeparator}{timeout_ms}";
         }
-        [TestInitialize]
+        [SetUp]
         public void ResetPrefix()
         {
             Logger.Prefix = "";
         }
-        [TestMethod]
+        [Test, RequiresThread]
         public void TestDispatch()
         {
             using (Dispatcher.StartCIUI(inProcess: true))
@@ -35,14 +36,14 @@ namespace CI.UI.Tests
                 Assert.IsTrue(messageSent);
             }
         }
-        [TestMethod, Timeout(1000)]
+        [Test, Timeout(1000)]
         public void TestDispatchReceipt()
         {
             const string testMessage = "hi";
+            string receivedMessage = null;
 
             using (Dispatcher.StartCIUI(inProcess: true))
             {
-                string receivedMessage = null;
                 ReceivingPipe.OnHandledMessage += (sender, message) => receivedMessage = message;
 
                 Dispatcher.TrySendMessage(testMessage);
@@ -51,8 +52,11 @@ namespace CI.UI.Tests
                 {
                     Thread.Sleep(1);
                 }
-                Assert.AreEqual(testMessage, receivedMessage);
             }
+
+            // the difference between asserting inside or outside of the using statement is that inside these assertions will only evaluated after all background threads have finished,
+            // which is precisely what we're not testing here. I assume this is a NUnit thing, but in case it isn't, this may explain why I didn't understand everything
+            Assert.AreEqual(testMessage, receivedMessage);
         }
     }
 }
