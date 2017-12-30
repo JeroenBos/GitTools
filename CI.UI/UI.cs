@@ -18,6 +18,7 @@ namespace CI.UI
 {
     public class Program : IDisposable
     {
+        internal const string TEST_ARGUMENT = "TEST_ARGUMENT";
         public static void Main(string[] args)
         {
             Logger.Log("In UI.main");
@@ -99,6 +100,17 @@ namespace CI.UI
         internal void HandleInput(string[] input, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
+
+            if (input[0] == TEST_ARGUMENT)
+            {
+                if (input.Length == 1)
+                    throw new ArgumentException("No number of milliseconds of test work was provided. ");
+                if (!int.TryParse(input[1], out int timeout))
+                    throw new ArgumentException("Invalid number of milliseconds of test work provided. ");
+
+                Thread.Sleep(timeout);
+                return;
+            }
 
             if (input.Length > 2)
                 throw new ArgumentException($"Too many arguments provided: expected 1 or 2, received {input.Length}");
