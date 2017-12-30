@@ -15,11 +15,11 @@ namespace CI.UI
         public new const string PipeName = "CI_Pipe";
         public const string PipeMessageSeparator = "-:-";
 
-        public static CIReceivingPipe Start(Program program, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task Start(Program program, CancellationToken cancellationToken = default(CancellationToken))
         {
             CIReceivingPipe ctor(string arg0, string arg1) => new CIReceivingPipe(arg0, arg1, program);
 
-            return Start<CIReceivingPipe>(PipeName, PipeMessageSeparator, ctor: ctor, cancellationToken: cancellationToken);
+            await Start<CIReceivingPipe>(PipeName, PipeMessageSeparator, ctor: ctor, cancellationToken: cancellationToken);
         }
 
         /// <summary>

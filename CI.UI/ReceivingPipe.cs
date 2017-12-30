@@ -21,18 +21,17 @@ namespace JBSnorro
         /// <param name="pipeName"> The name of the pipe to receive on. </param>
         /// <param name="separator"> The separator character sequence between messages on this pipe. </param>
         /// <param name="cancellationToken"> A token with which reading from the pipe can be canceled. </param>
-        public static ReceivingPipe Start(string pipeName, string separator, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task Start(string pipeName, string separator, CancellationToken cancellationToken = default(CancellationToken))
         {
             ReceivingPipe ctor(string arg0, string arg1) => new ReceivingPipe(arg0, arg1);
-            return Start<ReceivingPipe>(pipeName, separator, ctor, cancellationToken);
+            await Start<ReceivingPipe>(pipeName, separator, ctor, cancellationToken);
         }
-        protected static TReceivingPipe Start<TReceivingPipe>(string pipeName, string separator, Func<string, string, TReceivingPipe> ctor, CancellationToken cancellationToken = default(CancellationToken)) where TReceivingPipe : ReceivingPipe
+        protected static async Task Start<TReceivingPipe>(string pipeName, string separator, Func<string, string, TReceivingPipe> ctor, CancellationToken cancellationToken = default(CancellationToken)) where TReceivingPipe : ReceivingPipe
         {
             Contract.Requires(ctor != null);
 
-            var result = ctor(pipeName, separator);
-            ThreadPool.QueueUserWorkItem(async _ => await result.loop(cancellationToken));
-            return result;
+            var pipe = ctor(pipeName, separator);
+            await pipe.loop(cancellationToken);
         }
         /// <summary>
         /// This event notifies whenever a messages is received. Testing purposes only.
@@ -104,7 +103,8 @@ namespace JBSnorro
                         {
                             if (cancellationToken.IsCancellationRequested)
                                 break;
-                            await Task.Delay(10);
+
+                            await Dispatcher.Yield(DispatcherPriority.Background);
                             continue;
                         }
 

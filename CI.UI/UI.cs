@@ -56,8 +56,8 @@ namespace CI.UI
             {
                 var uiDispatcher = Dispatcher.CurrentDispatcher;
                 cancellationToken.Register(() => uiDispatcher.InvokeShutdown());
-                CIReceivingPipe.Start(this, cancellationToken);
-                Dispatcher.Run(); // for icon etc
+                Dispatcher.CurrentDispatcher.InvokeAsync(async () => await CIReceivingPipe.Start(this, cancellationToken));
+                Dispatcher.Run(); // for icon and pipe reading
             }
             catch (Exception e)
             {
