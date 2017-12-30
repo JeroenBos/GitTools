@@ -15,8 +15,9 @@ namespace CI
 {
     internal class Dispatcher
     {
-        private static CancellableByDisposalCancellationTokenSource inProcessMessageProcesserCancellationTokenSource;
-        private static bool inProcessMessageProcesserIsRunning => inProcessMessageProcesserCancellationTokenSource != null;
+        private static RunnableTaskCancellableByDisposal inProcessUI;
+        private static bool inProcessUIIsRunning => inProcessUI != null;
+
         private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new AppSettingNotFoundException("CI_UI_Path");
         /// <summary>
         /// Gets the timeout in milliseconds after which the dispatch receiver may be presumed absent.
@@ -87,7 +88,7 @@ namespace CI
 
         private static NamedPipeServerStream TrySetupConnection()
         {
-            if (!inProcessMessageProcesserIsRunning && Process.GetProcessesByName("CI.UI").Length == 0)
+            if (!inProcessUIIsRunning && Process.GetProcessesByName("CI.UI").Length == 0)
             {
                 Logger.Log("The receiving end of the pipe is not running");
                 return null;
@@ -107,27 +108,27 @@ namespace CI
                 return null;
             }
         }
+        /// <summary>
+        /// Starts the UI in process with the specified icon.
+        /// </summary>
+        internal static IDisposable StartCIUI(NotificationIcon icon)
+        {
+            Contract.Requires(icon != null);
 
+            return new RunnableTaskCancellableByDisposal(token => Program.Start(icon, token));
+        }
+        /// <summary>
+        /// Starts the UI with a new icon.
+        /// </summary>
+        /// <param name="inProcess"> Indicates whether the ui should be started in the current process (true) or in a new process process (false). </param>
         internal static IDisposable StartCIUI(bool inProcess = false)
         {
             if (inProcess)
             {
-                if (!inProcessMessageProcesserIsRunning)
-                {
-                    inProcessMessageProcesserCancellationTokenSource = new CancellableByDisposalCancellationTokenSource(() => inProcessMessageProcesserCancellationTokenSource == null);
-                    Logger.Log("Starting CI.UI in process");
-                    Task.Run(() => Program.Start(inProcessMessageProcesserCancellationTokenSource.Token))
-                        .ContinueWith(t =>
-                        {
-                            Contract.Assume(!t.IsCanceled || inProcessMessageProcesserCancellationTokenSource.IsCancellationRequested);
+                Contract.Requires(!inProcessUIIsRunning, "The UI is already running in process");
 
-                            string reason = t.IsCanceled ? "Cancel requested" : t.IsFaulted ? "Error occurred: " + t.Exception.InnerException.Message : "succeeded";
-                            Logger.Log("Stopping CI.UI in process. " + reason);
-                            inProcessMessageProcesserCancellationTokenSource = null;
-                        });
-
-                }
-                return inProcessMessageProcesserCancellationTokenSource;
+                Logger.Log("Starting CI.UI in process");
+                return new RunnableTaskCancellableByDisposal(Program.Start);
             }
             else if (Process.GetProcessesByName("CI.UI").Length != 0)
             {
@@ -139,24 +140,40 @@ namespace CI
                 return Process.Start(CI_UI_Path);
             }
         }
-        private sealed class CancellableByDisposalCancellationTokenSource : CancellationTokenSource
+        private sealed class RunnableTaskCancellableByDisposal : CancellationTokenSource
         {
-            private readonly Func<bool> isCanceled;
-            public CancellableByDisposalCancellationTokenSource(Func<bool> isCanceled = null)
+            private readonly Task task;
+            public RunnableTaskCancellableByDisposal(Action<CancellationToken> cancellableAction)
             {
-                this.isCanceled = isCanceled;
+                Contract.Requires(cancellableAction != null);
+
+                this.task = Task.Run(() => cancellableAction(this.Token))
+                                .ContinueWith(t => Logger.Log("Unhandled exception occurred: " + t.Exception.InnerException.Message), TaskContinuationOptions.OnlyOnFaulted);
+                inProcessUI = this;
             }
             protected override void Dispose(bool disposing)
             {
-                Logger.Log("Cancelling UI");
-                this.Cancel();
-                base.Dispose(disposing);
-                if (isCanceled != null)
+                Logger.Log("Cancelling CI.UI");
+                try
                 {
-                    while (!isCanceled())
+                    this.Cancel();
+                }
+                catch (AggregateException e) when (e.InnerException is ObjectDisposedException)
+                {
+                    return;
+                }
+                finally
+                {
+                    try
                     {
-                        Thread.Sleep(1);
+                        this.task.Wait();
                     }
+                    catch (AggregateException ae) when (ae.InnerException is TaskCanceledException) { }
+                    catch (Exception e) { Logger.Log("Unhandled error: " + e.Message); }
+
+                    base.Dispose(disposing);
+                    inProcessUI = null;
+                    Logger.Log("Cancelled CI.UI");
                 }
             }
         }

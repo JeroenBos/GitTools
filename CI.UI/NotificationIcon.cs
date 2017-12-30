@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using JBSnorro.GitTools.CI;
 using System.Windows.Threading;
 using System.ComponentModel;
+using System.Threading;
 
 namespace CI.UI
 {
@@ -20,7 +21,20 @@ namespace CI.UI
     /// </summary>
     public sealed class NotificationIcon : DefaultINotifyPropertyChanged, IDisposable
     {
-        public event EventHandler CancellationRequested;
+        public bool HasCancellationRequestedHandler => this.cancellationRequested != null;//this.cancellationRequested?.GetInvocationList().Length?.Equals(0) ?? false;
+        public event EventHandler CancellationRequested
+        {
+            add
+            {
+                this.cancellationRequested += value;
+            }
+            remove
+            {
+                this.cancellationRequested -= value;
+            }
+        }
+        private EventHandler cancellationRequested;
+
 
         /// <summary>
         /// Gets the duration to show the error balloon in ms.
@@ -148,7 +162,7 @@ namespace CI.UI
 
         internal void RequestCancellation()
         {
-            CancellationRequested?.Invoke(this, new EventArgs());
+            this.cancellationRequested?.Invoke(this, new EventArgs());
         }
         public void Dispose()
         {

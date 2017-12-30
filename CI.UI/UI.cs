@@ -19,17 +19,13 @@ namespace CI.UI
     public class Program : IDisposable
     {
         internal const string TEST_ARGUMENT = "TEST_ARGUMENT";
-        /// <summary>
-        /// Gets the latest icon created. For testint purposes only.
-        /// </summary>
-        internal static NotificationIcon Icon_TESTING => icon_TESTING;
-        private static NotificationIcon icon_TESTING;
         public static void Main(string[] args)
         {
             if (args.Length != 0)
             {
 #if DEBUG
-                using (var program = new Program())
+                using (var icon = new NotificationIcon())
+                using (var program = new Program(icon))
                 {
                     Logger.Log($"Directly handling message {string.Join(" ", args)}");
                     program.HandleInput(args);
@@ -48,11 +44,21 @@ namespace CI.UI
             }
         }
 
+        /// <summary>
+        /// Reads the pipe and handles the message pump for the icon.
+        /// </summary>
         public static void Start(CancellationToken cancellationToken = default(CancellationToken))
         {
-            using (var program = new Program())
+            using (var icon = new NotificationIcon())
+                Start(icon, cancellationToken);
+        }
+        /// <summary>
+        /// Reads the pipe and handles the message pump for the specified icon.
+        /// </summary>
+        public static void Start(NotificationIcon icon, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            using (var program = new Program(icon))
             {
-                icon_TESTING = program.icon;
                 program.start(cancellationToken);
             }
         }
@@ -61,12 +67,14 @@ namespace CI.UI
             Logger.Log("In UI.start");
 
             var uiDispatcher = Dispatcher.CurrentDispatcher;
+            CIReceivingPipe pipe = null;
             Contract.Requires(!uiDispatcher.HasShutdownFinished, "The dispatcher has already shut down");
 
             try
             {
                 cancellationToken.Register(() => { Logger.Log("Shutting down uiDispatcher"); uiDispatcher.InvokeAsync(() => Dispatcher.ExitAllFrames()); });
-                Dispatcher.CurrentDispatcher.InvokeAsync(async () => await CIReceivingPipe.Start(this, cancellationToken));
+                Dispatcher.CurrentDispatcher.Invoke(() => pipe = new CIReceivingPipe(this));
+                Dispatcher.CurrentDispatcher.InvokeAsync(() => pipe.Start(cancellationToken));
                 Dispatcher.Run(); // for icon and pipe reading
             }
             catch (Exception e)
@@ -76,11 +84,19 @@ namespace CI.UI
             }
             finally
             {
+                if (pipe != null)
+                    pipe.Dispose();
                 Logger.Log("Disposing UI");
             }
         }
 
-        private readonly NotificationIcon icon = new NotificationIcon();
+        private readonly NotificationIcon icon;
+        private Program(NotificationIcon icon)
+        {
+            Contract.Requires(icon != null);
+
+            this.icon = icon;
+        }
         public void OutputError(Task task)
         {
             Contract.Requires(task != null);
@@ -107,18 +123,13 @@ namespace CI.UI
             icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
 #endif
         }
-        internal void HandleInput(string[] input, CancellationToken cancellationToken = default(CancellationToken))
+        internal void HandleInput(string[] input, CancellationToken externalCancellationToken = default(CancellationToken))
         {
             if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
 
             if (input[0] == TEST_ARGUMENT)
             {
-                if (input.Length == 1)
-                    throw new ArgumentException("No number of milliseconds of test work was provided. ");
-                if (!int.TryParse(input[1], out int timeout))
-                    throw new ArgumentException("Invalid number of milliseconds of test work provided. ");
-
-                Task.Delay(timeout, cancellationToken);
+                HandleTestInput(input, externalCancellationToken);
                 return;
             }
 
@@ -141,7 +152,37 @@ namespace CI.UI
 
             var work = new CopyBuildTestSolutions(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
-            HandleCommit(work, icon, hash, cancellationToken);
+            HandleCommit(work, icon, hash, externalCancellationToken);
+        }
+        private void HandleTestInput(string[] input, CancellationToken externalCancellationToken)
+        {
+            Contract.Requires(input != null && input.Length != 0 && input[0] == TEST_ARGUMENT);
+
+            if (input.Length == 1)
+                throw new ArgumentException("No number of milliseconds of test work was provided. ");
+            if (!int.TryParse(input[1], out int timeout))
+                throw new ArgumentException("Invalid number of milliseconds of test work provided. ");
+
+            using (CancellationTokenSource cancellationTokenSource = new CancellationTokenSource())
+            {
+                try
+                {
+                    icon.CancellationRequested += onOperationCanceled;
+                    externalCancellationToken.Register(() => cancellationTokenSource.Cancel());
+
+                    Task.Delay(timeout, cancellationTokenSource.Token).Wait();
+                }
+                finally
+                {
+                    icon.CancellationRequested -= onOperationCanceled;
+                }
+                return;
+
+                void onOperationCanceled(object sender, EventArgs e)
+                {
+                    cancellationTokenSource.Cancel();
+                }
+            }
         }
         internal static void HandleCommit(ICopyBuildTestSolutions work, NotificationIcon icon, string hash = null, CancellationToken externalCancellationToken = default(CancellationToken))
         {

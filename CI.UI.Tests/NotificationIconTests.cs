@@ -21,11 +21,6 @@ namespace CI.UI.Tests
             Console.WriteLine("Done");
             Console.ReadLine();
         }
-        [SetUp]
-        public void ResetPrefix()
-        {
-            Logger.Prefix = "";
-        }
 
         [Test]
         public void TestIconStatusAfterBuildError()

@@ -13,7 +13,6 @@ namespace JBSnorro.GitTools.CI
 {
     public static class Logger
     {
-        public static string Prefix { get; set; }
         public static readonly string LogPath = ConfigurationManager.AppSettings["logPath"] ?? throw new AppSettingNotFoundException("logPath");
         [DebuggerHidden]
         public static void Log(string message)
@@ -46,7 +45,7 @@ namespace JBSnorro.GitTools.CI
             }
             void logAt(string path, string m)
             {
-                File.AppendAllText(path, DateTime.Now.ToString("hh:mm:ss.ff") + " " + Prefix + m + "\r\n");
+                File.AppendAllText(path, DateTime.Now.ToString("hh:mm:ss.ff") + " " + (TestClassExtensions.RunningTestMethodName ?? "") + " " + m + "\r\n");
             }
         }
     }

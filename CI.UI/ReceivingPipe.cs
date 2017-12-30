@@ -16,29 +16,11 @@ namespace JBSnorro
     public class ReceivingPipe
     {
         /// <summary>
-        /// Starts a new receiving pipe.
-        /// </summary>
-        /// <param name="pipeName"> The name of the pipe to receive on. </param>
-        /// <param name="separator"> The separator character sequence between messages on this pipe. </param>
-        /// <param name="cancellationToken"> A token with which reading from the pipe can be canceled. </param>
-        public static async Task Start(string pipeName, string separator, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            ReceivingPipe ctor(string arg0, string arg1) => new ReceivingPipe(arg0, arg1);
-            await Start<ReceivingPipe>(pipeName, separator, ctor, cancellationToken);
-        }
-        protected static async Task Start<TReceivingPipe>(string pipeName, string separator, Func<string, string, TReceivingPipe> ctor, CancellationToken cancellationToken = default(CancellationToken)) where TReceivingPipe : ReceivingPipe
-        {
-            Contract.Requires(ctor != null);
-
-            var pipe = ctor(pipeName, separator);
-            await pipe.loop(cancellationToken);
-        }
-        /// <summary>
         /// This event notifies whenever a messages is received. Testing purposes only.
         /// </summary>
         internal static event Action<object, string> OnReceivedMessage;
         /// <summary>
-        /// This event notifies whenever a messages has been handled. Testing purposes only.
+        /// This event notifies whenever a messages has been handled. Testing purposes only. Is not triggered when the message was canceled (even if it completed).
         /// </summary>
         internal static event Action<object, string> OnHandledMessage;
 
@@ -77,7 +59,7 @@ namespace JBSnorro
             this.Separator = separator;
         }
 
-        private async Task loop(CancellationToken cancellationToken)
+        public async Task Start(CancellationToken cancellationToken)
         {
             try
             {
@@ -138,7 +120,8 @@ namespace JBSnorro
             Contract.Requires(message != null);
 
             var completeMessage = string.Join(" ", message);
-            InvokeOnHandledMessage(this, completeMessage);
+            if (!cancellationToken.IsCancellationRequested)
+                InvokeOnHandledMessage(this, completeMessage);
             Logger.Log($"Handled message '{completeMessage}'");
         }
     }

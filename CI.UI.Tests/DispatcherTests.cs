@@ -21,20 +21,30 @@ namespace CI.UI.Tests
         {
             return $"{Program.TEST_ARGUMENT}{CIReceivingPipe.PipeMessageSeparator}{timeout_ms}";
         }
-        [SetUp]
-        public void ResetPrefix()
-        {
-            Logger.Prefix = "";
-        }
-        [Test, RequiresThread]
+
+        [Test]
         public void TestDispatch()
         {
-            using (Dispatcher.StartCIUI(inProcess: true))
+            Logger.Log("");
+            bool messageSent = false;
+            bool madeit = false;
+            try
             {
-                bool messageSent = Dispatcher.TrySendMessage("hi");
-
-                Assert.IsTrue(messageSent);
+                using (Dispatcher.StartCIUI(inProcess: true))
+                {
+                    madeit = true;
+                    messageSent = Dispatcher.TrySendMessage("hi");
+                }
             }
+            finally
+            {
+                if (madeit)
+                    Logger.Log("Made it");
+                else
+                    Logger.Log("Didn't make it");
+            }
+
+            Assert.IsTrue(messageSent);
         }
         [Test, Timeout(1000)]
         public void TestDispatchReceipt()
@@ -61,7 +71,6 @@ namespace CI.UI.Tests
         [Test, Timeout(1000)]
         public void TestReceiptMultipleMessages()
         {
-            Logger.Prefix = "Test - ";
             const int timeout_ms = 500;
             string message = ComposeDummyWorkMessage(timeout_ms);
             int receivedMessageCount = 0;
@@ -95,20 +104,17 @@ namespace CI.UI.Tests
             const string test_message = "hi";
             string handledMessage = null;
             ReceivingPipe.OnHandledMessage += (sender, message) => handledMessage = message;
-            using (Dispatcher.StartCIUI(inProcess: true))
+            using (NotificationIcon icon = new NotificationIcon())
+            using (Dispatcher.StartCIUI(icon))
             {
                 Dispatcher.TrySendMessage(ComposeDummyWorkMessage(timeout_ms: int.MaxValue));           // send message
 
-                while (Program.Icon_TESTING == null)
-                {
-                    Thread.Sleep(10);
-                }
+                while (!icon.HasCancellationRequestedHandler) { }                                       // wait for it to be cancellable
 
-                Thread.Sleep(100);
-                Program.Icon_TESTING.RequestCancellation();                                             // which is then cancelled.
+                icon.RequestCancellation();                                                             // then cancel it
 
                 Contract.Assert(handledMessage == null);
-                Dispatcher.TrySendMessage(test_message);                                                // Then send another message
+                Dispatcher.TrySendMessage(test_message);                                                // then send another message
                 while (handledMessage == null)
                 {
                     Thread.Sleep(10);

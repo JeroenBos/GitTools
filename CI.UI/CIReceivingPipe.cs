@@ -1,6 +1,8 @@
 ﻿using JBSnorro;
 using JBSnorro.Diagnostics;
+using JBSnorro.GitTools.CI;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,17 +12,10 @@ using System.Windows.Threading;
 
 namespace CI.UI
 {
-    public sealed class CIReceivingPipe : ReceivingPipe
+    public sealed class CIReceivingPipe : ReceivingPipe, IDisposable
     {
         public new const string PipeName = "CI_Pipe";
         public const string PipeMessageSeparator = "-:-";
-
-        public static async Task Start(Program program, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            CIReceivingPipe ctor(string arg0, string arg1) => new CIReceivingPipe(arg0, arg1, program);
-
-            await Start<CIReceivingPipe>(PipeName, PipeMessageSeparator, ctor: ctor, cancellationToken: cancellationToken);
-        }
 
         /// <summary>
         /// Gets the dispatcher that created this pipe. 
@@ -35,32 +30,85 @@ namespace CI.UI
         /// </summary>
         public CancellationToken CancellationToken { get; }
 
-        private CIReceivingPipe(string arg0, string arg1, Program program)
-            : base(arg0, arg1)
+        private readonly ConcurrentQueue<(string[], CancellationToken)> messageQueue;
+        private readonly ManualResetEvent MessageEvent;
+        private readonly object messageEventLock = new object();
+        private readonly Thread messageHandlingThread;
+        private bool isDisposed;
+
+        public CIReceivingPipe(Program program)
+            : base(PipeName, PipeMessageSeparator)
         {
             Contract.Requires(program != null);
 
             this.Program = program;
             this.MainDispatcher = Dispatcher.CurrentDispatcher;
+            this.MessageEvent = new ManualResetEvent(false);
+            this.messageQueue = new ConcurrentQueue<(string[], CancellationToken)>();
+
+            this.messageHandlingThread = new Thread(processQueue) { IsBackground = true };
+            this.messageHandlingThread.Start();
         }
 
         protected override void HandleMessage(string[] message, CancellationToken cancellationToken)
         {
-            ThreadPool.QueueUserWorkItem(_ =>
+            messageQueue.Enqueue((message, cancellationToken));
+            lock (messageEventLock)
             {
-                try
+                MessageEvent.Set();
+            }
+        }
+        private void processQueue()
+        {
+            while (!isDisposed)
+            {
+                if (messageQueue.TryDequeue(out (string[], CancellationToken) tuple))
                 {
-                    Program.HandleInput(message, cancellationToken);
+                    handleMessageImplementation(tuple.Item1, tuple.Item2);
                 }
-                catch (Exception e)
+                else
                 {
-                    MainDispatcher.InvokeAsync(() => Program.OutputError(e));
+                    lock (messageEventLock)
+                    {
+                        MessageEvent.Reset();
+                    }
+                    MessageEvent.WaitOne();
                 }
-                finally
-                {
-                    base.HandleMessage(message, cancellationToken);
-                }
-            });
+            }
+        }
+        private void handleMessageImplementation(string[] message, CancellationToken cancellationToken)
+        {
+            Exception debug = null;
+            try
+            {
+                Program.HandleInput(message, cancellationToken);
+            }
+            catch (Exception e) when (e is TaskCanceledException || (e is AggregateException ae && ae.InnerException is TaskCanceledException))
+            {
+                debug = e;
+                cancellationToken = new CancellationToken(true); // affects how the base handler works
+            }
+            catch (Exception e)
+            {
+                debug = e;
+                MainDispatcher.InvokeAsync(() => Program.OutputError(debug));
+            }
+            finally
+            {
+                base.HandleMessage(message, cancellationToken);
+            }
+        }
+
+        public void Dispose()
+        {
+            Logger.Log("Disposing receiving pipe");
+            //gracefully cancel thread before disposing of ManualResetEvent
+            this.isDisposed = true;
+            this.MessageEvent.Set();
+            this.messageHandlingThread.Join();
+
+            this.MessageEvent.Dispose();
+            Logger.Log("Disposed receiving pipe");
         }
     }
 }
