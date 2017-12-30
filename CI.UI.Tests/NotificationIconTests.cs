@@ -33,7 +33,7 @@ namespace CI.UI.Tests
                     (Status.BuildError, "test")
                 };
 
-                Program.HandleCommit(log, icon);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(log), icon);
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Bad);
                 Assert.AreEqual(actual: icon.Percentage, expected: 1);
@@ -54,7 +54,7 @@ namespace CI.UI.Tests
                     assertBeforeFinallyBlockInHandleCommit();
                 };
 
-                Program.HandleCommit(getLog, icon, projectCount: 2);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(getLog, projectCount: 2), icon);
 
                 void assertBeforeFinallyBlockInHandleCommit()
                 {
@@ -75,7 +75,7 @@ namespace CI.UI.Tests
                     (Status.BuildSuccess, "test"),
                 };
 
-                Program.HandleCommit(log, icon, projectCount: 2);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(log, projectCount: 2), icon);
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Ok);
                 Assert.IsTrue(icon.Text != null && icon.Text.StartsWith("2/2"));
@@ -92,7 +92,7 @@ namespace CI.UI.Tests
                     (Status.TestSuccess, null),
                 };
 
-                Program.HandleCommit(log, icon);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(log), icon);
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Ok);
                 Assert.AreEqual(1, icon.Percentage);
@@ -111,7 +111,7 @@ namespace CI.UI.Tests
                     (Status.TestError, null),
                 };
 
-                Program.HandleCommit(log, icon);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(log), icon);
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Bad);
                 Assert.AreEqual(1, icon.Percentage);
@@ -131,7 +131,7 @@ namespace CI.UI.Tests
                     (Status.TestSuccess, null),
                 };
 
-                Program.HandleCommit(log, icon);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(log), icon);
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Bad);
                 Assert.AreEqual(1, icon.Percentage);
@@ -152,7 +152,7 @@ namespace CI.UI.Tests
                     (Status.TestSuccess, null),
                 };
 
-                Program.HandleCommit(log, icon);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(log), icon);
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Bad);
                 Assert.AreEqual(1, icon.Percentage);
@@ -176,7 +176,7 @@ namespace CI.UI.Tests
                     yield return (Status.Skipped, null); //dummy
                 };
 
-                Program.HandleCommit(getLog(), icon, cancellationToken: tokenSource.Token);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(getLog), icon, externalCancellationToken: tokenSource.Token);
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Default);
                 Assert.AreEqual(1, icon.Percentage);
@@ -208,7 +208,7 @@ namespace CI.UI.Tests
 
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
 
-                Program.HandleCommit(getLog(), icon);
+                Program.HandleCommit(new MockCopyBuildTestSolutions(getLog), icon);
 
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }

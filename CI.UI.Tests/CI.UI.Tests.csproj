@@ -78,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DispatcherTests.cs" />
+    <Compile Include="MockCopyBuildTestSolutions.cs" />
     <Compile Include="NotificationIconTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

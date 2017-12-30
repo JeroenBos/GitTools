@@ -117,43 +117,11 @@ namespace CI.UI
                 hash = input[1];
             }
 
-            HandleCommit(solutionFilePath, hash, cancellationToken);
-        }
+            var work = new CopyBuildTestSolutions(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
-        private void HandleCommit(string solutionFilePath, string hash, CancellationToken externalCancellationToken)
-        {
-            Contract.Requires(!string.IsNullOrEmpty(solutionFilePath));
-
-            IEnumerable<(Status Status, string Message)> getLog(CancellationToken internalCancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
-            {
-                return JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(solutionFilePath,
-                                                                                ConfigurationManager.AppSettings["destinationDirectory"],
-                                                                                out resultsFile,
-                                                                                out commitMessage,
-                                                                                out projectCount,
-                                                                                hash,
-                                                                                internalCancellationToken);
-            }
-
-            HandleCommit(icon, getLog, hash, externalCancellationToken);
+            HandleCommit(work, icon, hash, cancellationToken);
         }
-        internal static void HandleCommit(IEnumerable<(Status, string)> log, NotificationIcon icon, TestResultsFile resultsFile = null, string commitMessage = null, int projectCount = 0, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            HandleCommit(() => log, icon, resultsFile, commitMessage, projectCount, hash, cancellationToken);
-        }
-        internal static void HandleCommit(Func<IEnumerable<(Status, string)>> getLog, NotificationIcon icon, TestResultsFile resultsFile = null, string commitMessage = null, int projectCount = 0, string hash = null, CancellationToken externalCancellationToken = default(CancellationToken))
-        {
-            var wrappedGetlog = new CopySolutionAndExecuteTestsDelegate(implementation);
-            IEnumerable<(Status, string)> implementation(CancellationToken internalCancellationToken, out TestResultsFile resultsFile_out, out string commitMessage_out, out int projectCount_out)
-            {
-                resultsFile_out = resultsFile;
-                commitMessage_out = commitMessage;
-                projectCount_out = projectCount;
-                return getLog();
-            }
-            HandleCommit(icon, wrappedGetlog, hash, externalCancellationToken);
-        }
-        private static void HandleCommit(NotificationIcon icon, CopySolutionAndExecuteTestsDelegate getLog, string hash, CancellationToken externalCancellationToken)
+        internal static void HandleCommit(ICopyBuildTestSolutions work, NotificationIcon icon, string hash = null, CancellationToken externalCancellationToken = default(CancellationToken))
         {
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             icon.CancellationRequested += onOperationCanceled;
@@ -173,7 +141,7 @@ namespace CI.UI
             string commitMessage = "";
             try
             {
-                foreach ((Status status, string message) in getLog(cancellationTokenSource.Token, out resultsFile, out commitMessage, out int projectCount))
+                foreach ((Status status, string message) in work.CopySolutionAndExecuteTestsDelegate(cancellationTokenSource.Token, out resultsFile, out commitMessage, out int projectCount))
                 {
                     if (cancellationTokenSource.IsCancellationRequested)
                     {
@@ -298,10 +266,5 @@ namespace CI.UI
         {
             this.icon?.Dispose();
         }
-
-        /// <summary>
-        /// An abstraction such that HandleCommit can be tested more easily.
-        /// </summary>
-        internal delegate IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTestsDelegate(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount);
     }
 }
