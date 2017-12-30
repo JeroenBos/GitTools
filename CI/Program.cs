@@ -314,7 +314,11 @@ namespace JBSnorro.GitTools.CI
                 if (!skipCopySolution)
                 {
                     //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
-                    CopyDirectory(new DirectoryInfo(Path.GetDirectoryName(solutionFilePath)), new DirectoryInfo(destinationDirectory), cancellationToken);
+                    var sourceDirectory = Path.GetDirectoryName(solutionFilePath);
+                    var _gitDirectory = Path.Combine(sourceDirectory, ".git");
+                    if (Directory.Exists(_gitDirectory))
+                        SetAttributesNormal(_gitDirectory);
+                    CopyDirectory(new DirectoryInfo(sourceDirectory), new DirectoryInfo(destinationDirectory), cancellationToken);
                     SetAttributesNormal(destinationDirectory);
                 }
                 error = null;
