@@ -338,7 +338,7 @@ namespace JBSnorro.GitTools.CI
                 if (cancellationToken.IsCancellationRequested)
                     throw new TaskCanceledException();
 
-                if (!(dir.Name.StartsWith(".vs") || dir.Name == "bin" || dir.Name == "obj"))
+                if (!(dir.Name.StartsWith(".vs") || dir.Name == "bin" || dir.Name == "obj") || dir.Name == "TestResults")
                     CopyDirectory(dir, target.CreateSubdirectory(dir.Name), cancellationToken);
             }
             foreach (FileInfo file in source.GetFiles())
