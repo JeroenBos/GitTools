@@ -85,17 +85,13 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                if (Directory.Exists(path))
-                {
-                    path = Path.Combine(path, RelativePath);
-                }
-
                 errorMessage = null;
                 return Read(path);
             }
             catch (Exception e)
             {
-                errorMessage = $"Error in reading file {path}.testresults. " + e.Message;
+                path = path.EndsWith(".testresults") ? path : path + ".testresults";
+                errorMessage = $"Error in reading file {path}. " + e.Message;
                 return null;
             }
         }

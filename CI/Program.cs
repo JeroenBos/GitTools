@@ -235,7 +235,7 @@ namespace JBSnorro.GitTools.CI
             try
             {
                 var branchName = File.ReadAllText(Path.Combine(solutionDirectory, @".git\HEAD"));
-                if (!branchName.StartsWith("ref: refs")) throw new Exception("Assertion failed");
+                Contract.Assume(branchName.StartsWith("ref: refs"));
 
                 branchName = branchName.Substring("ref: ".Length, branchName.Length - "\n".Length - "ref: ".Length);
                 var commitHash = File.ReadAllText(Path.Combine(solutionDirectory, @".git\", branchName)).Substring(0, 40);
