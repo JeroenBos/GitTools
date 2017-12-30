@@ -26,8 +26,8 @@ namespace JBSnorro.GitTools
 		}
 		static int Main(string[] args)
 		{
-			// if no argument is specified, the script tests all methods identified by TestMethod
-			// if a single argument is specified, it must be a path + method quantification of a method 
+            // if no argument is specified, the script tests all methods identified by TestMethod
+            // if a single argument is specified, it must be a path + method quantification of a method 
 
 			if (args == null || args.Length == 0)
 			{
