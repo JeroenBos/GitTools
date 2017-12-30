@@ -21,6 +21,23 @@ namespace JBSnorro.GitTools
         public static readonly bool IsRunningFromUnitTest;
 
         /// <summary>
+        /// Gets the name of the currently running test method; or null if no test method is running.
+        /// </summary>
+        public static string RunningTestMethodName
+        {
+            get
+            {
+                foreach (var stackMethod in new StackTrace().GetFrames().Reverse().Select(frame => frame.GetMethod()).OfType<MethodInfo>())
+                {
+                    if (IsTestMethod(stackMethod))
+                    {
+                        return stackMethod.Name;
+                    }
+                }
+                return null;
+            }
+        }
+        /// <summary>
         /// Gets whether the type is a type containing tests.
         /// </summary>
         public static bool IsTestType(Type type)
