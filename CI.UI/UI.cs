@@ -118,7 +118,7 @@ namespace CI.UI
                 if (!int.TryParse(input[1], out int timeout))
                     throw new ArgumentException("Invalid number of milliseconds of test work provided. ");
 
-                Thread.Sleep(timeout);
+                Task.Delay(timeout, cancellationToken);
                 return;
             }
 
