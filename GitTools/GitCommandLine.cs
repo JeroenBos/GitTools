@@ -108,5 +108,14 @@ namespace JBSnorro.GitTools
         {
             return ExecuteWithThrow(repositoryPath, "log -1 --pretty=format:%s " + hash).First();
         }
+        /// <summary>
+        /// Gets the hash of the parent of the specified hash.
+        /// </summary>
+        public static string GetParentCommitHash(string repositoryPath, string hash)
+        {
+            string parentHash = ExecuteWithThrow(repositoryPath, $"log -1 --pretty=format:%P \"{hash}\"").First();
+            Contract.Ensures(IsValidCommitHash(parentHash));
+            return parentHash;
+        }
     }
 }
