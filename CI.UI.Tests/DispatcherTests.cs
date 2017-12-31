@@ -30,7 +30,7 @@ namespace CI.UI.Tests
             bool madeit = false;
             try
             {
-                using (Dispatcher.StartCIUI(inProcess: true))
+                using (Dispatcher.StartCIUIInProcess())
                 {
                     madeit = true;
                     messageSent = Dispatcher.TrySendMessage("hi");
@@ -52,7 +52,7 @@ namespace CI.UI.Tests
             const string testMessage = "hi";
             string receivedMessage = null;
 
-            using (Dispatcher.StartCIUI(inProcess: true))
+            using (Dispatcher.StartCIUIInProcess())
             {
                 ReceivingPipe.OnHandledMessage += (sender, message) => receivedMessage = message;
 
@@ -78,7 +78,7 @@ namespace CI.UI.Tests
             ReceivingPipe.OnReceivedMessage += (sender, e) => receivedMessageCount++;
             ReceivingPipe.OnHandledMessage += (sender, e) => handledMessageCount++;
 
-            using (Dispatcher.StartCIUI(inProcess: true))
+            using (Dispatcher.StartCIUIInProcess())
             {
                 //Act
                 Dispatcher.TrySendMessage(message);

@@ -41,16 +41,16 @@ namespace CI
         /// </summary>
         internal static void Main(string[] args)
         {
-            IDisposable disposable = null;
+            IDisposable ui = null;
             Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
             try
             {
                 if (args.Length > 0 && args[0] == START_UI_ARG)
                 {
 #if DEBUG
-                    disposable = StartCIUI(inProcess: true);
+                    ui = StartCIUIInProcess();
 #else
-                    disposable = StartCIUI(inProcess: false);
+                    ui = StartCIUIOutOfProcess();
 #endif
                     args = args.Skip(1).ToArray();
                 }
@@ -60,6 +60,10 @@ namespace CI
                 {
                     TrySendMessage(message);
                 }
+#if DEBUG
+                Console.ReadLine();
+                ((RunnableTaskCancellableByDisposal)ui).Cancel();
+#endif
             }
             catch (Exception e)
             {
@@ -67,14 +71,11 @@ namespace CI
             }
             finally
             {
-                if (disposable != null)
+                if (ui != null)
                 {
                     Logger.Log("Disposing started UI");
-                    disposable.Dispose();
+                    ui.Dispose();
                 }
-#if DEBUG
-                Console.ReadLine();
-#endif
             }
         }
 
@@ -114,25 +115,27 @@ namespace CI
         internal static IDisposable StartCIUI(NotificationIcon icon)
         {
             Contract.Requires(icon != null);
+            Contract.Requires(!inProcessUIIsRunning, "The UI is already running in process");
 
+            Logger.Log("Starting CI.UI in process");
             return new RunnableTaskCancellableByDisposal(token => Program.Start(icon, token));
         }
         /// <summary>
         /// Starts the UI with a new icon.
         /// </summary>
         /// <param name="inProcess"> Indicates whether the ui should be started in the current process (true) or in a new process process (false). </param>
-        internal static IDisposable StartCIUI(bool inProcess = false)
+        internal static IDisposable StartCIUIInProcess()
         {
-            if (inProcess)
-            {
-                Contract.Requires(!inProcessUIIsRunning, "The UI is already running in process");
+            Contract.Requires(!inProcessUIIsRunning, "The UI is already running in process");
 
-                Logger.Log("Starting CI.UI in process");
-                return new RunnableTaskCancellableByDisposal(Program.Start);
-            }
-            else if (Process.GetProcessesByName("CI.UI").Length != 0)
+            Logger.Log("Starting CI.UI in process");
+            return new RunnableTaskCancellableByDisposal(Program.Start);
+        }
+        private static IDisposable StartCIUIOutOfProcess()
+        {
+            if (Process.GetProcessesByName("CI.UI").Length != 0)
             {
-                return null;
+                return null; //already running
             }
             else
             {
@@ -150,6 +153,15 @@ namespace CI
                 this.task = Task.Run(() => cancellableAction(this.Token))
                                 .ContinueWith(t => Logger.Log("Unhandled exception occurred: " + t.Exception.InnerException.Message), TaskContinuationOptions.OnlyOnFaulted);
                 inProcessUI = this;
+            }
+
+            public void Wait()
+            {
+                try
+                {
+                    this.task.Wait(this.Token);
+                }
+                catch (AggregateException ae) when (ae.InnerException is TaskCanceledException) { }
             }
             protected override void Dispose(bool disposing)
             {
