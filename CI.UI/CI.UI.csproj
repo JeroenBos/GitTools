@@ -64,7 +64,7 @@
     </Reference>
     <Reference Include="JBSnorro, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\ASDE\JBSnorro\bin\x86\Debug\JBSnorro.dll</HintPath>
+      <HintPath>D:\ASDE\JBSnorro\bin\x86\Debug\JBSnorro.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Build, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="Microsoft.Build.Framework, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
