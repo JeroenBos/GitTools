@@ -100,11 +100,15 @@ namespace JBSnorro.GitTools.CI
 
         public IEnumerator<string> GetEnumerator()
         {
-            while ((this.aliveConnections != 0 || expectedNumberOfConnections != 0) && !this.CancellationTokenSource.IsCancellationRequested)
+            while (!this.CancellationTokenSource.IsCancellationRequested)
             {
                 if (queue.TryDequeue(out string result))
                 {
                     yield return result;
+                }
+                else if (this.aliveConnections == 0 && expectedNumberOfConnections == 0)
+                {
+                    yield break;
                 }
                 else
                 {
