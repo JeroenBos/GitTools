@@ -240,7 +240,7 @@ namespace CI.UI
                             break;
 
                         case Status.TestStarted:
-                            Logger.Log($"Started testing " + message);
+                            Logger.Log($"Testing " + message);
                             break;
                         case Status.TestSuccess:
                             successfulTestsCount++;
@@ -285,6 +285,12 @@ namespace CI.UI
                             throw new DefaultSwitchCaseUnreachableException();
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                overallStatus = TestResult.Failure;
+                Logger.Log($"{Status.UnhandledException.ToTitle()}: " + e.Message);
+                throw new ContractException();
             }
             finally
             {

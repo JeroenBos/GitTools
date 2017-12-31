@@ -97,80 +97,88 @@ namespace JBSnorro.GitTools.CI
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
         public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out string commitMessage, out int projectCount, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            projectCount = -1;
-            resultsFile = null;
-            commitMessage = "";
-            var error = ValidateSolutionFilePath(solutionFilePath);
-            if (error != null)
+            try
             {
-                return (Status.ArgumentError, error).ToSingleton();
-            }
+                projectCount = -1;
+                resultsFile = null;
+                commitMessage = "";
+                var error = ValidateSolutionFilePath(solutionFilePath);
+                if (error != null)
+                {
+                    return (Status.ArgumentError, error).ToSingleton();
+                }
 
-            error = ValidateDestinationDirectory(baseDestinationDirectory);
-            if (error != null)
-            {
-                return (Status.ArgumentError, error).ToSingleton();
-            }
+                error = ValidateDestinationDirectory(baseDestinationDirectory);
+                if (error != null)
+                {
+                    return (Status.ArgumentError, error).ToSingleton();
+                }
 
-            bool mustDoCheckout = false;
-            (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
-            resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
+                bool mustDoCheckout = false;
+                (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
+                resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
 
-            if (hash == null)
-            {
-                string currentCommitHash = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
                 if (hash == null)
                 {
-                    hash = currentCommitHash;
+                    string currentCommitHash = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
+                    if (hash == null)
+                    {
+                        hash = currentCommitHash;
+                    }
+                    else if (currentCommitHash != hash)
+                    {
+                        mustDoCheckout = true;
+                        hash = currentCommitHash;
+                    }
+                    if (error != null)
+                    {
+                        return (Status.MiscellaneousError, error).ToSingleton();
+                    }
                 }
-                else if (currentCommitHash != hash)
-                {
-                    mustDoCheckout = true;
-                    hash = currentCommitHash;
-                }
+
                 if (error != null)
                 {
                     return (Status.MiscellaneousError, error).ToSingleton();
                 }
-            }
 
-            if (error != null)
+                bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out commitMessage, out error);
+                if (skipCommit)
+                {
+                    return (Status.Skipped, error).ToSingleton();
+                }
+                else if (error != null)
+                {
+                    return (Status.MiscellaneousError, error).ToSingleton();
+                }
+
+                string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out error);
+                if (error != null)
+                {
+                    return (Status.MiscellaneousError, error).ToSingleton();
+                }
+
+                if (mustDoCheckout)
+                    GitCommandLine.Checkout(destinationDirectory, hash);
+
+                var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
+                if (error != null)
+                {
+                    return (Status.ProjectLoadingError, error).ToSingleton();
+                }
+                projectCount = projectFilePaths.Count;
+
+
+                IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
+                IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, cancellationToken);
+                IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
+
+                return EnumerableExtensions.Concat(loadSolutionMessages, buildSolutionMessages, testMessages)
+                                           .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
+            }
+            catch
             {
-                return (Status.MiscellaneousError, error).ToSingleton();
+                throw new ContractException();
             }
-
-            bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out commitMessage, out error);
-            if (skipCommit)
-            {
-                return (Status.Skipped, error).ToSingleton();
-            }
-            else if (error != null)
-            {
-                return (Status.MiscellaneousError, error).ToSingleton();
-            }
-
-            string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out error);
-            if (error != null)
-            {
-                return (Status.MiscellaneousError, error).ToSingleton();
-            }
-
-            if (mustDoCheckout)
-                GitCommandLine.Checkout(destinationDirectory, hash);
-
-            var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
-            if (error != null)
-            {
-                return (Status.ProjectLoadingError, error).ToSingleton();
-            }
-            projectCount = projectFilePaths.Count;
-
-            IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
-            IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, cancellationToken);
-            IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
-
-            return EnumerableExtensions.Concat(loadSolutionMessages, buildSolutionMessages, testMessages)
-                                       .TakeWhile(t => t.Item1.IsSuccessful());
         }
         /// <summary>
         /// Yields the elements of the second sequence only if all elements in the first sequence match the specified predicate.
@@ -586,6 +594,13 @@ namespace JBSnorro.GitTools.CI
                                                 writer.WriteLine(ERROR_CODON + message);
                                                 messagesCount++;
                                             }
+                                        }
+                                    }
+                                    catch (ReflectionTypeLoadException e)
+                                    {
+                                        foreach (var loadException in e.LoaderExceptions)
+                                        {
+                                            writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
                                         }
                                     }
                                     catch (Exception e)
