@@ -24,6 +24,7 @@ namespace JBSnorro.GitTools.CI
         TestError,
         UnhandledException,
         Skipped,
+        ParentFailed,
         Canceled,
     }
 
@@ -59,6 +60,8 @@ namespace JBSnorro.GitTools.CI
                     return "Unhandled exception occurred";
                 case Status.Skipped:
                     return "Build and test skipped";
+                case Status.ParentFailed:
+                    return "Skipped because parent failed";
                 case Status.Canceled:
                     return "Canceled";
                 default:
@@ -86,6 +89,7 @@ namespace JBSnorro.GitTools.CI
                 case Status.TestError:
                 case Status.UnhandledException:
                 case Status.Canceled:
+                case Status.ParentFailed:
                     return false;
                 default:
                     throw new DefaultSwitchCaseUnreachableException();

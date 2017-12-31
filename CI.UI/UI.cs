@@ -223,6 +223,12 @@ namespace CI.UI
                             overallStatus = TestResult.Ignored;
                             break;
 
+                        case Status.ParentFailed:
+                            Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {message}");
+                            icon.Status = NotificationIconStatus.Bad;
+                            overallStatus = TestResult.Failure;
+                            break;
+
                         case Status.ProjectLoadSuccess:
                             loadedProjectsCount++;
                             icon.Status = NotificationIconStatus.Working;

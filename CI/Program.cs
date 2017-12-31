@@ -151,6 +151,16 @@ namespace JBSnorro.GitTools.CI
                     return (Status.MiscellaneousError, error).ToSingleton();
                 }
 
+                bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
+                if (parentCommitFailed)
+                {
+                    return (Status.ParentFailed, error).ToSingleton();
+                }
+                else if (error != null)
+                {
+                    return (Status.MiscellaneousError, error).ToSingleton();
+                }
+
                 string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out error);
                 if (error != null)
                 {
@@ -297,6 +307,36 @@ namespace JBSnorro.GitTools.CI
             catch (Exception e)
             {
                 commitMessage = null;
+                error = e.Message;
+                return false;
+            }
+        }
+        /// <summary>
+        /// Determines the parent commit of the specified commit is not registed as having failed in the results file. 
+        /// If it has failed, the solution corresponding to the specified hash should not be copied, built and tested, because its parent already failed.
+        /// </summary>
+        private static bool CheckParentCommit(string sourceDirectory, string hash, TestResultsFile resultsFile, out string error)
+        {
+            try
+            {
+                string parentHash = GitCommandLine.GetParentCommitHash(sourceDirectory, hash);
+                if (resultsFile.Hashes.TryGetValue(parentHash, out TestResult testResult) && testResult == TestResult.Failure)
+                {
+                    error = "The parent commit had already failed";
+                    return true;
+                }
+                else
+                {
+                    error = null;
+                    return false;
+                }
+            }
+            catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
+            {
+                throw new ArgumentException("The specified hash does not exist");
+            }
+            catch (Exception e)
+            {
                 error = e.Message;
                 return false;
             }
@@ -550,7 +590,7 @@ namespace JBSnorro.GitTools.CI
             {
                 return (Status.MiscellaneousError, e.Message).ToSingleton();
             }
-            
+
             void RunTestsAndWriteMessagesBack(string assemblyPath)
             {
                 string appDomainBase = Path.GetDirectoryName(assemblyPath);
