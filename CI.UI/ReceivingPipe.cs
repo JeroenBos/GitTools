@@ -73,16 +73,9 @@ namespace JBSnorro
                         while (!pipe.IsConnected)
                         {
                             if (cancellationToken.IsCancellationRequested)
-                                break;
-                            try
-                            {
-                                pipe.Connect(10);
-                            }
-                            catch (TimeoutException)
-                            {
-                                await Dispatcher.Yield(DispatcherPriority.Background);
-                                continue;
-                            }
+                                return;
+
+                            await pipe.ConnectAsync(cancellationToken);
 
                             while (pipe.IsConnected)
                             {
@@ -90,7 +83,7 @@ namespace JBSnorro
                                 if (message == null)
                                     break;
                                 if (cancellationToken.IsCancellationRequested)
-                                    break;
+                                    return;
 
                                 Logger.Log($"Received message {receivedMessageCount++}");
                                 InvokeOnReceivedMessage(this, message);

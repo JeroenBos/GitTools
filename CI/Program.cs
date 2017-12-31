@@ -465,7 +465,7 @@ namespace JBSnorro.GitTools.CI
                 }
                 else
                 {
-                    yield return (Status.BuildError, errorMessage ?? "Unknown error");
+                    yield return (Status.BuildError, errorMessage ?? "Compilation failed");
                     yield break;
                 }
             }
@@ -550,7 +550,7 @@ namespace JBSnorro.GitTools.CI
             {
                 return (Status.MiscellaneousError, e.Message).ToSingleton();
             }
-
+            
             void RunTestsAndWriteMessagesBack(string assemblyPath)
             {
                 string appDomainBase = Path.GetDirectoryName(assemblyPath);

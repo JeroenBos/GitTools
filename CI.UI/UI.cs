@@ -205,7 +205,7 @@ namespace CI.UI
             string commitMessage = "";
             try
             {
-                foreach ((Status status, string message) in work.CopySolutionAndExecuteTestsDelegate(cancellationTokenSource.Token, out resultsFile, out commitMessage, out int projectCount))
+                foreach ((Status status, string message) in work.CopySolutionAndExecuteTests(cancellationTokenSource.Token, out resultsFile, out commitMessage, out int projectCount))
                 {
                     if (cancellationTokenSource.IsCancellationRequested)
                     {

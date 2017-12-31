@@ -9,10 +9,10 @@ namespace JBSnorro.GitTools.CI
 {
     public interface ICopyBuildTestSolutions
     {
-        IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTestsDelegate(CancellationToken cancellationToken, 
-                                                                                         out TestResultsFile resultsFile,
-                                                                                         out string commitMessage,
-                                                                                         out int projectCount);
+        IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, 
+                                                                                 out TestResultsFile resultsFile,
+                                                                                 out string commitMessage,
+                                                                                 out int projectCount);
     }
     public sealed class CopyBuildTestSolutions : ICopyBuildTestSolutions
     {
@@ -25,7 +25,7 @@ namespace JBSnorro.GitTools.CI
             this.BaseDestinationDirectory = baseDestinationDirectory;
             this.Hash = hash;
         }
-        public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTestsDelegate(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
+        public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
         {
             return Program.CopySolutionAndExecuteTests(SolutionFilePath, BaseDestinationDirectory, out resultsFile, out commitMessage, out projectCount, Hash, cancellationToken);
         }

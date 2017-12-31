@@ -27,7 +27,7 @@ namespace CI.UI.Tests
         {
 
         }
-        public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTestsDelegate(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
+        public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
         {
             resultsFile = this.ResultsFile;
             commitMessage = this.CommitMessage;
