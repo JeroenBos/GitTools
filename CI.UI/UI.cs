@@ -1,9 +1,9 @@
-﻿using JBSnorro.Configuration;
-using JBSnorro.Diagnostics;
+﻿using JBSnorro.Diagnostics;
 using JBSnorro.GitTools;
 using JBSnorro.GitTools.CI;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -150,7 +150,7 @@ namespace CI.UI
                 hash = input[1];
             }
 
-            var work = new CopyBuildTestSolutionInjection(solutionFilePath, AppDomainConfigurationManager.AppSettings["destinationDirectory"], hash);
+            var work = new CopyBuildTestSolutionInjection(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
             HandleCommit(work, icon, hash, externalCancellationToken);
         }

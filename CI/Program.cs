@@ -17,10 +17,11 @@ using JBSnorro.Extensions;
 using System.Diagnostics;
 using AppDomainToolkit;
 using AppDomainContext = AppDomainToolkit.AppDomainContext<AppDomainToolkit.AssemblyTargetLoader, AppDomainToolkit.PathBasedAssemblyResolver>;
-using JBSnorro.Configuration;
 using JBSnorro.Diagnostics;
 using System.IO.Pipes;
 using System.Collections.Concurrent;
+using System.Configuration;
+
 
 namespace JBSnorro.GitTools.CI
 {
@@ -353,9 +354,9 @@ namespace JBSnorro.GitTools.CI
         }
         private static IEnumerable<string> GetAllIgnorePrefixes()
         {
-            return AppDomainConfigurationManager.AppSettings
-                                                .Where(pair => pair.Key.StartsWith("ignore_prefix"))
-                                                .Select(pair => pair.Value);
+            return ConfigurationManager.AppSettings.AllKeys
+                                                   .Where(key => key.StartsWith("ignore_prefix"))
+                                                   .Select(key => ConfigurationManager.AppSettings[key]);
         }
         private static string TryCopySolution(string solutionFilePath, string destinationDirectory, CancellationToken cancellationToken, out string error)
         {

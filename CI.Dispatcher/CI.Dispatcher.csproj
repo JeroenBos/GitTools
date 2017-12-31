@@ -91,10 +91,6 @@
       <Project>{b0fc2fbf-2166-457f-ad5f-5e2ab5c76eca}</Project>
       <Name>CI.UI</Name>
     </ProjectReference>
-    <ProjectReference Include="..\GitTools\GitTools.csproj">
-      <Project>{E5DF85D7-F393-4435-A565-883AA70951CD}</Project>
-      <Name>GitTools</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

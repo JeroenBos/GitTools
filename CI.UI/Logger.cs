@@ -1,7 +1,7 @@
-﻿using JBSnorro.Configuration;
-using JBSnorro.Diagnostics;
+﻿using JBSnorro.Diagnostics;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -13,7 +13,7 @@ namespace JBSnorro.GitTools.CI
 {
     public static class Logger
     {
-        public static readonly string LogPath = AppDomainConfigurationManager.AppSettings["logPath"] ?? throw new AppSettingNotFoundException("logPath");
+        public static readonly string LogPath = ConfigurationManager.AppSettings["logPath"] ?? throw new AppSettingNotFoundException("logPath");
         [DebuggerHidden]
         public static void Log(string message)
         {
