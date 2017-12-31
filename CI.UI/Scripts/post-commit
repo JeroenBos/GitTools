@@ -1,4 +1,4 @@
 #!/bin/sh
 
 hash="$(git rev-parse head)"
-exec D:\\GitTools\\CI.Dispatcher\\bin\\x86\\Release\\CI.Dispatcher.exe UI $PWD"\\CI.Tests.sln" $hash
+exec D:\\GitTools\\CI.Dispatcher\\bin\\x86\\Release\\CI.Dispatcher.exe UI $PWD"\\GitTools.sln" $hash
