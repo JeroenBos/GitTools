@@ -590,8 +590,7 @@ namespace JBSnorro.GitTools.CI
                     staThread.Start();
                 }
 
-                var pipes = new NamedPipesServerStream(PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count, cancellationToken);
-                return Read(pipes);
+                return NamedPipesServerStream.Read(Parse, PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count, cancellationToken);
             }
             catch (TaskCanceledException)
             {
@@ -695,7 +694,7 @@ namespace JBSnorro.GitTools.CI
         public const string STOP_CODON = "STOPS___CODON";
         public const string STARTED_CODON = "STARTED_CODON";
 
-        public static IEnumerable<(Status, string)> Read(IEnumerable<string> lines)
+        public static IEnumerable<(Status, string)> Parse(IEnumerable<string> lines)
         {
             bool hasErrors = false;
             List<int> totalSuccessCounts = new List<int>();

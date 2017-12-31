@@ -23,9 +23,27 @@ namespace JBSnorro.GitTools.CI
         private volatile int aliveConnections;
         private readonly bool spawnLazily;
         private int readMessagesCount;
+        private readonly object enumeratorDispensedLock = new object();
+        private bool enumeratorDispensed;
         public int ReadMessagesCount => readMessagesCount;
 
-        public NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, CancellationToken cancellationToken = default(CancellationToken), bool spawnLazily = false)
+        /// <remarks> This function ensures that the stream is disposed of, created lazily and that the enumerator can only be obtained once. </remarks>
+        public static IEnumerable<TResult> Read<TResult>(Func<IEnumerable<string>, IEnumerable<TResult>> parse,
+                                                         string pipeName,
+                                                         Func<string, bool> isQuitSignal,
+                                                         int expectedNumberOfConnections,
+                                                         CancellationToken cancellationToken = default(CancellationToken),
+                                                         bool spawnLazily = false)
+        {
+            using (var stream = new NamedPipesServerStream(pipeName, isQuitSignal, expectedNumberOfConnections, cancellationToken, spawnLazily))
+            {
+                foreach (TResult result in parse(stream))
+                {
+                    yield return result;
+                }
+            }
+        }
+        private NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, CancellationToken cancellationToken = default(CancellationToken), bool spawnLazily = false)
         {
             this.PipeName = pipeName;
             this.isQuitSignal = isQuitSignal;
@@ -100,6 +118,14 @@ namespace JBSnorro.GitTools.CI
 
         public IEnumerator<string> GetEnumerator()
         {
+            lock (enumeratorDispensedLock)
+            {
+                if (enumeratorDispensed)
+                    throw new InvalidOperationException("This class cannot be enumerated multiple times");
+
+                enumeratorDispensed = true;
+            }
+
             while (!this.CancellationTokenSource.IsCancellationRequested)
             {
                 if (queue.TryDequeue(out string result))
