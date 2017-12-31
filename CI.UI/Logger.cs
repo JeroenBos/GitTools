@@ -45,7 +45,11 @@ namespace JBSnorro.GitTools.CI
             }
             void logAt(string path, string m)
             {
-                File.AppendAllText(path, DateTime.Now.ToString("hh:mm:ss.ff") + " " + (TestClassExtensions.RunningTestMethodName ?? "") + " " + m + "\r\n");
+                try
+                {
+                    File.AppendAllText(path, DateTime.Now.ToString("hh:mm:ss.ff") + " " + (TestClassExtensions.RunningTestMethodName ?? "") + " " + m + "\r\n");
+                }
+                catch { }
             }
         }
     }
