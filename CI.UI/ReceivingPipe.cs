@@ -70,34 +70,35 @@ namespace JBSnorro
                     using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))
                     using (StreamReader reader = new StreamReader(pipe))
                     {
-                        string message = null;
-                        while (!pipe.IsConnected && message == null)
+                        while (!pipe.IsConnected)
                         {
+                            if (cancellationToken.IsCancellationRequested)
+                                break;
                             try
                             {
-                                if (cancellationToken.IsCancellationRequested)
-                                    break;
-                                pipe.Connect(0);
-
-                                if (cancellationToken.IsCancellationRequested)
-                                    break;
-                                message = reader.ReadLine();
+                                pipe.Connect(10);
                             }
                             catch (TimeoutException)
                             {
-                                if (cancellationToken.IsCancellationRequested)
-                                    break;
-
                                 await Dispatcher.Yield(DispatcherPriority.Background);
                                 continue;
                             }
 
-                            Logger.Log($"Received message {receivedMessageCount++}");
-                            InvokeOnReceivedMessage(this, message);
+                            while (pipe.IsConnected)
+                            {
+                                string message = reader.ReadLine();
+                                if (message == null)
+                                    break;
+                                if (cancellationToken.IsCancellationRequested)
+                                    break;
 
-                            Logger.Log($"Handling message '{message}'");
-                            string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
-                            HandleMessage(messageParts, cancellationToken);
+                                Logger.Log($"Received message {receivedMessageCount++}");
+                                InvokeOnReceivedMessage(this, message);
+
+                                Logger.Log($"Handling message '{message}'");
+                                string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
+                                HandleMessage(messageParts, cancellationToken);
+                            }
                         }
                     }
                 }
