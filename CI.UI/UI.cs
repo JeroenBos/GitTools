@@ -168,7 +168,7 @@ namespace CI.UI
                 try
                 {
                     icon.CancellationRequested += onOperationCanceled;
-                    externalCancellationToken.Register(() => cancellationTokenSource.Cancel());
+                    externalCancellationToken.Register(() => { try { cancellationTokenSource.Cancel(); } catch { } });
 
                     Task.Delay(timeout, cancellationTokenSource.Token).Wait();
                 }
