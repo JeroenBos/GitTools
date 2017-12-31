@@ -603,7 +603,7 @@ namespace JBSnorro.GitTools.CI
             void RunTestsAndWriteMessagesBack(string assemblyPath)
             {
                 string appDomainBase = Path.GetDirectoryName(assemblyPath);
-                using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, }))
+                using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, ConfigurationFile = assemblyPath + ".config" }))
                 {
                     int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
                     {
