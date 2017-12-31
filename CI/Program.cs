@@ -81,7 +81,8 @@ namespace JBSnorro.GitTools.CI
             TestResultsFile resultsFile = null;
             try
             {
-                return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, out int projectCount, hash, cancellationToken);
+                throw new NotImplementedException();
+                //return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, out int projectCount, hash, cancellationToken);
             }
             finally
             {
@@ -90,78 +91,88 @@ namespace JBSnorro.GitTools.CI
             }
         }
         /// <summary>
+        /// Does work that is actually part of the preamble of <see cref="CopySolutionAndExecuteTests(string, string, bool, out int, string, CancellationToken)"/>
+        /// </summary>
+        public static Prework Prework(string solutionFilePath, string baseDestinationDirectory, string hash)
+        {
+            string error = ValidateSolutionFilePath(solutionFilePath);
+            if (error != null)
+            {
+                return new Prework(Status.ArgumentError, error);
+            }
+
+            error = ValidateDestinationDirectory(baseDestinationDirectory);
+            if (error != null)
+            {
+                return new Prework(Status.ArgumentError, error);
+            }
+
+            bool mustDoCheckout = false;
+            (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
+            TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
+
+            if (hash == null)
+            {
+                string currentCommitHash = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
+                if (hash == null)
+                {
+                    hash = currentCommitHash;
+                }
+                else if (currentCommitHash != hash)
+                {
+                    mustDoCheckout = true;
+                    hash = currentCommitHash;
+                }
+                if (error != null)
+                {
+                    return new Prework(Status.MiscellaneousError, error);
+                }
+            }
+
+            if (error != null)
+            {
+                return new Prework(Status.MiscellaneousError, error);
+            }
+
+            bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
+            if (skipCommit)
+            {
+                return new Prework(Status.Skipped, error);
+            }
+            else if (error != null)
+            {
+                return new Prework(Status.MiscellaneousError, error);
+            }
+
+            bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
+            if (parentCommitFailed)
+            {
+                return new Prework(Status.ParentFailed, error);
+            }
+            else if (error != null)
+            {
+                return new Prework(Status.MiscellaneousError, error);
+            }
+
+            return new Prework(resultsFile, commitMessage, destinationDirectory, mustDoCheckout);
+        }
+        /// <summary>
         /// Copies the solution to a temporary destination directory, build the solution and executes the tests and returns any errors.
         /// </summary>
         /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
-        /// <param name="baseDestinationDirectory"> The temporary directory to copy the solution to. </param>
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, out TestResultsFile resultsFile, out string commitMessage, out int projectCount, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
+        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath,
+                                                                                string destinationDirectory,
+                                                                                bool mustDoCheckout,
+                                                                                out int projectCount,
+                                                                                string hash = null,
+                                                                                CancellationToken cancellationToken = default(CancellationToken))
         {
             try
             {
                 projectCount = -1;
-                resultsFile = null;
-                commitMessage = "";
-                var error = ValidateSolutionFilePath(solutionFilePath);
-                if (error != null)
-                {
-                    return (Status.ArgumentError, error).ToSingleton();
-                }
 
-                error = ValidateDestinationDirectory(baseDestinationDirectory);
-                if (error != null)
-                {
-                    return (Status.ArgumentError, error).ToSingleton();
-                }
-
-                bool mustDoCheckout = false;
-                (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
-                resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
-
-                if (hash == null)
-                {
-                    string currentCommitHash = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
-                    if (hash == null)
-                    {
-                        hash = currentCommitHash;
-                    }
-                    else if (currentCommitHash != hash)
-                    {
-                        mustDoCheckout = true;
-                        hash = currentCommitHash;
-                    }
-                    if (error != null)
-                    {
-                        return (Status.MiscellaneousError, error).ToSingleton();
-                    }
-                }
-
-                if (error != null)
-                {
-                    return (Status.MiscellaneousError, error).ToSingleton();
-                }
-
-                bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out commitMessage, out error);
-                if (skipCommit)
-                {
-                    return (Status.Skipped, error).ToSingleton();
-                }
-                else if (error != null)
-                {
-                    return (Status.MiscellaneousError, error).ToSingleton();
-                }
-
-                bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
-                if (parentCommitFailed)
-                {
-                    return (Status.ParentFailed, error).ToSingleton();
-                }
-                else if (error != null)
-                {
-                    return (Status.MiscellaneousError, error).ToSingleton();
-                }
-
-                string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out error);
+                string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out string error);
                 if (error != null)
                 {
                     return (Status.MiscellaneousError, error).ToSingleton();

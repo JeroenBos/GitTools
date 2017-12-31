@@ -79,6 +79,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CIReceivingPipe.cs" />
+    <Compile Include="CopyBuildTestSolutionInjection.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="NotificationIconContextMenus.cs" />
     <Compile Include="NotificationIconStatus.cs" />

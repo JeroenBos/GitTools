@@ -150,7 +150,7 @@ namespace CI.UI
                 hash = input[1];
             }
 
-            var work = new CopyBuildTestSolutions(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
+            var work = new CopyBuildTestSolutionInjection(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
             HandleCommit(work, icon, hash, externalCancellationToken);
         }
@@ -192,20 +192,72 @@ namespace CI.UI
 
             Logger.Log("Processing message");
             DateTime start = DateTime.Now;
-            icon.Text = "Starting...";
-            icon.Percentage = 0.1;
-            icon.Status = NotificationIconStatus.Working;
-            TestResult overallStatus = TestResult.Failure;
+
+            Prework prework = work.Prework();
+            string commitMessage = prework.CommitMessage;
+            TestResult overallStatus;
+
+            switch (prework.Status)
+            {
+                case Status.Success:
+                    overallStatus = TestResult.Success;
+                    break;
+
+                case Status.Skipped:
+                    Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {prework.Message}");
+                    icon.Status = NotificationIconStatus.Default;
+                    overallStatus = TestResult.Ignored;
+                    break;
+
+                case Status.ParentFailed:
+                    Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {prework.Message}");
+                    icon.Status = NotificationIconStatus.Bad;
+                    overallStatus = TestResult.Failure;
+                    break;
+
+                case Status.Canceled:
+                    overallStatus = TestResult.Success;
+                    break;
+
+                case Status.ArgumentError:
+                case Status.MiscellaneousError:
+                case Status.UnhandledException:
+                    Logger.Log($"{prework.Status.ToTitle()}: " + prework.Message);
+                    icon.Percentage = 1;
+                    icon.Text = null;
+                    icon.ShowErrorBalloon(prework.Message, prework.Status);
+                    return;
+
+                case Status.ProjectLoadingError:
+                case Status.BuildError:
+                case Status.TestError:
+                case Status.ProjectLoadSuccess:
+                case Status.BuildSuccess:
+                case Status.TestStarted:
+                case Status.TestSuccess:
+                    throw new ContractException("Prework shouldn't return this status");
+                default:
+                    throw new DefaultSwitchCaseUnreachableException();
+            }
+
+            TestResultsFile resultsFile = prework.TestResultsFile;
             int loadedProjectsCount = 0;
             int builtProjectsCount = 0;
             int successfulTestsCount = 0;
             int failedTestCount = 0;
             string balloonMessage = "";
-            TestResultsFile resultsFile = null;
-            string commitMessage = "";
+
             try
             {
-                foreach ((Status status, string message) in work.CopySolutionAndExecuteTests(cancellationTokenSource.Token, out resultsFile, out commitMessage, out int projectCount))
+                if (overallStatus != TestResult.Success)
+                    return;
+
+                icon.Text = "Starting...";
+                icon.Percentage = 0.1;
+                icon.Status = NotificationIconStatus.Working;
+
+
+                foreach ((Status status, string message) in work.CopySolutionAndExecuteTests(cancellationTokenSource.Token, out int projectCount))
                 {
                     if (cancellationTokenSource.IsCancellationRequested)
                     {
@@ -217,18 +269,6 @@ namespace CI.UI
 
                     switch (status)
                     {
-                        case Status.Skipped:
-                            Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {message}");
-                            icon.Status = NotificationIconStatus.Default;
-                            overallStatus = TestResult.Ignored;
-                            break;
-
-                        case Status.ParentFailed:
-                            Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {message}");
-                            icon.Status = NotificationIconStatus.Bad;
-                            overallStatus = TestResult.Failure;
-                            break;
-
                         case Status.ProjectLoadSuccess:
                             loadedProjectsCount++;
                             icon.Status = NotificationIconStatus.Working;
@@ -269,7 +309,6 @@ namespace CI.UI
                             icon.ShowErrorBalloon(balloonMessage, status);
                             break;
 
-                        case Status.ArgumentError:
                         case Status.MiscellaneousError:
                         case Status.ProjectLoadingError:
                         case Status.BuildError:
@@ -287,6 +326,10 @@ namespace CI.UI
                             icon.Status = NotificationIconStatus.Ok;
                             overallStatus = TestResult.Success;
                             break;
+
+                        case Status.ParentFailed:
+                        case Status.ArgumentError:
+                            throw new ContractException("This error status should have been returned by the prework already");
                         default:
                             throw new DefaultSwitchCaseUnreachableException();
                     }

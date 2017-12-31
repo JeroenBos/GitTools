@@ -1,4 +1,5 @@
-﻿using System;
+﻿using JBSnorro.Diagnostics;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,25 +10,36 @@ namespace JBSnorro.GitTools.CI
 {
     public interface ICopyBuildTestSolutions
     {
-        IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, 
-                                                                                 out TestResultsFile resultsFile,
-                                                                                 out string commitMessage,
-                                                                                 out int projectCount);
+        Prework Prework();
+        IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out int projectCount);
     }
-    public sealed class CopyBuildTestSolutions : ICopyBuildTestSolutions
+    public sealed class Prework
     {
-        public string SolutionFilePath { get; }
-        public string BaseDestinationDirectory { get; }
-        public string Hash { get; }
-        public CopyBuildTestSolutions(string solutionFilePath, string baseDestinationDirectory, string hash)
+        public Status Status { get; }
+        public string Message { get; }
+        public string CommitMessage { get; }
+        public TestResultsFile TestResultsFile { get; }
+        public bool MustDoCheckout { get; }
+        public string DestinationDirectory { get; }
+
+        public bool HasError => Message != null;
+
+        internal Prework(Status status, string message)
         {
-            this.SolutionFilePath = solutionFilePath;
-            this.BaseDestinationDirectory = baseDestinationDirectory;
-            this.Hash = hash;
+            Contract.Requires(message != null || status == Status.Success);
+            Contract.RequiresEnumIsDefined(status);
+
+            this.Status = status;
+            this.Message = message;
         }
-        public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
+        internal Prework(TestResultsFile resultsFile, string commitMessage, string destinationDirectory, bool mustDoCheckout)
         {
-            return Program.CopySolutionAndExecuteTests(SolutionFilePath, BaseDestinationDirectory, out resultsFile, out commitMessage, out projectCount, Hash, cancellationToken);
+            Contract.Requires(resultsFile != null);
+
+            this.TestResultsFile = resultsFile;
+            this.CommitMessage = commitMessage;
+            this.MustDoCheckout = mustDoCheckout;
+            this.DestinationDirectory = destinationDirectory;
         }
     }
 }

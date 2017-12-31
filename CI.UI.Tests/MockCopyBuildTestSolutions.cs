@@ -27,12 +27,17 @@ namespace CI.UI.Tests
         {
 
         }
-        public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out TestResultsFile resultsFile, out string commitMessage, out int projectCount)
+
+
+        public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out int projectCount)
         {
-            resultsFile = this.ResultsFile;
-            commitMessage = this.CommitMessage;
             projectCount = this.ProjectCount;
             return getLog();
+        }
+
+        public Prework Prework()
+        {
+            return new Prework(Status.Success, null);
         }
     }
 }
