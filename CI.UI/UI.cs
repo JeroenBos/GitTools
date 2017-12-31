@@ -196,6 +196,7 @@ namespace CI.UI
             icon.Percentage = 0.1;
             icon.Status = NotificationIconStatus.Working;
             TestResult overallStatus = TestResult.Failure;
+            int loadedProjectsCount = 0;
             int builtProjectsCount = 0;
             int successfulTestsCount = 0;
             int failedTestCount = 0;
@@ -220,6 +221,14 @@ namespace CI.UI
                             Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {message}");
                             icon.Status = NotificationIconStatus.Default;
                             overallStatus = TestResult.Ignored;
+                            break;
+
+                        case Status.ProjectLoadSuccess:
+                            loadedProjectsCount++;
+                            icon.Status = NotificationIconStatus.Working;
+                            icon.Percentage = GetEstimatedPercentage();
+                            icon.Text = $"{loadedProjectsCount}/{projectCount} projects loaded";
+                            Logger.Log(message);
                             break;
 
                         case Status.BuildSuccess:

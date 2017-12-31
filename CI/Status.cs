@@ -13,8 +13,9 @@ namespace JBSnorro.GitTools.CI
     public enum Status
     {
         Success,
-        TestSuccess,
+        ProjectLoadSuccess,
         BuildSuccess,
+        TestSuccess,
         ArgumentError,
         MiscellaneousError,
         ProjectLoadingError,
@@ -35,10 +36,12 @@ namespace JBSnorro.GitTools.CI
             {
                 case Status.Success:
                     return "All tests successful";
-                case Status.TestSuccess:
-                    return "Test successful";
+                case Status.ProjectLoadSuccess:
+                    return "Project load successful";
                 case Status.BuildSuccess:
                     return "Build successful";
+                case Status.TestSuccess:
+                    return "Test successful";
                 case Status.ArgumentError:
                     return "Input invalid";
                 case Status.MiscellaneousError:
@@ -55,6 +58,31 @@ namespace JBSnorro.GitTools.CI
                     return "Build and test skipped";
                 case Status.Canceled:
                     return "Canceled";
+                default:
+                    throw new DefaultSwitchCaseUnreachableException();
+            }
+        }
+        /// <summary>
+        /// Gets whether the specified status is considered a success.
+        /// </summary>
+        public static bool IsSuccessful(this Status status)
+        {
+            switch (status)
+            {
+                case Status.Success:
+                case Status.ProjectLoadSuccess:
+                case Status.BuildSuccess:
+                case Status.TestSuccess:
+                case Status.Skipped:
+                    return true;
+                case Status.ArgumentError:
+                case Status.MiscellaneousError:
+                case Status.ProjectLoadingError:
+                case Status.BuildError:
+                case Status.TestError:
+                case Status.UnhandledException:
+                case Status.Canceled:
+                    return false;
                 default:
                     throw new DefaultSwitchCaseUnreachableException();
             }

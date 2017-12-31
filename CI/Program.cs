@@ -158,14 +158,19 @@ namespace JBSnorro.GitTools.CI
             if (mustDoCheckout)
                 GitCommandLine.Checkout(destinationDirectory, hash);
 
-            var projectsInBuildOrder = LoadSolution(destinationSolutionFile, cancellationToken, out error);
+            var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
             if (error != null)
             {
                 return (Status.ProjectLoadingError, error).ToSingleton();
             }
+            projectCount = projectFilePaths.Count;
 
-            projectCount = projectsInBuildOrder.Count;
-            return ConcatIfAllPreviouses(BuildSolution(projectsInBuildOrder, cancellationToken), buildMessage => buildMessage.Item1 == Status.BuildSuccess, () => RunTests(projectsInBuildOrder, cancellationToken));
+            IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
+            IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, cancellationToken);
+            IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
+
+            return EnumerableExtensions.Concat(loadSolutionMessages, buildSolutionMessages, testMessages)
+                                       .TakeWhile(t => t.Item1.IsSuccessful());
         }
         /// <summary>
         /// Yields the elements of the second sequence only if all elements in the first sequence match the specified predicate.
@@ -364,28 +369,60 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static IReadOnlyList<Project> LoadSolution(string destinationSolutionFile, CancellationToken cancellationToken, out string error)
+        private static IReadOnlyList<string> GetProjectPaths(string destinationSolutionFilepath, out string error)
         {
+            error = null;
             try
             {
-                using (var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true })
-                {
-                    foreach (var projectPath in GetProjectFilesIn(destinationSolutionFile))
-                    {
-                        projects.LoadProject(projectPath.AbsolutePath);
-
-                        if (cancellationToken.IsCancellationRequested)
-                            throw new TaskCanceledException();
-                    }
-                    IReadOnlyList<Project> projectsInBuildOrder = GetInBuildOrder(projects.LoadedProjects);
-                    error = null;
-                    return projectsInBuildOrder;
-                }
+                var file = SolutionFile.Parse(destinationSolutionFilepath);
+                return file.ProjectsInOrder
+                           .Where(project => File.Exists(project.AbsolutePath))
+                           .Select(project => project.AbsolutePath)
+                           .ToReadOnlyList();
             }
             catch (Exception e)
             {
                 error = e.Message;
                 return null;
+            }
+        }
+        private static IEnumerable<(Status Status, string Message)> LoadSolution(IReadOnlyList<string> projectFilePaths, CancellationToken cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder)
+        {
+            var inBuildOrder = new List<Project>();
+            projectsInBuildOrder = new ReadOnlyCollection<Project>(inBuildOrder);
+
+            var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true };
+            return messages().ContinueWith(() => inBuildOrder.AddRange(ToBuildOrder(projects.LoadedProjects))).OnDisposal(projects.Dispose);
+
+            IEnumerable<(Status, string)> messages()
+            {
+                foreach (var projectPath in projectFilePaths)
+                {
+                    string errorMessage = null;
+                    try
+                    {
+                        projects.LoadProject(projectPath);
+                    }
+                    catch (Exception e)
+                    {
+                        errorMessage = e.Message;
+                    }
+
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        yield return (Status.Canceled, TaskCanceledMessage);
+                        yield break;
+                    }
+                    else if (errorMessage == null)
+                    {
+                        yield return (Status.ProjectLoadSuccess, $"Assembly {Path.GetFileName(projectPath)} loaded successfully");
+                    }
+                    else
+                    {
+                        yield return (Status.ProjectLoadingError, errorMessage);
+                        yield break;
+                    }
+                }
             }
         }
         /// <summary>
@@ -403,17 +440,18 @@ namespace JBSnorro.GitTools.CI
                 try
                 {
                     success = project.Build(new ConsoleLogger());
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
                 }
                 catch (Exception e)
                 {
                     errorMessage = e.Message;
                 }
 
-                if (success)
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    yield return (Status.Canceled, TaskCanceledMessage);
+                    yield break;
+                }
+                else if (success)
                 {
                     yield return (Status.BuildSuccess, $"Assembly {Path.GetFileName(project.FullPath)} built successfully");
                 }
@@ -423,20 +461,9 @@ namespace JBSnorro.GitTools.CI
                     yield break;
                 }
             }
-            if (cancellationToken.IsCancellationRequested)
-            {
-                yield return (Status.Canceled, TaskCanceledMessage);
-            }
-        }
-        private static IEnumerable<ProjectInSolution> GetProjectFilesIn(string solutionFilePath)
-        {
-            var file = SolutionFile.Parse(solutionFilePath);
-            return file.ProjectsInOrder
-                       .Where(project => File.Exists(project.AbsolutePath))
-                       .EnsureSingleEnumerationDEBUG();
         }
 
-        private static List<Project> GetInBuildOrder(IEnumerable<Project> projects)
+        private static List<Project> ToBuildOrder(IEnumerable<Project> projects)
         {
             var remaining = projects.ToList();
             var result = new List<Project>();
@@ -499,7 +526,7 @@ namespace JBSnorro.GitTools.CI
                         }
                     }
 
-                    var staThread = new Thread(processRemainingProjects) { IsBackground = true };
+                    var staThread = new Thread(processRemainingProjects) { IsBackground = true, Priority = ThreadPriority.AboveNormal };
                     staThread.SetApartmentState(ApartmentState.STA);
                     staThread.Start();
                 }
