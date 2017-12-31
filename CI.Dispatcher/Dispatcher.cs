@@ -95,7 +95,7 @@ namespace CI
                 return null;
             }
 
-            var pipe = new NamedPipeServerStream(CIReceivingPipe.PipeName, PipeDirection.Out);
+            var pipe = new NamedPipeServerStream(CIReceivingPipe.GetPipeName(), PipeDirection.Out);
             // try to make connection, or start the executable in case it's not responding
             Task makeConnectionTask = pipe.WaitForConnectionAsync();
             if (makeConnectionTask.Wait(timeout))

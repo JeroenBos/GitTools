@@ -64,7 +64,7 @@ namespace JBSnorro
             try
             {
                 int receivedMessageCount = 0;
-                Logger.Log("Starting message pump client pipe");
+                Logger.Log("Starting message pump client pipe with name " + this.PipeName);
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     using (var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.In))

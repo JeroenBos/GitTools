@@ -4,6 +4,7 @@ using JBSnorro.GitTools.CI;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -14,7 +15,7 @@ namespace CI.UI
 {
     public sealed class CIReceivingPipe : ReceivingPipe, IDisposable
     {
-        public new const string PipeName = "CI_Pipe";
+        public static string GetPipeName() => ConfigurationManager.AppSettings["CI_PIPE_NAME"] ?? "CI_PIPE";
         public const string PipeMessageSeparator = "-:-";
 
         /// <summary>
@@ -37,7 +38,7 @@ namespace CI.UI
         private bool isDisposed;
 
         public CIReceivingPipe(Program program)
-            : base(PipeName, PipeMessageSeparator)
+            : base(GetPipeName(), PipeMessageSeparator)
         {
             Contract.Requires(program != null);
 
