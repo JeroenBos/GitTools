@@ -2,6 +2,7 @@
 using JBSnorro.GitTools.CI;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -18,6 +19,7 @@ namespace CI.UI
         public bool HasDonePrework => this.prework != null;
         private Prework prework;
 
+        [DebuggerHidden]
         public Prework Prework()
         {
             Contract.Requires(!HasDonePrework);
@@ -26,12 +28,14 @@ namespace CI.UI
             return this.prework;
         }
 
+        [DebuggerHidden]
         public CopyBuildTestSolutionInjection(string solutionFilePath, string baseDestinationDirectory, string hash)
         {
             this.SolutionFilePath = solutionFilePath;
             this.BaseDestinationDirectory = baseDestinationDirectory;
             this.Hash = hash;
         }
+        [DebuggerHidden]
         public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out int projectCount)
         {
             Contract.Requires(HasDonePrework);
