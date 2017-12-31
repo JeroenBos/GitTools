@@ -304,7 +304,7 @@ namespace CI.UI
                 {
                     try
                     {
-                        if (hash != null)
+                        if (hash != null && overallStatus != TestResult.Ignored)
                         {
                             resultsFile.Append(hash, overallStatus, commitMessage, (int)Math.Ceiling((DateTime.Now - start).TotalSeconds), successfulTestsCount);
                         }
