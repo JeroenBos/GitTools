@@ -239,6 +239,9 @@ namespace CI.UI
                             Logger.Log(message);
                             break;
 
+                        case Status.TestStarted:
+                            Logger.Log($"Started testing " + message);
+                            break;
                         case Status.TestSuccess:
                             successfulTestsCount++;
                             if (icon.Status != NotificationIconStatus.Bad)

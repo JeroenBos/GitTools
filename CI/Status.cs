@@ -15,6 +15,7 @@ namespace JBSnorro.GitTools.CI
         Success,
         ProjectLoadSuccess,
         BuildSuccess,
+        TestStarted,
         TestSuccess,
         ArgumentError,
         MiscellaneousError,
@@ -50,6 +51,8 @@ namespace JBSnorro.GitTools.CI
                     return "Loading project failed";
                 case Status.BuildError:
                     return "Build failed";
+                case Status.TestStarted:
+                    return "Test started";
                 case Status.TestError:
                     return "Tests failed";
                 case Status.UnhandledException:
@@ -74,6 +77,7 @@ namespace JBSnorro.GitTools.CI
                 case Status.BuildSuccess:
                 case Status.TestSuccess:
                 case Status.Skipped:
+                case Status.TestStarted:
                     return true;
                 case Status.ArgumentError:
                 case Status.MiscellaneousError:

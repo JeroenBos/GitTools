@@ -33,7 +33,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Gets the number of threads used for testing. At most one thread is used per test project.
         /// </summary>
-        const int TEST_THREAD_COUNT = 2;
+        const int TEST_THREAD_COUNT = 1;
         /// <summary>
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
         /// </summary>
@@ -565,6 +565,9 @@ namespace JBSnorro.GitTools.CI
                                     {
                                         foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPathLocal))
                                         {
+                                            writer.WriteLine(STARTED_CODON + $"{method.DeclaringType.FullName}.{method.Name}");
+                                            messagesCount++;
+
                                             string methodError = RunTest(method);
 
                                             if (!outPipe.IsConnected)
@@ -624,6 +627,7 @@ namespace JBSnorro.GitTools.CI
         public const string SUCCESS_CODON = "SUCCESS_CODON";
         public const string ERROR_CODON = "ERROR___CODON";
         public const string STOP_CODON = "STOPS___CODON";
+        public const string STARTED_CODON = "STARTED_CODON";
 
         public static IEnumerable<(Status, string)> Read(IEnumerable<string> lines)
         {
@@ -636,6 +640,9 @@ namespace JBSnorro.GitTools.CI
 
                 switch (codon)
                 {
+                    case STARTED_CODON:
+                        yield return (Status.TestStarted, message);
+                        break;
                     case SUCCESS_CODON:
                         yield return (Status.TestSuccess, message);
                         break;
