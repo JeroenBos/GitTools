@@ -21,7 +21,7 @@ namespace CI.UI
     /// </summary>
     public sealed class NotificationIcon : DefaultINotifyPropertyChanged, IDisposable
     {
-        public bool HasCancellationRequestedHandler => this.cancellationRequested != null;//this.cancellationRequested?.GetInvocationList().Length?.Equals(0) ?? false;
+        public bool HasCancellationRequestedHandler => this.cancellationRequested != null;
         public event EventHandler CancellationRequested
         {
             add
