@@ -13,12 +13,13 @@ namespace JBSnorro.GitTools
     {
         static TestClassExtensions()
         {
-            IsRunningFromUnitTest = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.FullName).Any(assemblyName => TestingAssemblies.Any(assemblyName.StartsWith));
+            isRunningFromUnitTest = new AppDomainField<bool>(appDomain => appDomain.GetAssemblies().Select(a => a.FullName).Any(assemblyName => TestingAssemblies.Any(assemblyName.StartsWith)), discardValueOnAssemblyAdded: true);
         }
+        private static readonly AppDomainField<bool> isRunningFromUnitTest;
         /// <summary>
         /// Gets whether the code is running from a unit test.
         /// </summary>
-        public static readonly bool IsRunningFromUnitTest;
+        public static bool IsRunningFromUnitTest => isRunningFromUnitTest.Value;
 
         /// <summary>
         /// Gets the name of the currently running test method; or null if no test method is running.
