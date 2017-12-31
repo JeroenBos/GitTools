@@ -1,8 +1,8 @@
-﻿using JBSnorro.Diagnostics;
+﻿using JBSnorro.Configuration;
+using JBSnorro.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Configuration;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -18,7 +18,7 @@ namespace CI.UI
     public static class Icons
     {
         private static string executingAssemblyDirectory => Path.GetDirectoryName(new Uri(System.Reflection.Assembly.GetExecutingAssembly().CodeBa‌​se).LocalPath);
-        private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"] ?? throw new AppSettingNotFoundException("iconsPath"));
+        private static string iconsPath => Path.Combine(executingAssemblyDirectory, AppDomainConfigurationManager.AppSettings["iconsPath"] ?? throw new AppSettingNotFoundException("iconsPath"));
         private static readonly ReadOnlyDictionary<NotificationIconStatus, Bitmap> bitmaps = new ReadOnlyDictionary<NotificationIconStatus, Bitmap>(new Dictionary<NotificationIconStatus, Bitmap>
         {
             [NotificationIconStatus.Default] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "default_status.png")),

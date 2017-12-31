@@ -1,10 +1,10 @@
 ﻿using CI.UI;
 using System.Linq;
 using JBSnorro;
+using JBSnorro.Configuration;
 using JBSnorro.Diagnostics;
 using JBSnorro.GitTools.CI;
 using System;
-using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
@@ -18,7 +18,7 @@ namespace CI
         private static RunnableTaskCancellableByDisposal inProcessUI;
         private static bool inProcessUIIsRunning => inProcessUI != null;
 
-        private static string CI_UI_Path => ConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new AppSettingNotFoundException("CI_UI_Path");
+        private static string CI_UI_Path => AppDomainConfigurationManager.AppSettings["CI_UI_Path"] ?? throw new AppSettingNotFoundException("CI_UI_Path");
         /// <summary>
         /// Gets the timeout in milliseconds after which the dispatch receiver may be presumed absent.
         /// </summary>
@@ -26,7 +26,7 @@ namespace CI
         private static int readTimeoutFromSettings()
         {
             const string key = "timeout_ms";
-            string timeout_string = ConfigurationManager.AppSettings[key] ?? throw new AppSettingNotFoundException(key);
+            string timeout_string = AppDomainConfigurationManager.AppSettings[key] ?? throw new AppSettingNotFoundException(key);
             if (int.TryParse(timeout_string, out int result))
                 return result;
             else
