@@ -159,6 +159,18 @@ namespace CI.UI
 
             this.Icon.ShowBalloonTip(ErrorBalloonShowDuration, status.ToTitle(), message, ToolTipIcon.Error);
         }
+        /// <summary>
+        /// Sets this icon back to the default state.
+        /// </summary>
+        public void Reset()
+        {
+            if (this.IsDisposed)
+                throw new ObjectDisposedException(nameof(NotificationIcon));
+
+            this.Text = null;
+            this.Percentage = 1;
+            this.Status = NotificationIconStatus.Default;
+        }
 
         internal void RequestCancellation()
         {
