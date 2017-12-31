@@ -300,6 +300,7 @@ namespace CI.UI
 
                         case Status.TestError:
                             Logger.Log($"{status.ToTitle()}: " + message);
+                            overallStatus = TestResult.Failure;
 
                             failedTestCount++;
                             balloonMessage += message + "\n";
@@ -314,6 +315,8 @@ namespace CI.UI
                         case Status.BuildError:
                         case Status.UnhandledException:
                             Logger.Log($"{status.ToTitle()}: " + message);
+                            overallStatus = TestResult.Failure;
+
                             icon.Percentage = 1;
                             icon.Text = null;
                             icon.ShowErrorBalloon(message, status);
