@@ -118,7 +118,10 @@ namespace CI.UI
 #if DEBUG
             icon.Status = NotificationIconStatus.Bad;
             if (!TestClassExtensions.IsRunningFromUnitTest)
+            {
+                Logger.Log("Reading line (so not from unit test)");
                 Console.ReadLine();
+            }
 #else
             icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
 #endif
@@ -165,18 +168,20 @@ namespace CI.UI
 
             using (CancellationTokenSource cancellationTokenSource = new CancellationTokenSource())
             {
+                bool canceled = true;
                 try
                 {
                     icon.CancellationRequested += onOperationCanceled;
                     externalCancellationToken.Register(() => { try { cancellationTokenSource.Cancel(); } catch { } });
 
                     Task.Delay(timeout, cancellationTokenSource.Token).Wait();
+                    canceled = false;
                 }
                 finally
                 {
                     icon.CancellationRequested -= onOperationCanceled;
+                    Logger.Log($"Finished test input: {(canceled ? "canceled" : "time elapsed")}");
                 }
-                return;
 
                 void onOperationCanceled(object sender, EventArgs e)
                 {

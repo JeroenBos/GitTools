@@ -89,9 +89,11 @@ namespace CI.UI
             {
                 debug = e;
                 cancellationToken = new CancellationToken(true); // affects how the base handler works
+                Logger.Log($"Canceled message '{string.Join(" '", message)}'");
             }
             catch (Exception e)
             {
+                Logger.Log($"Error while handling message '{string.Join(" '", message)}': {e.Message}");
                 debug = e;
                 MainDispatcher.InvokeAsync(() => Program.OutputError(debug));
             }

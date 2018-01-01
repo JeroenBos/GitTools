@@ -61,6 +61,8 @@ namespace CI.UI.Tests
                 {
                     Thread.Sleep(1);
                 }
+
+                Logger.Log("TestDispatchReceipt received message");
             }
 
             // the difference between asserting inside or outside of the using statement is that inside these assertions will only evaluated after all background threads have finished,
@@ -108,7 +110,10 @@ namespace CI.UI.Tests
             {
                 Dispatcher.TrySendMessage(ComposeDummyWorkMessage(timeout_ms: int.MaxValue));           // send message
 
-                while (!icon.HasCancellationRequestedHandler) { }                                       // wait for it to be cancellable
+                while (!icon.HasCancellationRequestedHandler)                                           // wait for it to be cancellable
+                {
+                    Thread.Sleep(10);
+                }                                       
 
                 icon.RequestCancellation();                                                             // then cancel it
 

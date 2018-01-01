@@ -24,12 +24,10 @@ namespace JBSnorro
         /// </summary>
         internal static event Action<object, string> OnHandledMessage;
 
-        [Conditional("DEBUG")]
         private static void InvokeOnReceivedMessage(ReceivingPipe pipe, string message)
         {
             OnReceivedMessage?.Invoke(pipe, message);
         }
-        [Conditional("DEBUG")]
         private static void InvokeOnHandledMessage(ReceivingPipe pipe, string message)
         {
             OnHandledMessage?.Invoke(pipe, message);
