@@ -137,7 +137,8 @@ namespace CI.UI
 
         private void OnStatusChanged()
         {
-            this.Icon.Icon = Icons.GetIcon(this.Status);
+            var icon = Icons.GetIcon(this.Status);
+            this.Icon.Icon = icon;
 
             RefreshContextMenuItems();
         }
