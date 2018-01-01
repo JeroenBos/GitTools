@@ -36,6 +36,7 @@ namespace JBSnorro.GitTools.CI
         {
             Contract.Requires(resultsFile != null);
 
+            this.Status = Status.Success;
             this.TestResultsFile = resultsFile;
             this.CommitMessage = commitMessage;
             this.MustDoCheckout = mustDoCheckout;
