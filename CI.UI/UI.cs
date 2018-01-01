@@ -164,7 +164,7 @@ namespace CI.UI
 
             var work = new CopyBuildTestSolutionInjection(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
-            HandleCommit(work, icon, hash, externalCancellationToken);
+            HandleCommit(work, icon, externalCancellationToken);
         }
         private void HandleTestInput(string[] input, CancellationToken externalCancellationToken)
         {
@@ -198,8 +198,10 @@ namespace CI.UI
                 }
             }
         }
-        internal static void HandleCommit(ICopyBuildTestSolutions work, NotificationIcon icon, string hash = null, CancellationToken externalCancellationToken = default(CancellationToken))
+        internal static void HandleCommit(ICopyBuildTestSolutions work, NotificationIcon icon, CancellationToken externalCancellationToken = default(CancellationToken))
         {
+            Contract.Requires(work != null);
+
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             icon.CancellationRequested += onOperationCanceled;
             externalCancellationToken.Register(cancellationTokenSource.Cancel);
@@ -383,9 +385,9 @@ namespace CI.UI
                 {
                     try
                     {
-                        if (hash != null && overallStatus != TestResult.Ignored)
+                        if (work.Hash != null && overallStatus != TestResult.Ignored)
                         {
-                            resultsFile.Append(hash, overallStatus, commitMessage, (int)Math.Ceiling((DateTime.Now - start).TotalSeconds), successfulTestsCount);
+                            resultsFile.Append(work.Hash, overallStatus, commitMessage, (int)Math.Ceiling((DateTime.Now - start).TotalSeconds), successfulTestsCount);
                         }
                     }
                     catch { }

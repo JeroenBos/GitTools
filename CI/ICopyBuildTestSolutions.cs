@@ -10,6 +10,7 @@ namespace JBSnorro.GitTools.CI
 {
     public interface ICopyBuildTestSolutions
     {
+        string Hash { get; }
         Prework Prework();
         IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out int projectCount);
     }
