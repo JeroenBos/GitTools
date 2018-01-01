@@ -753,7 +753,17 @@ namespace JBSnorro.GitTools.CI
             {
                 testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
                 TestClassExtensions.RunInitializationMethod(testClassInstance);
-                testMethod.Invoke(testClassInstance, new object[0]);
+                int? timeout = TestClassExtensions.GetTestMethodTimeout(testMethod);
+                Action invocation = () => testMethod.Invoke(testClassInstance, new object[0]);
+                if (timeout != null)
+                {
+                    if (!invocation.InvokeWithTimeOut(timeout.Value))
+                        return "{0} timed out";
+                }
+                else
+                {
+                    invocation();
+                }
             }
             catch (TargetInvocationException e)
             {

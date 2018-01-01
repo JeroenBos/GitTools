@@ -114,6 +114,20 @@ namespace JBSnorro.GitTools
 
             return result;
         }
+        /// <summary>
+        /// If the specified method has a timeout attribute, its timeout value in ms is returned; otherwise null. 
+        /// </summary>
+        public static int? GetTestMethodTimeout(MethodInfo method)
+        {
+            Contract.Requires(method != null);
+            Contract.Requires(IsTestMethod(method));
+
+            var attributeData = method.GetAttributeData(TestMethodTimeoutAttribute.Keys, out string fullName);
+            if (attributeData == null)
+                return null;
+
+            return TestMethodTimeoutAttribute[fullName](attributeData);
+        }
 
 
         private static bool IsTestInitializationMethod(MethodInfo method)
@@ -154,7 +168,8 @@ namespace JBSnorro.GitTools
         private static List<string> TestMethodIgnoreAttributeFullNames = new List<string> { "Microsoft.VisualStudio.TestTools.UnitTesting.IgnoreAttribute", "NUnit.Framework.IgnoreAttribute" };
         private static List<string> TestingAssemblies = new List<string> { "Microsoft.VisualStudio.TestPlatform", "nunit.framework" };
         private static Dictionary<string, Func<Attribute, Exception, bool>> TestMethodExpectedExceptionAttributeFullNames = new Dictionary<string, Func<Attribute, Exception, bool>> { ["Microsoft.VisualStudio.TestTools.UnitTesting.ExpectedExceptionBaseAttribute"] = verifyExpectedExceptionBaseAttribute };
-        //TODO: implement timeout
+        private static Dictionary<string, Func<CustomAttributeData, int>> TestMethodTimeoutAttribute = new Dictionary<string, Func<CustomAttributeData, int>> { ["Microsoft.VisualStudio.TestTools.UnitTesting.TimeoutAttribute"] = getTimoutValue, ["NUnit.Framework.TimeoutAttribute"] = getTimoutValue };
+
         private static bool verifyExpectedExceptionBaseAttribute(Attribute attribute, Exception e)
         {
             var m = attribute.GetType().GetMethod("Verify", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -166,6 +181,22 @@ namespace JBSnorro.GitTools
             catch
             {
                 return false;
+            }
+        }
+        private static int getTimoutValue(CustomAttributeData attributeData)
+        {
+            Contract.Requires(attributeData != null);
+            Contract.Requires(attributeData.ConstructorArguments.Count == 1);
+            var argType = attributeData.ConstructorArguments[0].ArgumentType;
+            Contract.Requires(argType == typeof(int) || argType.FullName == "Microsoft.VisualStudio.TestTools.UnitTesting.TestTimeout");
+
+            try
+            {
+                return (int)attributeData.ConstructorArguments[0].Value;
+            }
+            catch (InvalidCastException)
+            {
+                return int.MaxValue; // = Microsoft.VisualStudio.TestTools.UnitTesting.TestTimeout.Infinite
             }
         }
     }
