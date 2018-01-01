@@ -138,7 +138,16 @@ namespace CI.UI
         private void OnStatusChanged()
         {
             var icon = Icons.GetIcon(this.Status);
-            this.Icon.Icon = icon;
+            Contract.Assert(icon != null);
+            try
+            {
+                this.Icon.Icon = icon;
+            }
+            catch (ArgumentNullException)
+            {
+                Thread.Sleep(10);
+                this.Icon.Icon = icon;
+            }
 
             RefreshContextMenuItems();
         }
