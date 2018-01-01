@@ -18,6 +18,7 @@ namespace CI.UI
 {
     public class Program : IDisposable
     {
+        internal static Program Instance { get; private set; }
         internal const string TEST_ARGUMENT = "TEST_ARGUMENT";
         public static void Main(string[] args)
         {
@@ -57,9 +58,17 @@ namespace CI.UI
         /// </summary>
         public static void Start(NotificationIcon icon, CancellationToken cancellationToken = default(CancellationToken))
         {
-            using (var program = new Program(icon))
+            try
             {
-                program.start(cancellationToken);
+                using (var program = new Program(icon))
+                {
+                    Instance = program;
+                    program.start(cancellationToken);
+                }
+            }
+            finally
+            {
+                Instance = null;
             }
         }
         private void start(CancellationToken cancellationToken = default(CancellationToken))
