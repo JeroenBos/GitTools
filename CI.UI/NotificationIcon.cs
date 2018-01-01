@@ -97,7 +97,7 @@ namespace CI.UI
         /// <summary>
         /// Creates a new nofication icon in the notification area.
         /// </summary>
-        public NotificationIcon(bool isVisible = true)
+        public NotificationIcon(bool isVisible = false)
         {
             ProcessExit.Event += onProcessExit;
             this.Icon = new NotifyIcon()

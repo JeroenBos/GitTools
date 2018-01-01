@@ -24,7 +24,7 @@ namespace CI.UI.Tests
         [Test]
         public void TestIconStatusAfterBuildError()
         {
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 var log = new(Status, string)[]
                 {
@@ -42,7 +42,7 @@ namespace CI.UI.Tests
         [Test]
         public void TestIconStatusAfterBuildingOneOutOfTwoProjects()
         {
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 IEnumerable<(Status, string)> getLog()
                 {
@@ -64,7 +64,7 @@ namespace CI.UI.Tests
         [Test]
         public void TestIconStatusAfterBuildingTwoOutOfTwoProjects()
         {
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 var log = new(Status, string)[]
                 {
@@ -82,7 +82,7 @@ namespace CI.UI.Tests
         [Test]
         public void TestIconStatusAfterTestSucceeds()
         {
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 var log = new(Status, string)[]
                 {
@@ -100,7 +100,7 @@ namespace CI.UI.Tests
         [Test]
         public void TestIconStatusAfterTestFails()
         {
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 var log = new(Status, string)[]
                 {
@@ -118,7 +118,7 @@ namespace CI.UI.Tests
         [Test]
         public void TestIconStatusAfterOneTestFailsAndAnotherOneSucceeds()
         {
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 var log = new(Status, string)[]
                 {
@@ -137,7 +137,7 @@ namespace CI.UI.Tests
         [Test]
         public void TestIconStatusAfterOneTestSucceedsOneFailsAndAnotherOneSucceeds()
         {
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 var log = new(Status, string)[]
                 {
@@ -158,7 +158,7 @@ namespace CI.UI.Tests
         public void TestIconStatusAfterCancellation()
         {
             using (var tokenSource = new CancellationTokenSource())
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 IEnumerable<(Status, string)> getLog()
                 {
@@ -180,7 +180,7 @@ namespace CI.UI.Tests
         [Test]
         public void TestCancelButtonExistence()
         {
-            using (var icon = new NotificationIcon(isVisible: false))
+            using (var icon = new NotificationIcon())
             {
                 IEnumerable<(Status, string)> getLog()
                 {

@@ -24,7 +24,7 @@ namespace CI.UI
             if (args.Length != 0)
             {
 #if DEBUG
-                using (var icon = new NotificationIcon())
+                using (var icon = new NotificationIcon(isVisible: true))
                 using (var program = new Program(icon))
                 {
                     Logger.Log($"Directly handling message {string.Join(" ", args)}");
@@ -49,7 +49,7 @@ namespace CI.UI
         /// </summary>
         public static void Start(CancellationToken cancellationToken = default(CancellationToken))
         {
-            using (var icon = new NotificationIcon())
+            using (var icon = new NotificationIcon(isVisible: true))
                 Start(icon, cancellationToken);
         }
         /// <summary>
