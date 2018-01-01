@@ -651,16 +651,27 @@ namespace JBSnorro.GitTools.CI
                                         foreach (var loadException in e.LoaderExceptions)
                                         {
                                             writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
+                                            messagesCount++;
+                                        }
+                                    }
+                                    catch (TargetInvocationException te)
+                                    {
+                                        Exception e = te.InnerException;
+                                        if (e.InnerException != null)
+                                        {
+                                            writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+                                            messagesCount++;
+                                        }
+                                        else
+                                        {
+                                            writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+                                            messagesCount++;
                                         }
                                     }
                                     catch (Exception e)
                                     {
-                                        writer.WriteLine(ERROR_CODON + RemoveLineBreaks(e.Message));
-                                        if (e.InnerException != null)
-                                        {
-                                            writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks(e.InnerException.Message));
-                                            messagesCount++;
-                                        }
+                                        writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"A serious error occurred: {e.Message}"));
+                                        messagesCount++;
                                     }
                                     finally
                                     {
@@ -687,6 +698,7 @@ namespace JBSnorro.GitTools.CI
 
             return s?.Replace('\n', '-').Replace('\r', '-');
         }
+
         private static int messagesWrittenCount;
         public const string PIPE_NAME = "CI_internal_pipe";
         public const string SUCCESS_CODON = "SUCCESS_CODON";
@@ -771,10 +783,7 @@ namespace JBSnorro.GitTools.CI
                 {
                     return e.InnerException.Message;
                 }
-            }
-            catch (Exception e)
-            {
-                return e.Message;
+                throw;
             }
             finally
             {
