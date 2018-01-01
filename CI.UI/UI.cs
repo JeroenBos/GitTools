@@ -310,14 +310,15 @@ namespace CI.UI
                             break;
 
                         case Status.TestError:
-                            Logger.Log($"{status.ToTitle()}{(commitMessage == null ? "" : $" for commit '{commitMessage}'")}: {message}");
+                            commitMessage = commitMessage == null ? "" : $" for commit '{commitMessage}'";
+                            Logger.Log($"{status.ToTitle()}{commitMessage}: {message}");
                             overallStatus = TestResult.Failure;
 
                             failedTestCount++;
                             balloonMessage += message + "\n";
 
                             icon.Percentage = GetEstimatedPercentage();
-                            icon.Text = $"{failedTestCount}/{getTotalTestCount()} tests failed{(commitMessage == null ? "" : $" for commit '{commitMessage}'")}";
+                            icon.Text = $"{failedTestCount}/{getTotalTestCount()} tests failed{commitMessage}";
                             icon.ShowErrorBalloon(balloonMessage, status);
                             return;
 

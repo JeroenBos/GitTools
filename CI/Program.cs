@@ -691,6 +691,7 @@ namespace JBSnorro.GitTools.CI
         {
             Contract.Assert(SUCCESS_CODON.Length == STOP_CODON.Length);
             Contract.Assert(ERROR_CODON.Length == STOP_CODON.Length);
+            Contract.Assert(STARTED_CODON.Length == STOP_CODON.Length);
 
             return s?.Replace('\n', '-').Replace('\r', '-');
         }
