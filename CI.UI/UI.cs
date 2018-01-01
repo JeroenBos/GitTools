@@ -349,7 +349,7 @@ namespace CI.UI
             {
                 overallStatus = TestResult.Failure;
                 Logger.Log($"{Status.UnhandledException.ToTitle()}: " + e.Message);
-                throw new ContractException();
+                throw new ContractException(e.StackTrace);
             }
             finally
             {
