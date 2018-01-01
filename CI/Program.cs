@@ -33,7 +33,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Gets the number of threads used for testing. At most one thread is used per test project.
         /// </summary>
-        const int TEST_THREAD_COUNT = 1;
+        public static readonly int TEST_THREAD_COUNT = ConfigurationManagerExtensions.ParseAppSettingInt("TEST_THREAD_COUNT", ifMissing: 1);
         /// <summary>
         /// The maximum number of milliseconds a test may take before it is canceled and considered failed.
         /// </summary>
