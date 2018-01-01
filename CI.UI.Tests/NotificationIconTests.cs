@@ -203,5 +203,16 @@ namespace CI.UI.Tests
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
+
+        [Test]
+        public void SkipBecauseParentFailed()
+        {
+            using (var icon = new NotificationIcon())
+            {
+                Program.HandleCommit(new MockCopyBuildTestSolutions(Status.ParentFailed), icon);
+
+                Assert.AreEqual(icon.Status, NotificationIconStatus.Bad);
+            }
+        }
     }
 }
