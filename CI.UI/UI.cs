@@ -206,6 +206,8 @@ namespace CI.UI
                 case Status.Skipped:
                     Logger.Log($"Skipped: The specified commit does not satisfy the conditions to be built and tested. {prework.Message}");
                     icon.Status = NotificationIconStatus.Default;
+                    if (string.IsNullOrEmpty(icon.Text))
+                        icon.Text = "This commit was skipped";
                     overallStatus = TestResult.Ignored;
                     break;
 
@@ -224,11 +226,12 @@ namespace CI.UI
                 case Status.ArgumentError:
                 case Status.MiscellaneousError:
                 case Status.UnhandledException:
-                    Logger.Log($"{prework.Status.ToTitle()}: " + prework.Message);
+                    Logger.Log($"{prework.Status.ToTitle()}: {prework.Message}");
                     icon.Percentage = 1;
-                    icon.Text = null;
+                    icon.Text = $"{prework.Status.ToTitle()}: {prework.Message}";
                     icon.ShowErrorBalloon(prework.Message, prework.Status);
-                    return;
+                    overallStatus = TestResult.Failure;
+                    break;
 
                 case Status.ProjectLoadingError:
                 case Status.BuildError:
@@ -310,7 +313,7 @@ namespace CI.UI
                             icon.Percentage = GetEstimatedPercentage();
                             icon.Text = $"{failedTestCount}/{getTotalTestCount()} tests failed";
                             icon.ShowErrorBalloon(balloonMessage, status);
-                            break;
+                            return;
 
                         case Status.MiscellaneousError:
                         case Status.ProjectLoadingError:

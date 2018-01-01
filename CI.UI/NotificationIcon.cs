@@ -137,6 +137,9 @@ namespace CI.UI
 
         private void OnStatusChanged()
         {
+            if (this.Status != NotificationIconStatus.Working)
+                this.Percentage = 1;
+
             if (this.Icon.Visible)
             {
                 var icon = Icons.GetIcon(this.Status);
