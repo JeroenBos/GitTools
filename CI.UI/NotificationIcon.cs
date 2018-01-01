@@ -161,14 +161,17 @@ namespace CI.UI
         }
         private void RefreshContextMenuItems()
         {
+            var dimissBadParentFlag = this.Status == NotificationIconStatus.BadParent ? NotificationIconContextMenuItems.DisregardTestResults
+                                                                                      : NotificationIconContextMenuItems.None;
+
             bool menuShouldHaveCancel = this.Percentage != 1;
             if (menuShouldHaveCancel)
             {
-                this.ContextMenuItems = NotificationIconContextMenuItems.Exit | NotificationIconContextMenuItems.Cancel;
+                this.ContextMenuItems = dimissBadParentFlag | NotificationIconContextMenuItems.Exit | NotificationIconContextMenuItems.Cancel;
             }
             else
             {
-                this.ContextMenuItems = NotificationIconContextMenuItems.Exit;
+                this.ContextMenuItems = dimissBadParentFlag | NotificationIconContextMenuItems.Exit;
             }
         }
         private void SetPartialIcon()

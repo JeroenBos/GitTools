@@ -89,7 +89,7 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Does work that is actually part of the preamble of <see cref="CopySolutionAndExecuteTests(string, string, bool, out int, string, CancellationToken)"/>
         /// </summary>
-        public static Prework Prework(string solutionFilePath, string baseDestinationDirectory, string hash)
+        public static Prework Prework(string solutionFilePath, string baseDestinationDirectory, string hash, bool ignoreParentFailed)
         {
             string error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
@@ -140,14 +140,17 @@ namespace JBSnorro.GitTools.CI
                 return new Prework(Status.MiscellaneousError, error);
             }
 
-            bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
-            if (parentCommitFailed)
+            if (!ignoreParentFailed)
             {
-                return new Prework(Status.ParentFailed, error);
-            }
-            else if (error != null)
-            {
-                return new Prework(Status.MiscellaneousError, error);
+                bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
+                if (parentCommitFailed)
+                {
+                    return new Prework(Status.ParentFailed, error);
+                }
+                else if (error != null)
+                {
+                    return new Prework(Status.MiscellaneousError, error);
+                }
             }
 
             return new Prework(resultsFile, commitMessage, destinationDirectory, mustDoCheckout);

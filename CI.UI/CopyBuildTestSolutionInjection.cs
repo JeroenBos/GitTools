@@ -1,4 +1,5 @@
-﻿using JBSnorro.Diagnostics;
+﻿using JBSnorro;
+using JBSnorro.Diagnostics;
 using JBSnorro.GitTools.CI;
 using System;
 using System.Collections.Generic;
@@ -16,15 +17,16 @@ namespace CI.UI
         public string BaseDestinationDirectory { get; }
         public string Hash { get; }
 
-        public bool HasDonePrework => this.prework != null;
+        private Option<bool> preworkDoneArgument;
         private Prework prework;
 
         [DebuggerHidden]
-        public Prework Prework()
+        public Prework Prework(bool ignoreParentFailed)
         {
-            Contract.Requires(!HasDonePrework);
+            Contract.Requires(!preworkDoneArgument.HasValue || (!preworkDoneArgument.Value && ignoreParentFailed), "You can only call this method once with true, and only once with false before the call with true");
+            preworkDoneArgument = ignoreParentFailed;
 
-            this.prework = JBSnorro.GitTools.CI.Program.Prework(SolutionFilePath, BaseDestinationDirectory, Hash);
+            this.prework = JBSnorro.GitTools.CI.Program.Prework(SolutionFilePath, BaseDestinationDirectory, Hash, ignoreParentFailed);
             return this.prework;
         }
 
@@ -38,7 +40,7 @@ namespace CI.UI
         [DebuggerHidden]
         public IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out int projectCount)
         {
-            Contract.Requires(HasDonePrework);
+            Contract.Requires(preworkDoneArgument.HasValue, "prework must be called before calling this method");
 
             return JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(SolutionFilePath, prework.DestinationDirectory, prework.MustDoCheckout, out projectCount, Hash, cancellationToken);
         }

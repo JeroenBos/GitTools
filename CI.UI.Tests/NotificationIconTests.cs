@@ -14,11 +14,17 @@ namespace CI.UI.Tests
     {
         static void Main(string[] args)
         {
+            new NotificationIconTests().RetryButtonRemovedOnInvocation();
             new DispatcherTests().MessagesAreHandledAfterCancellation();
 
 
             Console.WriteLine("Done");
             Console.ReadLine();
+        }
+        [SetUp]
+        public void ClearParentMessages()
+        {
+            ParentFailedTracker.Clear();
         }
 
         [Test]
@@ -212,6 +218,82 @@ namespace CI.UI.Tests
                 Program.HandleCommit(new MockCopyBuildTestSolutions(Status.ParentFailed), icon);
 
                 Assert.AreEqual(icon.Status, NotificationIconStatus.BadParent);
+            }
+        }
+        [Test]
+        public void RetryButtonIsAddedOnParentFailed()
+        {
+            using (var icon = new NotificationIcon())
+            {
+                Program.HandleCommit(new MockCopyBuildTestSolutions(Status.ParentFailed), icon);
+
+                Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit | NotificationIconContextMenuItems.DisregardTestResults);
+            }
+        }
+        [Test]
+        public void FailedParentIsAddedToTracker()
+        {
+            using (var icon = new NotificationIcon())
+            {
+                Program.HandleCommit(new MockCopyBuildTestSolutions(Status.ParentFailed), icon);
+            }
+
+            Assert.AreEqual(actual: ParentFailedTracker.Count, expected: 1);
+        }
+
+        [Test]
+        public void RetryButtonRehandlesFailedParentMessage()
+        {
+            using (var icon = new NotificationIcon())
+            {
+                bool logHandled = false;
+                IEnumerable<(Status, string)> getLog()
+                {
+                    logHandled = true;
+                    yield break;
+                };
+
+                Program.HandleCommit(new MockCopyBuildTestSolutions(Status.ParentFailed, getLog, secondPreworkStatus: Status.Success), icon);
+
+                Assert.IsFalse(logHandled);
+
+                ParentFailedTracker.RedoCanceledMessagesBecauseParentFailed(icon);
+
+                Assert.IsTrue(logHandled);
+            }
+        }
+
+        [Test]
+        public void RetryButtonDoesntTriggerLogIfSecondPreworkFailsToo()
+        {
+            using (var icon = new NotificationIcon())
+            {
+                bool logHandled = false;
+                IEnumerable<(Status, string)> getLog()
+                {
+                    logHandled = true;
+                    yield break;
+                };
+
+                Program.HandleCommit(new MockCopyBuildTestSolutions(Status.ParentFailed, getLog, secondPreworkStatus: Status.ArgumentError), icon);
+
+                Assert.IsFalse(logHandled);
+
+                ParentFailedTracker.RedoCanceledMessagesBecauseParentFailed(icon);
+
+                Assert.IsFalse(logHandled);
+            }
+        }
+        [Test]
+        public void RetryButtonRemovedOnInvocation()
+        {
+            using (var icon = new NotificationIcon())
+            {
+                Program.HandleCommit(new MockCopyBuildTestSolutions(Status.ParentFailed, secondPreworkStatus: Status.ArgumentError), icon);
+
+                ParentFailedTracker.RedoCanceledMessagesBecauseParentFailed(icon);
+
+                Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
     }

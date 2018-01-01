@@ -18,7 +18,6 @@ namespace CI.UI
 {
     public class Program : IDisposable
     {
-        internal static Program Instance { get; private set; }
         internal const string TEST_ARGUMENT = "TEST_ARGUMENT";
         public static void Main(string[] args)
         {
@@ -58,30 +57,22 @@ namespace CI.UI
         /// </summary>
         public static void Start(NotificationIcon icon, CancellationToken cancellationToken = default(CancellationToken))
         {
-            try
+            Dispatcher = Dispatcher.CurrentDispatcher;
+            using (var program = new Program(icon))
             {
-                using (var program = new Program(icon))
-                {
-                    Instance = program;
-                    program.start(cancellationToken);
-                }
-            }
-            finally
-            {
-                Instance = null;
+                program.start(cancellationToken);
             }
         }
         private void start(CancellationToken cancellationToken = default(CancellationToken))
         {
             Logger.Log("In UI.start");
 
-            var uiDispatcher = Dispatcher.CurrentDispatcher;
             CIReceivingPipe pipe = null;
-            Contract.Requires(!uiDispatcher.HasShutdownFinished, "The dispatcher has already shut down");
+            Contract.Requires(!this.dispatcher.HasShutdownFinished, "The dispatcher has already shut down");
 
             try
             {
-                cancellationToken.Register(() => { Logger.Log("Shutting down uiDispatcher"); uiDispatcher.InvokeAsync(() => Dispatcher.ExitAllFrames()); });
+                cancellationToken.Register(() => { Logger.Log("Shutting down uiDispatcher"); this.dispatcher.InvokeAsync(() => Dispatcher.ExitAllFrames()); });
                 Dispatcher.CurrentDispatcher.Invoke(() => pipe = new CIReceivingPipe(this));
                 Dispatcher.CurrentDispatcher.InvokeAsync(() => pipe.Start(cancellationToken));
                 Dispatcher.Run(); // for icon and pipe reading
@@ -99,12 +90,18 @@ namespace CI.UI
             }
         }
 
+        public static Dispatcher Dispatcher { get; private set; }
+        private readonly Dispatcher dispatcher;
         private readonly NotificationIcon icon;
+       
+
+ 
         private Program(NotificationIcon icon)
         {
             Contract.Requires(icon != null);
 
             this.icon = icon;
+            this.dispatcher = Dispatcher.CurrentDispatcher;
         }
         public void OutputError(Task task)
         {
@@ -135,7 +132,7 @@ namespace CI.UI
             icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
 #endif
         }
-        internal void HandleInput(string[] input, CancellationToken externalCancellationToken = default(CancellationToken))
+        internal void HandleInput(string[] input, CancellationToken externalCancellationToken = default(CancellationToken), bool ignoreParentFailed = false)
         {
             if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
 
@@ -164,7 +161,7 @@ namespace CI.UI
 
             var work = new CopyBuildTestSolutionInjection(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
 
-            HandleCommit(work, icon, externalCancellationToken);
+            HandleCommit(work, icon, externalCancellationToken, ignoreParentFailed);
         }
         private void HandleTestInput(string[] input, CancellationToken externalCancellationToken)
         {
@@ -181,7 +178,7 @@ namespace CI.UI
                 try
                 {
                     icon.CancellationRequested += onOperationCanceled;
-                    externalCancellationToken.Register(() => { try { cancellationTokenSource.Cancel(); } catch { } });
+                    externalCancellationToken.Register(icon.RequestCancellation);
 
                     Task.Delay(timeout, cancellationTokenSource.Token).Wait();
                     canceled = false;
@@ -197,19 +194,23 @@ namespace CI.UI
                     cancellationTokenSource.Cancel();
                 }
             }
+
         }
-        internal static void HandleCommit(ICopyBuildTestSolutions work, NotificationIcon icon, CancellationToken externalCancellationToken = default(CancellationToken))
+        internal static void HandleCommit(ICopyBuildTestSolutions work,
+                                          NotificationIcon icon,
+                                          CancellationToken externalCancellationToken = default(CancellationToken),
+                                          bool ignoreParentFailed = false)
         {
             Contract.Requires(work != null);
 
             CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             icon.CancellationRequested += onOperationCanceled;
-            externalCancellationToken.Register(cancellationTokenSource.Cancel);
+            externalCancellationToken.Register(icon.RequestCancellation);
 
             Logger.Log("Processing message");
             DateTime start = DateTime.Now;
 
-            Prework prework = work.Prework();
+            Prework prework = work.Prework(ignoreParentFailed);
             string commitMessage = prework.CommitMessage;
             TestResult overallStatus;
 
@@ -228,7 +229,9 @@ namespace CI.UI
                     break;
 
                 case Status.ParentFailed:
+                    Contract.Assert(!ignoreParentFailed);
                     Logger.Log($"Skipped: The specified commit {(commitMessage == null ? "" : $"({commitMessage})")} does not satisfy the conditions to be built and tested. {prework.Message}");
+                    ParentFailedTracker.Add(work);
                     if (string.IsNullOrEmpty(icon.Text))
                     {
                         icon.ShowErrorBalloon("Parent failed already", Status.ParentFailed);

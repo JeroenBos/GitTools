@@ -11,7 +11,7 @@ namespace JBSnorro.GitTools.CI
     public interface ICopyBuildTestSolutions
     {
         string Hash { get; }
-        Prework Prework();
+        Prework Prework(bool ignoreParentFailed);
         IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out int projectCount);
     }
     public sealed class Prework

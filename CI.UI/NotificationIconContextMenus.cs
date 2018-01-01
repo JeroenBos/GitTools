@@ -14,6 +14,7 @@ namespace CI.UI
     {
         private static MenuItem exitMenuItem => new MenuItem(GetMenuItemCaption(Exit), (sender, e) => Dispatcher.CurrentDispatcher.InvokeShutdown());
         private static MenuItem cancelMenuItem(NotificationIcon icon) => new MenuItem(GetMenuItemCaption(Cancel), (sender, e) => icon.RequestCancellation());
+        private static MenuItem disregardTestResultsMenuItem(NotificationIcon icon) => new MenuItem(GetMenuItemCaption(DisregardTestResults), (sender, e) => ParentFailedTracker.RedoCanceledMessagesBecauseParentFailed(icon));
 
         public static ContextMenu Create(NotificationIconContextMenuItems items, NotificationIcon icon)
         {
@@ -25,6 +26,10 @@ namespace CI.UI
                     return new ContextMenu(new[] { exitMenuItem });
                 case Exit | Cancel:
                     return new ContextMenu(new[] { cancelMenuItem(icon), exitMenuItem });
+                case Exit | DisregardTestResults:
+                    return new ContextMenu(new[] { exitMenuItem, disregardTestResultsMenuItem(icon) });
+                case Exit | Cancel | DisregardTestResults:
+                    return new ContextMenu(new[] { cancelMenuItem(icon), exitMenuItem, disregardTestResultsMenuItem(icon) });
                 default:
                     throw new DefaultSwitchCaseUnreachableException();
             }
@@ -63,6 +68,8 @@ namespace CI.UI
                     return "Exit";
                 case Cancel:
                     return "Cancel";
+                case DisregardTestResults:
+                    return "Dismiss parent failed";
                 default:
                     throw new DefaultSwitchCaseUnreachableException();
             }
@@ -74,5 +81,6 @@ namespace CI.UI
         None = 0,
         Exit = 1,
         Cancel = 2,
+        DisregardTestResults = 4
     }
 }
