@@ -34,8 +34,6 @@ namespace JBSnorro.GitTools.CI
         }
         internal Prework(TestResultsFile resultsFile, string commitMessage, string destinationDirectory, bool mustDoCheckout)
         {
-            Contract.Requires(resultsFile != null);
-
             this.Status = Status.Success;
             this.TestResultsFile = resultsFile;
             this.CommitMessage = commitMessage;
