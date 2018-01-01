@@ -85,10 +85,9 @@ namespace JBSnorro
                                 if (cancellationToken.IsCancellationRequested)
                                     return;
 
-                                Logger.Log($"Received message {receivedMessageCount++}");
+                                Logger.Log($"Received message {receivedMessageCount++}. Enqueuing");
                                 InvokeOnReceivedMessage(this, message);
 
-                                Logger.Log($"Handling message '{message}'");
                                 string[] messageParts = message.Split(new string[] { Separator }, StringSplitOptions.None);
                                 HandleMessage(messageParts, cancellationToken);
                             }

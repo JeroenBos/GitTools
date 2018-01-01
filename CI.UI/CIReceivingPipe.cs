@@ -79,6 +79,7 @@ namespace CI.UI
         }
         private void handleMessageImplementation(string[] message, CancellationToken cancellationToken)
         {
+            Logger.Log($"Handling message '{string.Join(" '", message)}'");
             Exception debug = null;
             try
             {
