@@ -12,6 +12,7 @@ namespace JBSnorro.GitTools.CI
     /// </summary>
     public enum Status
     {
+        None,
         Success,
         ProjectLoadSuccess,
         BuildSuccess,
