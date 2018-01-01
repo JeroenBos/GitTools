@@ -13,6 +13,8 @@ using JBSnorro.GitTools.CI;
 using System.Windows.Threading;
 using System.ComponentModel;
 using System.Threading;
+using Timer = System.Threading.Timer;
+using System.Configuration;
 
 namespace CI.UI
 {
@@ -75,6 +77,10 @@ namespace CI.UI
         /// Gets whether this <see cref="NotificationIcon"/> has been disposed of.
         /// </summary>
         public bool IsDisposed { get; private set; }
+        /// <summary>
+        /// Represents the timer that resets the icon after a certain time of inactivity.
+        /// </summary>
+        private readonly (Timer timer, TimeSpan span) resetTimer;
 
         internal NotificationIconContextMenuItems ContextMenuItems
         {
@@ -99,18 +105,34 @@ namespace CI.UI
                 Visible = isVisible,
             };
 
-
             this.Status = NotificationIconStatus.Default;
             this.Percentage = 1;
+            this.resetTimer = createTimer();
 
             this.PropertyChanged += (sender, e) =>
             {
                 if (e.PropertyName == nameof(Status)) OnStatusChanged();
                 if (e.PropertyName == nameof(Text)) { this.Icon.Text = this.Text; }
                 if (e.PropertyName == nameof(Percentage)) OnPercentageChanged();
+                this.resetTimer.timer?.Change(this.resetTimer.span, TimeSpan.FromMilliseconds(-1));
             };
 
             OnStatusChanged(); //sets exit button and default icon
+
+            (Timer, TimeSpan) createTimer()
+            {
+                const string settingName = "NotificationIconReset_ms";
+                string rawSetting;
+                if (!isVisible || (rawSetting = ConfigurationManager.AppSettings[settingName]) == null)
+                    return (null, default(TimeSpan)); // icon only resets if the setting is present
+
+                if (!int.TryParse(rawSetting, out int setting_ms))
+                {
+                    throw new InvalidAppSettingException(settingName, "A number was expected. ");
+                }
+
+                return (new Timer(_ => this.Reset(), null, setting_ms, -1), TimeSpan.FromMilliseconds(setting_ms));
+            }
         }
 
         private void OnStatusChanged()
@@ -179,6 +201,7 @@ namespace CI.UI
         public void Dispose()
         {
             IsDisposed = true;
+            this.resetTimer.timer?.Dispose();
             this.Icon.Dispose();
             ProcessExit.Event -= onProcessExit;
         }
