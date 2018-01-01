@@ -35,7 +35,6 @@ namespace CI.UI.Tests
 
                 Assert.AreEqual(actual: icon.Status, expected: NotificationIconStatus.Bad);
                 Assert.AreEqual(actual: icon.Percentage, expected: 1);
-                Assert.AreEqual(actual: icon.Text, expected: null);
                 Assert.AreEqual(actual: icon.ContextMenuItems, expected: NotificationIconContextMenuItems.Exit);
             }
         }
