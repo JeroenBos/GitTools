@@ -1,20 +1,14 @@
 ﻿using JBSnorro;
-using JBSnorro.Extensions;
 using JBSnorro.Diagnostics;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using JBSnorro.Extensions;
 using JBSnorro.GitTools.CI;
-using System.Windows.Threading;
-using System.ComponentModel;
-using System.Threading;
-using Timer = System.Threading.Timer;
+using System;
 using System.Configuration;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Windows.Forms;
+using Timer = System.Threading.Timer;
 
 namespace CI.UI
 {
@@ -112,7 +106,7 @@ namespace CI.UI
             this.PropertyChanged += (sender, e) =>
             {
                 if (e.PropertyName == nameof(Status)) OnStatusChanged();
-                if (e.PropertyName == nameof(Text)) { this.Icon.Text = this.Text; }
+                if (e.PropertyName == nameof(Text)) { this.SetText(this.Text); }
                 if (e.PropertyName == nameof(Percentage)) OnPercentageChanged();
                 this.resetTimer.timer?.Change(this.resetTimer.span, TimeSpan.FromMilliseconds(-1));
             };
@@ -142,20 +136,23 @@ namespace CI.UI
 
             if (this.Icon.Visible)
             {
-                var icon = Icons.GetIcon(this.Status);
-                Contract.Assert(icon != null);
-                try
-                {
-                    this.Icon.Icon = icon;
-                }
-                catch (ArgumentNullException)
-                {
-                    Thread.Sleep(10);
-                    this.Icon.Icon = icon;
-                }
+                RepeatIfArgumentNullException(() => this.Icon.Icon = Icons.GetIcon(this.Status));
             }
 
             RefreshContextMenuItems();
+        }
+
+        private static void RepeatIfArgumentNullException(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (ArgumentNullException)
+            {
+                Thread.Sleep(10);
+                action();
+            }
         }
         private void OnPercentageChanged()
         {
@@ -181,6 +178,35 @@ namespace CI.UI
                 //TODO: find out if the icon must be disposed of (which it should if it doesn't dispose of the bitmap it's created from)
                 // For non-reusable icons, it should never
                 this.Icon.Icon = Icons.GetIcon(NotificationIconStatus.Working, NotificationIconStatus.Ok, this.Percentage);
+            }
+        }
+        private static readonly Action<NotifyIcon, bool> _updateIcon = typeof(NotifyIcon).GetMethod("UpdateIcon", BindingFlags.NonPublic | BindingFlags.Instance).ToAction<NotifyIcon, bool>();
+        private static readonly Action<NotifyIcon, string> _setText = typeof(NotifyIcon).GetField("text", BindingFlags.NonPublic | BindingFlags.Instance).ToAction<NotifyIcon, string>();
+        private static readonly Func<NotifyIcon, bool> _getAdded = typeof(NotifyIcon).GetField("added", BindingFlags.NonPublic | BindingFlags.Instance).ToFunc<NotifyIcon, bool>();
+        /// <remarks>https://stackoverflow.com/a/580264/308451</remarks>
+        private void SetText(string text)
+        {
+            NotifyIcon icon = this.Icon;
+            Contract.Requires(icon != null, "Icon was null");
+
+            if (text == null)
+            {
+                icon.Text = null;
+            }
+            else if (text.Length >= 127)
+            {
+                text = text.Substring(0, 126) + "…";
+            }
+            else if (text.Length < 64)
+            {
+                icon.Text = text;
+            }
+            else
+            {
+                // set text via reflection, which eschews the fake limit of 63 characters and raises it to 127
+                _setText(icon, text);
+                if (_getAdded(icon))
+                    _updateIcon(icon, true);
             }
         }
 
