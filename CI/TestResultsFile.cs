@@ -169,7 +169,7 @@ namespace JBSnorro.GitTools.CI
             if (split.Length < 10)
                 throw new FormatException($"Line '{line}' is expected to have a date, hash summary, test result, commit message, full hash, timing and test count separated by ' - '");
 
-            string hash = split.FirstOrDefault(s => s.StartsWith("("));
+            string hash = split.LastOrDefault(s => s.StartsWith("("));
             if (hash == null || hash.Length == 0 || hash.Last() != ')')
                 throw new FormatException($"The full hash in '{line}' is invalid");
 
