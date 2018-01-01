@@ -218,9 +218,14 @@ namespace CI.UI
 
                 case Status.ParentFailed:
                     Logger.Log($"Skipped: The specified commit {(commitMessage == null ? "" : $"({commitMessage})")} does not satisfy the conditions to be built and tested. {prework.Message}");
-                    icon.Status = NotificationIconStatus.Bad;
                     if (string.IsNullOrEmpty(icon.Text))
-                        icon.Text = "Parent failed already";
+                    {
+                        icon.ShowErrorBalloon("Parent failed already", Status.ParentFailed);
+                    }
+                    else
+                    {
+                        icon.Status = NotificationIconStatus.BadParent;
+                    }
                     overallStatus = TestResult.Failure;
                     break;
 

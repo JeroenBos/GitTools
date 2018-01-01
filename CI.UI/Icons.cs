@@ -25,6 +25,7 @@ namespace CI.UI
             [NotificationIconStatus.Ok] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "ok_status.png")),
             [NotificationIconStatus.Working] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "working_status.png")),
             [NotificationIconStatus.Bad] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "bad_status.png")),
+            [NotificationIconStatus.BadParent] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "bad_status.png")),
         });
         private static readonly ReadOnlyDictionary<NotificationIconStatus, Icon> icons = new ReadOnlyDictionary<NotificationIconStatus, Icon>(bitmaps.ToDictionary(kvp => kvp.Key, kvp => Convert(kvp.Value)));
         private static readonly Bitmap reusableBitmap = (Bitmap)bitmaps[NotificationIconStatus.Working].Clone();

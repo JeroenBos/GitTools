@@ -13,6 +13,7 @@ namespace CI.UI
         Default,
         Ok,
         Bad,
-        Working
+        Working,
+        BadParent
     }
 }

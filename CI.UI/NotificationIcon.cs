@@ -219,7 +219,7 @@ namespace CI.UI
             Contract.Requires(status != JBSnorro.GitTools.CI.Status.Success);
             Contract.Requires(!string.IsNullOrEmpty(message));
 
-            this.Status = NotificationIconStatus.Bad;
+            this.Status = status == JBSnorro.GitTools.CI.Status.ParentFailed ? NotificationIconStatus.BadParent : NotificationIconStatus.Bad;
 
             this.Icon.ShowBalloonTip(ErrorBalloonShowDuration, status.ToTitle(), message, ToolTipIcon.Error);
         }

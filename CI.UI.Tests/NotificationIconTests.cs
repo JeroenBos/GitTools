@@ -211,7 +211,7 @@ namespace CI.UI.Tests
             {
                 Program.HandleCommit(new MockCopyBuildTestSolutions(Status.ParentFailed), icon);
 
-                Assert.AreEqual(icon.Status, NotificationIconStatus.Bad);
+                Assert.AreEqual(icon.Status, NotificationIconStatus.BadParent);
             }
         }
     }
