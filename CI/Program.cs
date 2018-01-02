@@ -707,6 +707,10 @@ namespace JBSnorro.GitTools.CI
 
         public static IEnumerable<(Status, string)> Parse(IEnumerable<string> lines)
         {
+#if DEBUG
+            var cache = new List<string>();
+            lines = lines.Select(s => { cache.Add(s); return s; });
+#endif
             bool hasErrors = false;
             List<int> totalSuccessCounts = new List<int>();
             foreach (string line in lines)
