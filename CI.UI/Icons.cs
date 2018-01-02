@@ -37,7 +37,9 @@ namespace CI.UI
         {
             Contract.RequiresEnumIsDefined(status);
 
-            return icons[status];
+            var result = icons[status];
+            Contract.Ensures(result != null, "Icon was null");
+            return result;
         }
         /// <summary>
         /// Gets the icon representing the specified status.
