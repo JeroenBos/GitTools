@@ -81,12 +81,15 @@ namespace JBSnorro.GitTools.CI
                     if (spawnLazily)
                         Spawn();
                     await Loop(pipe);
-                    Interlocked.Decrement(ref this.aliveConnections);
                 }
                 catch (TaskCanceledException) { }
                 catch (ObjectDisposedException) { }
                 catch (IOException) { }
-                finally { pipe.Dispose(); }
+                finally
+                {
+                    Interlocked.Decrement(ref this.aliveConnections);
+                    pipe.Dispose();
+                }
             }, this.CancellationTokenSource.Token);
 
             if (!spawnLazily)
