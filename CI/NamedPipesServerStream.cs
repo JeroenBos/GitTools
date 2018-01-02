@@ -77,7 +77,7 @@ namespace JBSnorro.GitTools.CI
             {
                 try
                 {
-                    pipe.WaitForConnection();
+                    await pipe.WaitForConnectionAsync(this.CancellationTokenSource.Token);
                     if (spawnLazily)
                         Spawn();
                     await Loop(pipe);
