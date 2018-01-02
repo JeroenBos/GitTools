@@ -12,6 +12,7 @@ namespace JBSnorro.GitTools.CI
     {
         string Hash { get; }
         Prework Prework(bool ignoreParentFailed);
+        /// <remarks><see cref="Program.CopySolutionAndExecuteTests(string, string, out int, string, CancellationToken)"/></remarks>
         IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out int projectCount);
     }
     public sealed class Prework
