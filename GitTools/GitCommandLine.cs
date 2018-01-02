@@ -102,6 +102,8 @@ namespace JBSnorro.GitTools
         /// </summary>
         public static void Checkout(string repositoryPath, string hash)
         {
+            Contract.Requires(IsValidCommitHash(hash));
+
             ExecuteWithThrow(repositoryPath, "checkout " + hash);
         }
         /// <summary>
@@ -125,6 +127,8 @@ namespace JBSnorro.GitTools
         /// </summary>
         public static string GetCommitMessage(string repositoryPath, string hash)
         {
+            Contract.Requires(IsValidCommitHash(hash));
+
             return ExecuteWithThrow(repositoryPath, "log -1 --pretty=format:%s " + hash).First();
         }
         /// <summary>
@@ -132,6 +136,8 @@ namespace JBSnorro.GitTools
         /// </summary>
         public static string GetParentCommitHash(string repositoryPath, string hash)
         {
+            Contract.Requires(IsValidCommitHash(hash));
+
             string parentHash = ExecuteWithThrow(repositoryPath, $"log -1 --pretty=format:%P \"{hash}\"").First();
             Contract.Ensures(IsValidCommitHash(parentHash));
             return parentHash;
