@@ -33,7 +33,6 @@ namespace CI.UI
 
         private readonly ConcurrentQueue<(string[], CancellationToken)> messageQueue;
         private readonly ManualResetEvent MessageEvent;
-        private readonly object messageEventLock = new object();
         private readonly Thread messageHandlingThread;
         private bool isDisposed;
 
@@ -54,10 +53,7 @@ namespace CI.UI
         protected override void HandleMessage(string[] message, CancellationToken cancellationToken)
         {
             messageQueue.Enqueue((message, cancellationToken));
-            lock (messageEventLock)
-            {
-                MessageEvent.Set();
-            }
+            MessageEvent.Set();
         }
         private void processQueue()
         {
@@ -69,10 +65,7 @@ namespace CI.UI
                 }
                 else
                 {
-                    lock (messageEventLock)
-                    {
-                        MessageEvent.Reset();
-                    }
+                    MessageEvent.Reset();
                     MessageEvent.WaitOne();
                 }
             }
