@@ -388,6 +388,20 @@ namespace JBSnorro.GitTools.CI
                 }
             }
             return Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath));
+
+            void SetAttributesNormal(string dirPath)
+            {
+                SetAttributesNormalImpl(new DirectoryInfo(dirPath));
+            }
+            void SetAttributesNormalImpl(DirectoryInfo dir)
+            {
+                foreach (var subDir in dir.GetDirectories())
+                    SetAttributesNormalImpl(subDir);
+                foreach (var file in dir.GetFiles())
+                {
+                    file.Attributes = FileAttributes.Normal;
+                }
+            }
         }
         /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
         private static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
@@ -410,19 +424,7 @@ namespace JBSnorro.GitTools.CI
                     file.CopyTo(Path.Combine(target.FullName, file.Name), true);
             }
         }
-        private static void SetAttributesNormal(string dirPath)
-        {
-            SetAttributesNormal(new DirectoryInfo(dirPath));
-        }
-        private static void SetAttributesNormal(DirectoryInfo dir)
-        {
-            foreach (var subDir in dir.GetDirectories())
-                SetAttributesNormal(subDir);
-            foreach (var file in dir.GetFiles())
-            {
-                file.Attributes = FileAttributes.Normal;
-            }
-        }
+
 
         private static IReadOnlyList<string> GetProjectPaths(string destinationSolutionFilepath, out string error)
         {
