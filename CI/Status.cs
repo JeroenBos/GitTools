@@ -19,6 +19,7 @@ namespace JBSnorro.GitTools.CI
         TestStarted,
         TestSuccess,
         ArgumentError,
+        CopyingError,
         MiscellaneousError,
         ProjectLoadingError,
         BuildError,
@@ -47,6 +48,8 @@ namespace JBSnorro.GitTools.CI
                     return "Test successful";
                 case Status.ArgumentError:
                     return "Input invalid";
+                case Status.CopyingError:
+                    return "Copying failed";
                 case Status.MiscellaneousError:
                     return "Unknown error";
                 case Status.ProjectLoadingError:
@@ -84,6 +87,7 @@ namespace JBSnorro.GitTools.CI
                 case Status.TestStarted:
                     return true;
                 case Status.ArgumentError:
+                case Status.CopyingError:
                 case Status.MiscellaneousError:
                 case Status.ProjectLoadingError:
                 case Status.BuildError:

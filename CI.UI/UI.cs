@@ -259,6 +259,7 @@ namespace CI.UI
                         overallStatus = TestResult.Failure;
                         break;
 
+                    case Status.CopyingError:
                     case Status.ProjectLoadingError:
                     case Status.BuildError:
                     case Status.TestError:
@@ -341,6 +342,7 @@ namespace CI.UI
                                 icon.ShowErrorBalloon(balloonMessage, status);
                                 return;
 
+                            case Status.CopyingError:
                             case Status.MiscellaneousError:
                             case Status.ProjectLoadingError:
                             case Status.BuildError:

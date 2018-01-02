@@ -168,7 +168,7 @@ namespace JBSnorro.GitTools.CI
                 string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out string error);
                 if (error != null)
                 {
-                    return (Status.MiscellaneousError, error).ToSingleton();
+                    return (Status.CopyingError, error).ToSingleton();
                 }
 
                 GitCommandLine.CheckoutHard(destinationDirectory, hash);
