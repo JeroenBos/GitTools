@@ -14,9 +14,8 @@ namespace CI.UI.Tests
     {
         static void Main(string[] args)
         {
+            new DispatcherTests().RunTests();
             new NotificationIconTests().RetryButtonRemovedOnInvocation();
-            new DispatcherTests().MessagesAreHandledAfterCancellation();
-
 
             Console.WriteLine("Done");
             Console.ReadLine();

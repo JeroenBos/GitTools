@@ -9,13 +9,48 @@ using JBSnorro.Diagnostics;
 using System.Threading;
 using JBSnorro.GitTools.CI;
 using NUnit.Framework;
+using System.IO;
+using JBSnorro.GitTools;
 
 namespace CI.UI.Tests
 {
     [TestFixture]
     public class DispatcherTests
     {
+        /// <summary>
+        /// Runs the CI.UI program on the tests in <see cref="__TESTS__"/>. 
+        /// </summary>
+        /// <remarks> Requires Microsoft.Build dlls. </remarks>
+        [Test]
+        public void RunTests()
+        {
+            Task waitForHandledMessage = WaitForHandledMessage();
+            using (NotificationIcon icon = new NotificationIcon())
+            using (Dispatcher.StartCIUI(icon))
+            {
+                string slnPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\Tests.sln");
+                string hash = GitCommandLine.GetCurrentCommitHash(Path.GetDirectoryName(slnPath));
+                Contract.Assert<NotImplementedException>(!slnPath.Contains(' '));
 
+                //Act
+                bool messageSent = Dispatcher.TrySendMessage(Dispatcher.ComposeMessage(slnPath, hash));
+                Contract.Assert(messageSent);
+
+                if (!waitForHandledMessage.Wait(5000))
+                    throw new TimeoutException("The message was never handled");
+
+                int expected = typeof(__TESTS__).GetMethods().Where(TestClassExtensions.IsTestMethod).Count();
+                Contract.Assert(icon.Text == $"Done. {expected} tests successful");
+            }
+        }
+        private static Task WaitForHandledMessage()
+        {
+            ManualResetEvent @event = new ManualResetEvent(false);
+            ReceivingPipe.OnHandledMessage += (sender, message) => { try { @event.Set(); } catch (ObjectDisposedException) { } };
+            Task task = Task.Run(() => @event.WaitOne())
+                            .ContinueWith(t => @event.Dispose());
+            return task;
+        }
         private static string ComposeDummyWorkMessage(int timeout_ms)
         {
             return $"{Program.TEST_ARGUMENT}{CIReceivingPipe.PipeMessageSeparator}{timeout_ms}";
@@ -113,7 +148,7 @@ namespace CI.UI.Tests
                 while (!icon.HasCancellationRequestedHandler)                                           // wait for it to be cancellable
                 {
                     Thread.Sleep(10);
-                }                                       
+                }
 
                 icon.RequestCancellation();                                                             // then cancel it
 
