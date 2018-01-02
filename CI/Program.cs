@@ -582,7 +582,7 @@ namespace JBSnorro.GitTools.CI
                         while (remainingProjects.TryDequeue(out Project project) && !cancellationToken.IsCancellationRequested)
                         {
                             Interlocked.Increment(ref processedProjectsCount);
-                            RunTestsAndWriteMessagesBack(GetAssemblyPath(project));
+                            StartMessageWriter(GetAssemblyPath(project));
                         }
                     }
 
@@ -602,93 +602,95 @@ namespace JBSnorro.GitTools.CI
                 return (Status.MiscellaneousError, e.Message).ToSingleton();
             }
 
-            void RunTestsAndWriteMessagesBack(string assemblyPath)
+            void StartMessageWriter(string assemblyPath)
             {
                 string appDomainBase = Path.GetDirectoryName(assemblyPath);
                 using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, ConfigurationFile = assemblyPath + ".config" }))
                 {
-                    int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, assemblyPathLocal =>
-                    {
-                        Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPathLocal), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPathLocal)}");
-
-                        try
-                        {
-                            using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
-                            {
-                                outPipe.Connect();
-                                using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
-                                {
-                                    int totalTestCount = 0;
-                                    int messagesCount = 0;
-                                    try
-                                    {
-                                        foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPathLocal))
-                                        {
-                                            writer.WriteLine(STARTED_CODON + $"{method.DeclaringType.FullName}.{method.Name}");
-                                            messagesCount++;
-
-                                            string methodError = RunTest(method);
-
-                                            if (!outPipe.IsConnected)
-                                                break;
-
-                                            totalTestCount++;
-                                            if (methodError == null)
-                                            {
-                                                const string successMessage = "";
-                                                writer.WriteLine(SUCCESS_CODON + successMessage);
-                                                messagesCount++;
-                                            }
-                                            else
-                                            {
-                                                string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
-                                                writer.WriteLine(ERROR_CODON + message);
-                                                messagesCount++;
-                                            }
-                                        }
-                                    }
-                                    catch (ReflectionTypeLoadException e)
-                                    {
-                                        foreach (var loadException in e.LoaderExceptions)
-                                        {
-                                            writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
-                                            messagesCount++;
-                                        }
-                                    }
-                                    catch (TargetInvocationException te)
-                                    {
-                                        Exception e = te.InnerException;
-                                        if (e.InnerException != null)
-                                        {
-                                            writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
-                                            messagesCount++;
-                                        }
-                                        else
-                                        {
-                                            writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
-                                            messagesCount++;
-                                        }
-                                    }
-                                    catch (Exception e)
-                                    {
-                                        writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
-                                        messagesCount++;
-                                    }
-                                    finally
-                                    {
-                                        writer.WriteLine(STOP_CODON + totalTestCount.ToString());
-                                        messagesCount++;
-                                    }
-                                    return messagesCount;
-                                }
-                            }
-                        }
-                        catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
-                        catch (IOException e) { Console.WriteLine(e.Message); }
-                        return 0;
-                    });
+                    int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, writeMessagesBackOfTesting);
                     Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);
                 }
+            }
+
+            int writeMessagesBackOfTesting(string assemblyPath)
+            {
+                Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPath), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPath)}");
+
+                try
+                {
+                    using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
+                    {
+                        outPipe.Connect();
+                        using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
+                        {
+                            int totalTestCount = 0;
+                            int messagesCount = 0;
+                            try
+                            {
+                                foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPath))
+                                {
+                                    writer.WriteLine(STARTED_CODON + $"{method.DeclaringType.FullName}.{method.Name}");
+                                    messagesCount++;
+
+                                    string methodError = RunTest(method);
+
+                                    if (!outPipe.IsConnected)
+                                        break;
+
+                                    totalTestCount++;
+                                    if (methodError == null)
+                                    {
+                                        const string successMessage = "";
+                                        writer.WriteLine(SUCCESS_CODON + successMessage);
+                                        messagesCount++;
+                                    }
+                                    else
+                                    {
+                                        string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
+                                        writer.WriteLine(ERROR_CODON + message);
+                                        messagesCount++;
+                                    }
+                                }
+                            }
+                            catch (ReflectionTypeLoadException e)
+                            {
+                                foreach (var loadException in e.LoaderExceptions)
+                                {
+                                    writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
+                                    messagesCount++;
+                                }
+                            }
+                            catch (TargetInvocationException te)
+                            {
+                                Exception e = te.InnerException;
+                                if (e.InnerException != null)
+                                {
+                                    writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+                                    messagesCount++;
+                                }
+                                else
+                                {
+                                    writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+                                    messagesCount++;
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
+                                messagesCount++;
+                            }
+                            finally
+                            {
+                                writer.WriteLine(STOP_CODON + totalTestCount.ToString());
+                                messagesCount++;
+                            }
+                            return messagesCount;
+                        }
+                    }
+                }
+                catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
+                catch (IOException e) { Console.WriteLine(e.Message); }
+                return 0;
             }
         }
 
