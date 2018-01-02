@@ -42,7 +42,7 @@ namespace CI.UI
         {
             Contract.Requires(preworkDoneArgument.HasValue, "prework must be called before calling this method");
 
-            return JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(SolutionFilePath, prework.DestinationDirectory, prework.MustDoCheckout, out projectCount, Hash, cancellationToken);
+            return JBSnorro.GitTools.CI.Program.CopySolutionAndExecuteTests(SolutionFilePath, prework.DestinationDirectory, out projectCount, Hash, cancellationToken);
         }
     }
 }

@@ -23,7 +23,7 @@ namespace CI.UI.Tests
         {
             this.getLog = getLog;
             this.ProjectCount = projectCount;
-            this.prework = prework ?? new Prework(resultsFile, commitMessage, null, false);
+            this.prework = prework ?? new Prework(resultsFile, commitMessage, null);
             this.Hash = hash;
         }
         public MockCopyBuildTestSolutions(IEnumerable<(Status, string)> log, TestResultsFile resultsFile = null, string commitMessage = null, int projectCount = 0, string hash = null)

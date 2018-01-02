@@ -103,7 +103,6 @@ namespace JBSnorro.GitTools.CI
                 return new Prework(Status.ArgumentError, error);
             }
 
-            bool mustDoCheckout = false;
             (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
             TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
             if (error != null)
@@ -111,18 +110,10 @@ namespace JBSnorro.GitTools.CI
                 return new Prework(Status.MiscellaneousError, error);
             }
 
-            if (hash == null)
+            hash = hash ?? RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
+            if (error != null)
             {
-                string currentCommitHash = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
-                if (error != null)
-                {
-                    return new Prework(Status.MiscellaneousError, error);
-                }
-                if (currentCommitHash != hash)
-                {
-                    mustDoCheckout = true;
-                }
-                hash = currentCommitHash;
+                return new Prework(Status.MiscellaneousError, error);
             }
 
             bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
@@ -148,7 +139,7 @@ namespace JBSnorro.GitTools.CI
                 }
             }
 
-            return new Prework(resultsFile, commitMessage, destinationDirectory, mustDoCheckout);
+            return new Prework(resultsFile, commitMessage, destinationDirectory);
         }
         /// <summary>
         /// Copies the solution to a temporary destination directory, build the solution and executes the tests and returns any errors.
@@ -157,7 +148,6 @@ namespace JBSnorro.GitTools.CI
         /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
         public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath,
                                                                                 string destinationDirectory,
-                                                                                bool mustDoCheckout,
                                                                                 out int projectCount,
                                                                                 string hash = null,
                                                                                 CancellationToken cancellationToken = default(CancellationToken))
@@ -172,8 +162,7 @@ namespace JBSnorro.GitTools.CI
                     return (Status.MiscellaneousError, error).ToSingleton();
                 }
 
-                if (mustDoCheckout)
-                    GitCommandLine.CheckoutHard(destinationDirectory, hash);
+                GitCommandLine.CheckoutHard(destinationDirectory, hash);
 
                 var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
                 if (error != null)

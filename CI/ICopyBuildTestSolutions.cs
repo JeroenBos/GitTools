@@ -20,7 +20,6 @@ namespace JBSnorro.GitTools.CI
         public string Message { get; }
         public string CommitMessage { get; }
         public TestResultsFile TestResultsFile { get; }
-        public bool MustDoCheckout { get; }
         public string DestinationDirectory { get; }
 
         public bool HasError => Message != null;
@@ -33,12 +32,11 @@ namespace JBSnorro.GitTools.CI
             this.Status = status;
             this.Message = message;
         }
-        internal Prework(TestResultsFile resultsFile, string commitMessage, string destinationDirectory, bool mustDoCheckout)
+        internal Prework(TestResultsFile resultsFile, string commitMessage, string destinationDirectory)
         {
             this.Status = Status.Success;
             this.TestResultsFile = resultsFile;
             this.CommitMessage = commitMessage;
-            this.MustDoCheckout = mustDoCheckout;
             this.DestinationDirectory = destinationDirectory;
         }
     }
