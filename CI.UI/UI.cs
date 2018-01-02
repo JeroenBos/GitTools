@@ -345,7 +345,7 @@ namespace CI.UI
                         case Status.ProjectLoadingError:
                         case Status.BuildError:
                         case Status.UnhandledException:
-                            string text = $"{prework.Status.ToTitle()}{(commitMessage == null ? "" : $" for commit '{commitMessage}'")}: {message}";
+                            string text = $"{status.ToTitle()}{(commitMessage == null ? "" : $" for commit '{commitMessage}'")}: {message}";
                             Logger.Log(text);
                             overallStatus = TestResult.Failure;
 
