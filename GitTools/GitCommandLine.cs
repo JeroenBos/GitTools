@@ -1,7 +1,7 @@
-﻿using System;
+﻿using JBSnorro.Diagnostics;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -29,11 +29,13 @@ namespace JBSnorro.GitTools
         /// <summary>
         /// Invokes the specified commands on the specified repository and returns the results or an error.
         /// </summary>
-        /// <param name="commands"> Includes the keyword 'git'. </param>
+        /// <param name="commands"> The commands to execute. Should exclude the keyword 'git'. </param>
         public static (IReadOnlyList<string> result, string error) Execute(string repositoryPath, params string[] commands)
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
             Contract.Requires(commands != null);
+            Contract.RequiresForAll(commands, command => command != null);
+            Contract.RequiresForAll(commands, command => !command.TrimStart().StartsWith("git "), "Git commands mustn't specify the word 'git' explicitly");
 
             if (commands.Length == 0)
                 return (EmptyCollection<string>.ReadOnlyList, null);
@@ -74,6 +76,7 @@ namespace JBSnorro.GitTools
         /// <summary>
         /// Invokes the specified commands on the specified repository and returns the results; or throws the error if one occurred.
         /// </summary>
+        /// <param name="commands"> The commands to execute. Should exclude the keyword 'git'. </param>
         public static IReadOnlyList<string> ExecuteWithThrow(string repositoryPath, params string[] commands)
         {
             var (results, error) = Execute(repositoryPath, commands);
@@ -92,14 +95,14 @@ namespace JBSnorro.GitTools
         /// </summary>
         public static string GetCurrentCommitHash()
         {
-            return ExecuteWithThrow("git rev-parse head").First();
+            return ExecuteWithThrow("rev-parse head").First();
         }
         /// <summary>
         /// Checks out the specified commit in the repository.
         /// </summary>
         public static void Checkout(string repositoryPath, string hash)
         {
-            ExecuteWithThrow(repositoryPath, "git checkout " + hash);
+            ExecuteWithThrow(repositoryPath, "checkout " + hash);
         }
         /// <summary>
         /// Gets the commit message of the commit with the specified hash.
