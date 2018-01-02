@@ -750,7 +750,7 @@ namespace JBSnorro.GitTools.CI
 
         private static void CopyDependenciesToNewAppDomainBaseDirectory(string appDomainBase)
         {
-            foreach (string source in Directory.GetFiles(Environment.CurrentDirectory))
+            foreach (string source in Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory))
             {
                 if (source.EndsWith(".dll") || source.EndsWith(".exe"))
                 {
