@@ -284,11 +284,11 @@ namespace JBSnorro.GitTools.CI
 
         private static (string sourceDirectory, string destinationDirectory) GetDirectories(string solutionFilePath, string baseDestinationDirectory)
         {
-            string sourceDirectory = Path.GetDirectoryName(solutionFilePath);
-            string solutionName = sourceDirectory.Substring(Path.GetDirectoryName(solutionFilePath).LastIndexOf(Path.DirectorySeparatorChar) + 1);
+            string sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(solutionFilePath));
+            string solutionName = sourceDirectory.Substring(sourceDirectory.LastIndexOf(Path.DirectorySeparatorChar) + 1);
+            Contract.Assert(!solutionName.EndsWith(".."), "Path error");
             string destinationDirectory = Path.Combine(baseDestinationDirectory, solutionName);
             return (sourceDirectory, destinationDirectory);
-
         }
         private static bool CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile, out string commitMessage, out string error)
         {
