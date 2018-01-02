@@ -91,6 +91,9 @@ namespace JBSnorro.GitTools.CI
         /// </summary>
         public static Prework Prework(string solutionFilePath, string baseDestinationDirectory, string hash, bool ignoreParentFailed)
         {
+            Contract.Requires(solutionFilePath != null, nameof(solutionFilePath));
+            Contract.Requires(baseDestinationDirectory != null, nameof(baseDestinationDirectory));
+
             string error = ValidateSolutionFilePath(solutionFilePath);
             if (error != null)
             {

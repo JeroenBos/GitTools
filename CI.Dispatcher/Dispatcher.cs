@@ -79,7 +79,7 @@ namespace CI
             }
         }
 
-        private static string ComposeMessage(string[] args)
+        public static string ComposeMessage(params string[] args)
         {
             Contract.Requires(args != null);
             Contract.Requires(args.Length > 0);
@@ -190,6 +190,9 @@ namespace CI
             }
         }
 
+        /// <summary>
+        /// By default, the message is the sln file, possibly with a hash of a particular commit. Prepend with <see cref="START_UI_ARG"/> to start the UI. All separated by <see cref="CIReceivingPipe.PipeMessageSeparator"/>.
+        /// </summary>
         internal static bool TrySendMessage(string message)
         {
             using (var pipe = TrySetupConnection())

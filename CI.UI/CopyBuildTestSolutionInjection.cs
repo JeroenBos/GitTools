@@ -33,6 +33,9 @@ namespace CI.UI
         [DebuggerHidden]
         public CopyBuildTestSolutionInjection(string solutionFilePath, string baseDestinationDirectory, string hash)
         {
+            Contract.Requires(solutionFilePath != null, nameof(solutionFilePath));
+            Contract.Requires(baseDestinationDirectory != null, "The appsetting key 'destinationDirectory' was not found");
+
             this.SolutionFilePath = solutionFilePath;
             this.BaseDestinationDirectory = baseDestinationDirectory;
             this.Hash = hash;
