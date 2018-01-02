@@ -106,28 +106,23 @@ namespace JBSnorro.GitTools.CI
             bool mustDoCheckout = false;
             (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
             TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
+            if (error != null)
+            {
+                return new Prework(Status.MiscellaneousError, error);
+            }
 
             if (hash == null)
             {
                 string currentCommitHash = RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
-                if (hash == null)
-                {
-                    hash = currentCommitHash;
-                }
-                else if (currentCommitHash != hash)
-                {
-                    mustDoCheckout = true;
-                    hash = currentCommitHash;
-                }
                 if (error != null)
                 {
                     return new Prework(Status.MiscellaneousError, error);
                 }
-            }
-
-            if (error != null)
-            {
-                return new Prework(Status.MiscellaneousError, error);
+                if (currentCommitHash != hash)
+                {
+                    mustDoCheckout = true;
+                }
+                hash = currentCommitHash;
             }
 
             bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
