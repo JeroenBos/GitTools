@@ -93,9 +93,9 @@ namespace CI.UI
         public static Dispatcher Dispatcher { get; private set; }
         private readonly Dispatcher dispatcher;
         private readonly NotificationIcon icon;
-       
 
- 
+
+
         private Program(NotificationIcon icon)
         {
             Contract.Requires(icon != null);
@@ -203,227 +203,221 @@ namespace CI.UI
         {
             Contract.Requires(work != null);
 
-            CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-            icon.CancellationRequested += onOperationCanceled;
-            externalCancellationToken.Register(icon.RequestCancellation);
-
             Logger.Log("Processing message");
             DateTime start = DateTime.Now;
 
-            Prework prework = work.Prework(ignoreParentFailed);
-            string commitMessage = prework.CommitMessage;
-            TestResult overallStatus;
-
-            switch (prework.Status)
+            using (Prework prework = work.Prework(ignoreParentFailed))
+            using (CancellationTokenSource cancellationTokenSource = new CancellationTokenSource())
             {
-                case Status.Success:
-                    overallStatus = TestResult.Success;
-                    break;
+                icon.CancellationRequested += onOperationCanceled;
+                externalCancellationToken.Register(icon.RequestCancellation);
+                string commitMessage = prework.CommitMessage;
+                TestResult overallStatus;
+                TestResultsFile resultsFile = prework.TestResultsFile;
 
-                case Status.Skipped:
-                    Logger.Log($"Skipped: The specified commit {(commitMessage == null ? "" : $"({commitMessage})")} does not satisfy the conditions to be built and tested. {prework.Message}");
-                    icon.Status = NotificationIconStatus.Default;
-                    if (string.IsNullOrEmpty(icon.Text))
-                        icon.Text = "This commit was skipped";
-                    overallStatus = TestResult.Ignored;
-                    break;
-
-                case Status.ParentFailed:
-                    Contract.Assert(!ignoreParentFailed);
-                    Logger.Log($"Skipped: The specified commit {(commitMessage == null ? "" : $"({commitMessage})")} does not satisfy the conditions to be built and tested. {prework.Message}");
-                    ParentFailedTracker.Add(work);
-                    if (string.IsNullOrEmpty(icon.Text))
-                    {
-                        icon.ShowErrorBalloon("Parent failed already", Status.ParentFailed);
-                    }
-                    else
-                    {
-                        icon.Status = NotificationIconStatus.BadParent;
-                    }
-                    overallStatus = TestResult.Failure;
-                    break;
-
-                case Status.Canceled:
-                    overallStatus = TestResult.Success;
-                    break;
-
-                case Status.ArgumentError:
-                case Status.MiscellaneousError:
-                case Status.UnhandledException:
-                    string text = $"{prework.Status.ToTitle()}{(commitMessage == null ? "" : $" for commit '{commitMessage}'")}: {prework.Message}";
-                    Logger.Log(text);
-                    icon.Percentage = 1;
-                    icon.Text = text;
-                    icon.ShowErrorBalloon(prework.Message, prework.Status);
-                    overallStatus = TestResult.Failure;
-                    break;
-
-                case Status.ProjectLoadingError:
-                case Status.BuildError:
-                case Status.TestError:
-                case Status.ProjectLoadSuccess:
-                case Status.BuildSuccess:
-                case Status.TestStarted:
-                case Status.TestSuccess:
-                    throw new ContractException("Prework shouldn't return this status");
-                default:
-                    throw new DefaultSwitchCaseUnreachableException();
-            }
-
-            TestResultsFile resultsFile = prework.TestResultsFile;
-            int loadedProjectsCount = 0;
-            int builtProjectsCount = 0;
-            int successfulTestsCount = 0;
-            int failedTestCount = 0;
-            string balloonMessage = "";
-
-            try
-            {
-                if (overallStatus != TestResult.Success)
-                    return;
-
-                icon.Text = "Starting...";
-                icon.Percentage = 0.1;
-                icon.Status = NotificationIconStatus.Working;
-
-
-                foreach ((Status status, string message) in work.CopySolutionAndExecuteTests(cancellationTokenSource.Token, out int projectCount))
+                switch (prework.Status)
                 {
-                    if (cancellationTokenSource.IsCancellationRequested)
-                    {
-                        Logger.Log("Processing message canceled by user");
+                    case Status.Success:
+                        overallStatus = TestResult.Success;
+                        break;
+
+                    case Status.Skipped:
+                        Logger.Log($"Skipped: The specified commit {(commitMessage == null ? "" : $"({commitMessage})")} does not satisfy the conditions to be built and tested. {prework.Message}");
                         icon.Status = NotificationIconStatus.Default;
-                        icon.Text = null;
+                        if (string.IsNullOrEmpty(icon.Text))
+                            icon.Text = "This commit was skipped";
+                        overallStatus = TestResult.Ignored;
+                        break;
+
+                    case Status.ParentFailed:
+                        Contract.Assert(!ignoreParentFailed);
+                        Logger.Log($"Skipped: The specified commit {(commitMessage == null ? "" : $"({commitMessage})")} does not satisfy the conditions to be built and tested. {prework.Message}");
+                        ParentFailedTracker.Add(work);
+                        if (string.IsNullOrEmpty(icon.Text))
+                        {
+                            icon.ShowErrorBalloon("Parent failed already", Status.ParentFailed);
+                        }
+                        else
+                        {
+                            icon.Status = NotificationIconStatus.BadParent;
+                        }
+                        overallStatus = TestResult.Failure;
+                        break;
+
+                    case Status.Canceled:
+                        overallStatus = TestResult.Success;
+                        break;
+
+                    case Status.ArgumentError:
+                    case Status.MiscellaneousError:
+                    case Status.UnhandledException:
+                        string text = $"{prework.Status.ToTitle()}{(commitMessage == null ? "" : $" for commit '{commitMessage}'")}: {prework.Message}";
+                        Logger.Log(text);
+                        icon.Percentage = 1;
+                        icon.Text = text;
+                        icon.ShowErrorBalloon(prework.Message, prework.Status);
+                        overallStatus = TestResult.Failure;
+                        break;
+
+                    case Status.ProjectLoadingError:
+                    case Status.BuildError:
+                    case Status.TestError:
+                    case Status.ProjectLoadSuccess:
+                    case Status.BuildSuccess:
+                    case Status.TestStarted:
+                    case Status.TestSuccess:
+                        throw new ContractException("Prework shouldn't return this status");
+                    default:
+                        throw new DefaultSwitchCaseUnreachableException();
+                }
+
+                int loadedProjectsCount = 0;
+                int builtProjectsCount = 0;
+                int successfulTestsCount = 0;
+                int failedTestCount = 0;
+                string balloonMessage = "";
+
+                try
+                {
+                    if (overallStatus != TestResult.Success)
                         return;
-                    }
 
-                    switch (status)
+                    icon.Text = "Starting...";
+                    icon.Percentage = 0.1;
+                    icon.Status = NotificationIconStatus.Working;
+
+
+                    foreach ((Status status, string message) in work.CopySolutionAndExecuteTests(cancellationTokenSource.Token, out int projectCount))
                     {
-                        case Status.ProjectLoadSuccess:
-                            loadedProjectsCount++;
-                            icon.Status = NotificationIconStatus.Working;
-                            icon.Percentage = GetEstimatedPercentage();
-                            icon.Text = $"{loadedProjectsCount}/{projectCount} projects loaded";
-                            Logger.Log(message);
-                            break;
+                        if (cancellationTokenSource.IsCancellationRequested)
+                        {
+                            Logger.Log("Processing message canceled by user");
+                            icon.Status = NotificationIconStatus.Default;
+                            icon.Text = null;
+                            return;
+                        }
 
-                        case Status.BuildSuccess:
-                            builtProjectsCount++;
-                            icon.Status = NotificationIconStatus.Working;
-                            icon.Percentage = GetEstimatedPercentage();
-                            icon.Text = $"{builtProjectsCount}/{projectCount} projects built";
-                            Logger.Log(message);
-                            break;
-
-                        case Status.TestStarted:
-                            Logger.Log($"Testing " + message);
-                            break;
-                        case Status.TestSuccess:
-                            successfulTestsCount++;
-                            if (icon.Status != NotificationIconStatus.Bad)
-                            {
+                        switch (status)
+                        {
+                            case Status.ProjectLoadSuccess:
+                                loadedProjectsCount++;
                                 icon.Status = NotificationIconStatus.Working;
-                                icon.Text = $"{successfulTestsCount}/{getTotalTestCount()} tests successful";
-                            }
-                            icon.Percentage = GetEstimatedPercentage();
-                            break;
+                                icon.Percentage = GetEstimatedPercentage();
+                                icon.Text = $"{loadedProjectsCount}/{projectCount} projects loaded";
+                                Logger.Log(message);
+                                break;
 
-                        case Status.TestError:
-                            commitMessage = commitMessage == null ? "" : $" for commit '{commitMessage}'";
-                            Logger.Log($"{status.ToTitle()}{commitMessage}: {message}");
-                            overallStatus = TestResult.Failure;
+                            case Status.BuildSuccess:
+                                builtProjectsCount++;
+                                icon.Status = NotificationIconStatus.Working;
+                                icon.Percentage = GetEstimatedPercentage();
+                                icon.Text = $"{builtProjectsCount}/{projectCount} projects built";
+                                Logger.Log(message);
+                                break;
 
-                            failedTestCount++;
-                            balloonMessage += message + "\n";
+                            case Status.TestStarted:
+                                Logger.Log($"Testing " + message);
+                                break;
+                            case Status.TestSuccess:
+                                successfulTestsCount++;
+                                if (icon.Status != NotificationIconStatus.Bad)
+                                {
+                                    icon.Status = NotificationIconStatus.Working;
+                                    icon.Text = $"{successfulTestsCount}/{getTotalTestCount()} tests successful";
+                                }
+                                icon.Percentage = GetEstimatedPercentage();
+                                break;
 
-                            icon.Percentage = GetEstimatedPercentage();
-                            icon.Text = $"{failedTestCount}/{getTotalTestCount()} tests failed{commitMessage}";
-                            icon.ShowErrorBalloon(balloonMessage, status);
-                            return;
+                            case Status.TestError:
+                                commitMessage = commitMessage == null ? "" : $" for commit '{commitMessage}'";
+                                Logger.Log($"{status.ToTitle()}{commitMessage}: {message}");
+                                overallStatus = TestResult.Failure;
 
-                        case Status.MiscellaneousError:
-                        case Status.ProjectLoadingError:
-                        case Status.BuildError:
-                        case Status.UnhandledException:
-                            string text = $"{status.ToTitle()}{(commitMessage == null ? "" : $" for commit '{commitMessage}'")}: {message}";
-                            Logger.Log(text);
-                            overallStatus = TestResult.Failure;
+                                failedTestCount++;
+                                balloonMessage += message + "\n";
 
-                            icon.Percentage = 1;
-                            icon.Text = text;
-                            icon.ShowErrorBalloon(message, status);
-                            return;
+                                icon.Percentage = GetEstimatedPercentage();
+                                icon.Text = $"{failedTestCount}/{getTotalTestCount()} tests failed{commitMessage}";
+                                icon.ShowErrorBalloon(balloonMessage, status);
+                                return;
 
-                        case Status.Success:
-                            Logger.Log("OK: " + message);
-                            icon.Percentage = 1;
-                            icon.Text = $"Done. {successfulTestsCount} tests successful";
-                            icon.Status = NotificationIconStatus.Ok;
-                            overallStatus = TestResult.Success;
-                            break;
+                            case Status.MiscellaneousError:
+                            case Status.ProjectLoadingError:
+                            case Status.BuildError:
+                            case Status.UnhandledException:
+                                string text = $"{status.ToTitle()}{(commitMessage == null ? "" : $" for commit '{commitMessage}'")}: {message}";
+                                Logger.Log(text);
+                                overallStatus = TestResult.Failure;
 
-                        case Status.ParentFailed:
-                        case Status.ArgumentError:
-                            throw new ContractException("This error status should have been returned by the prework already");
-                        default:
-                            throw new DefaultSwitchCaseUnreachableException();
+                                icon.Percentage = 1;
+                                icon.Text = text;
+                                icon.ShowErrorBalloon(message, status);
+                                return;
+
+                            case Status.Success:
+                                Logger.Log("OK: " + message);
+                                icon.Percentage = 1;
+                                icon.Text = $"Done. {successfulTestsCount} tests successful";
+                                icon.Status = NotificationIconStatus.Ok;
+                                overallStatus = TestResult.Success;
+                                break;
+
+                            case Status.ParentFailed:
+                            case Status.ArgumentError:
+                                throw new ContractException("This error status should have been returned by the prework already");
+                            default:
+                                throw new DefaultSwitchCaseUnreachableException();
+                        }
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                overallStatus = TestResult.Failure;
-                Logger.Log($"{Status.UnhandledException.ToTitle()}: " + e.Message);
-                throw new ContractException(e.StackTrace);
-            }
-            finally
-            {
-                icon.Percentage = 1; // removes the cancel button
-                icon.CancellationRequested -= onOperationCanceled;
-                cancellationTokenSource.Dispose();
-                if (icon.Status == NotificationIconStatus.Working)
-                    icon.Status = NotificationIconStatus.Ok;
-
-                if (resultsFile != null)
+                catch (Exception e)
                 {
-                    try
+                    overallStatus = TestResult.Failure;
+                    Logger.Log($"{Status.UnhandledException.ToTitle()}: " + e.Message);
+                    throw new ContractException(e.StackTrace);
+                }
+                finally
+                {
+                    icon.Percentage = 1; // removes the cancel button
+                    icon.CancellationRequested -= onOperationCanceled;
+                    if (icon.Status == NotificationIconStatus.Working)
+                        icon.Status = NotificationIconStatus.Ok;
+
+                    if (work.Hash != null && resultsFile != null && overallStatus != TestResult.Ignored)
                     {
-                        if (work.Hash != null && overallStatus != TestResult.Ignored)
+                        try
                         {
                             resultsFile.Append(work.Hash, overallStatus, commitMessage, (int)Math.Ceiling((DateTime.Now - start).TotalSeconds), successfulTestsCount);
                         }
+                        catch { }
                     }
-                    catch { }
-
-                    resultsFile.Dispose();
                 }
-            }
-
-            double GetEstimatedPercentage()
-            {
-                if (resultsFile == null || resultsFile.Estimate == TimingEstimator.UnknownEstimate)
-                    return 0;
-
-                float result = (float)(DateTime.Now - start).TotalSeconds / resultsFile.Estimate;
-                if (result > 1)
-                    return 0.99; // cannot be equal to 1, because that means done and things would get updated
-                else
-                    return result;
-            }
-            string getTotalTestCount()
-            {
-                if (resultsFile == null || successfulTestsCount >= resultsFile.TestCount)
+                double GetEstimatedPercentage()
                 {
-                    return "?";
+                    if (resultsFile == null || resultsFile.Estimate == TimingEstimator.UnknownEstimate)
+                        return 0;
+
+                    float result = (float)(DateTime.Now - start).TotalSeconds / resultsFile.Estimate;
+                    if (result > 1)
+                        return 0.99; // cannot be equal to 1, because that means done and things would get updated
+                    else
+                        return result;
                 }
-                else
+                string getTotalTestCount()
                 {
-                    return resultsFile.TestCount.ToString();
+                    if (resultsFile == null || successfulTestsCount >= resultsFile.TestCount)
+                    {
+                        return "?";
+                    }
+                    else
+                    {
+                        return resultsFile.TestCount.ToString();
+                    }
                 }
-            }
-            void onOperationCanceled(object sender, EventArgs e)
-            {
-                cancellationTokenSource.Cancel();
+                void onOperationCanceled(object sender, EventArgs e)
+                {
+                    cancellationTokenSource.Cancel();
+                }
             }
         }
 

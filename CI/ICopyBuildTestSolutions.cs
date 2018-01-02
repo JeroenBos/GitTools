@@ -15,7 +15,7 @@ namespace JBSnorro.GitTools.CI
         /// <remarks><see cref="Program.CopySolutionAndExecuteTests(string, string, out int, string, CancellationToken)"/></remarks>
         IEnumerable<(Status Status, string Message)> CopySolutionAndExecuteTests(CancellationToken cancellationToken, out int projectCount);
     }
-    public sealed class Prework
+    public sealed class Prework : IDisposable
     {
         public Status Status { get; }
         public string Message { get; }
@@ -39,6 +39,11 @@ namespace JBSnorro.GitTools.CI
             this.TestResultsFile = resultsFile;
             this.CommitMessage = commitMessage;
             this.DestinationDirectory = destinationDirectory;
+        }
+
+        public void Dispose()
+        {
+            this.TestResultsFile?.Dispose();
         }
     }
 }
