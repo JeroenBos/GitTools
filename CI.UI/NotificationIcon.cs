@@ -136,22 +136,29 @@ namespace CI.UI
 
             if (this.Icon.Visible)
             {
-                RepeatIfArgumentNullException(() => this.Icon.Icon = Icons.GetIcon(this.Status));
+                RepeatIfNullReferenceException(() => this.Icon.Icon = Icons.GetIcon(this.Status));
             }
 
             RefreshContextMenuItems();
         }
 
-        private static void RepeatIfArgumentNullException(Action action)
+        private static void RepeatIfNullReferenceException(Action action)
         {
             try
             {
                 action();
             }
-            catch (ArgumentNullException)
+            catch (NullReferenceException)
             {
                 Thread.Sleep(10);
-                action();
+                try
+                {
+                    action();
+                }
+                catch (NullReferenceException)
+                {
+                    Logger.Log("WEIRD NULLREF EXCEPTION");
+                }
             }
         }
         private void OnPercentageChanged()
