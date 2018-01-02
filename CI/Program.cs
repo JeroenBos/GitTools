@@ -173,7 +173,7 @@ namespace JBSnorro.GitTools.CI
                 }
 
                 if (mustDoCheckout)
-                    GitCommandLine.Checkout(destinationDirectory, hash);
+                    GitCommandLine.CheckoutHard(destinationDirectory, hash);
 
                 var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
                 if (error != null)

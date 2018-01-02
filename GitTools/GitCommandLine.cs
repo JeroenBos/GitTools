@@ -105,6 +105,22 @@ namespace JBSnorro.GitTools
             ExecuteWithThrow(repositoryPath, "checkout " + hash);
         }
         /// <summary>
+        /// Checks out the specified commit in the repository with option '--hard'.
+        /// </summary>
+        public static void CheckoutHard(string repositoryPath, string hash)
+        {
+            ResetHard(repositoryPath, hash);
+        }
+        /// <summary>
+        /// Checks out the specified commit in the repository with option '--hard'.
+        /// </summary>
+        public static void ResetHard(string repositoryPath, string hash)
+        {
+            Contract.Requires(IsValidCommitHash(hash));
+
+            ExecuteWithThrow(repositoryPath, "reset --hard " + hash);
+        }
+        /// <summary>
         /// Gets the commit message of the commit with the specified hash.
         /// </summary>
         public static string GetCommitMessage(string repositoryPath, string hash)
