@@ -10,6 +10,7 @@ using JBSnorro.GitTools.CI;
 using System.Windows.Threading;
 using JBSnorro.Diagnostics;
 using System.Diagnostics;
+using CI.UI;
 
 namespace JBSnorro
 {
@@ -73,7 +74,7 @@ namespace JBSnorro
                             if (cancellationToken.IsCancellationRequested)
                                 return;
 
-                            await pipe.ConnectAsync(cancellationToken);
+                            await pipe.ConnectAsyncWithBetterPerformance(this.PipeName, cancellationToken);
 
                             while (pipe.IsConnected)
                             {
