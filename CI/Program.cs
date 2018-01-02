@@ -105,41 +105,50 @@ namespace JBSnorro.GitTools.CI
 
             (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
             TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
-            if (error != null)
+            bool disposeResultsFile = true;
+            try
             {
-                return new Prework(Status.MiscellaneousError, error);
-            }
-
-            hash = hash ?? RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
-            if (error != null)
-            {
-                return new Prework(Status.MiscellaneousError, error);
-            }
-
-            bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
-            if (skipCommit)
-            {
-                return new Prework(Status.Skipped, error);
-            }
-            else if (error != null)
-            {
-                return new Prework(Status.MiscellaneousError, error);
-            }
-
-            if (!ignoreParentFailed)
-            {
-                bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
-                if (parentCommitFailed)
+                if (error != null)
                 {
-                    return new Prework(Status.ParentFailed, error);
+                    return new Prework(Status.MiscellaneousError, error);
+                }
+
+                hash = hash ?? RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
+                if (error != null)
+                {
+                    return new Prework(Status.MiscellaneousError, error);
+                }
+
+                bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
+                if (skipCommit)
+                {
+                    return new Prework(Status.Skipped, error);
                 }
                 else if (error != null)
                 {
                     return new Prework(Status.MiscellaneousError, error);
                 }
-            }
 
-            return new Prework(resultsFile, commitMessage, destinationDirectory);
+                if (!ignoreParentFailed)
+                {
+                    bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
+                    if (parentCommitFailed)
+                    {
+                        return new Prework(Status.ParentFailed, error);
+                    }
+                    else if (error != null)
+                    {
+                        return new Prework(Status.MiscellaneousError, error);
+                    }
+                }
+                disposeResultsFile = false;
+                return new Prework(resultsFile, commitMessage, destinationDirectory);
+            }
+            finally
+            {
+                if (disposeResultsFile)
+                    resultsFile?.Dispose();
+            }
         }
         /// <summary>
         /// Copies the solution to a temporary destination directory, build the solution and executes the tests and returns any errors.
