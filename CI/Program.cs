@@ -669,7 +669,7 @@ namespace JBSnorro.GitTools.CI
                                     }
                                     catch (Exception e)
                                     {
-                                        writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"A serious error occurred: {e.Message}"));
+                                        writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
                                         messagesCount++;
                                     }
                                     finally
@@ -779,9 +779,9 @@ namespace JBSnorro.GitTools.CI
             }
             catch (TargetInvocationException e)
             {
-                if (!TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
+                if (TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
                 {
-                    return e.InnerException.Message;
+                    return null;
                 }
                 throw;
             }
