@@ -343,6 +343,8 @@ namespace JBSnorro.GitTools.CI
         }
         private static string TryCopySolution(string solutionFilePath, string destinationDirectory, CancellationToken cancellationToken, out string error)
         {
+            error = null;
+
             if (!skipCopySolution)
             {
                 try
@@ -351,35 +353,37 @@ namespace JBSnorro.GitTools.CI
                     Directory.Delete(destinationDirectory, recursive: true);
                 }
                 catch { }
-            }
-            try
-            {
-                if (cancellationToken.IsCancellationRequested)
+
+                try
                 {
-                    throw new TaskCanceledException();
+                    DirectoryInfo sourceDirectory = new DirectoryInfo(Path.GetDirectoryName(solutionFilePath));
+                    try
+                    {
+                        CopyDirectory(sourceDirectory, new DirectoryInfo(destinationDirectory), cancellationToken);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        var _gitDirectory = Path.Combine(sourceDirectory.ToString(), ".git");
+                        if (Directory.Exists(_gitDirectory))
+                            SetAttributesNormal(_gitDirectory);
+                        SetAttributesNormal(destinationDirectory);
+
+                        CopyDirectory(sourceDirectory, new DirectoryInfo(destinationDirectory), cancellationToken);
+                    }
+                    error = null;
                 }
-                if (!skipCopySolution)
+                catch (Exception e)
                 {
-                    //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
-                    var sourceDirectory = Path.GetDirectoryName(solutionFilePath);
-                    var _gitDirectory = Path.Combine(sourceDirectory, ".git");
-                    if (Directory.Exists(_gitDirectory))
-                        SetAttributesNormal(_gitDirectory);
-                    CopyDirectory(new DirectoryInfo(sourceDirectory), new DirectoryInfo(destinationDirectory), cancellationToken);
-                    SetAttributesNormal(destinationDirectory);
+                    error = e.Message;
+                    return null;
                 }
-                error = null;
-                return Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath));
             }
-            catch (Exception e)
-            {
-                error = e.Message;
-                return null;
-            }
+            return Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath));
         }
         /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
         private static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
         {
+            //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
             foreach (DirectoryInfo dir in source.GetDirectories())
             {
                 if (cancellationToken.IsCancellationRequested)
