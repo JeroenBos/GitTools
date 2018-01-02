@@ -93,9 +93,9 @@ namespace JBSnorro.GitTools
         /// <summary>
         /// Gets the hash of the current commit; or throws if somehow an error is thrown during execution.
         /// </summary>
-        public static string GetCurrentCommitHash()
+        public static string GetCurrentCommitHash(string repositoryPath)
         {
-            return ExecuteWithThrow("rev-parse head").First();
+            return ExecuteWithThrow(repositoryPath, "rev-parse head").First();
         }
         /// <summary>
         /// Checks out the specified commit in the repository.
