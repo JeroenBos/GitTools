@@ -325,7 +325,7 @@ namespace JBSnorro.GitTools.CI
                 string parentHash = GitCommandLine.GetParentCommitHash(sourceDirectory, hash);
                 if (resultsFile.Hashes.TryGetValue(parentHash, out TestResult testResult) && testResult == TestResult.Failure)
                 {
-                    error = "The parent commit had already failed";
+                    error = "The parent commit already failed";
                     return true;
                 }
                 else

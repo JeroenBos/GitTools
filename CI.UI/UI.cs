@@ -233,13 +233,14 @@ namespace CI.UI
                         Contract.Assert(!ignoreParentFailed);
                         Logger.Log($"Skipped: The specified commit {(commitMessage == null ? "" : $"({commitMessage})")} does not satisfy the conditions to be built and tested. {prework.Message}");
                         ParentFailedTracker.Add(work);
-                        if (string.IsNullOrEmpty(icon.Text))
+                        if (icon.Status != NotificationIconStatus.BadParent)
                         {
                             icon.ShowErrorBalloon("Parent failed already", Status.ParentFailed);
                         }
                         else
                         {
                             icon.Status = NotificationIconStatus.BadParent;
+                            icon.Text = prework.Message;
                         }
                         overallStatus = TestResult.Failure;
                         break;
