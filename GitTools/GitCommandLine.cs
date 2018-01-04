@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -153,6 +154,15 @@ namespace JBSnorro.GitTools
             string parentHash = ExecuteWithThrow(repositoryPath, $"log -1 --pretty=format:%P \"{hash}\"").First();
             Contract.Ensures(IsValidCommitHash(parentHash));
             return parentHash;
+        }
+
+        public static void Clone(string repositoryPath, string destinationPath)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
+            Contract.Requires(!string.IsNullOrEmpty(destinationPath));
+            Contract.Requires(!Directory.Exists(destinationPath) || Directory.GetFiles(destinationPath).Length == 0, "You cannot clone into a non-empty directory");
+
+            ExecuteWithThrow(repositoryPath, $"clone --quiet --no-hardlinks \"{repositoryPath}\" \"{destinationPath}\"");
         }
     }
 }
