@@ -113,6 +113,7 @@ namespace JBSnorro.GitTools.CI
 
         public void Dispose()
         {
+            IsDisposed = true;
             Console.WriteLine("Disposing reader");
             this.CancellationTokenSource.Cancel();
             foreach (var pipe in this.pipes)
@@ -150,5 +151,9 @@ namespace JBSnorro.GitTools.CI
         {
             return GetEnumerator();
         }
+
+
+        // testing members
+        internal bool IsDisposed { get; private set; }
     }
 }
