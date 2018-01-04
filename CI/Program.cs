@@ -361,70 +361,41 @@ namespace JBSnorro.GitTools.CI
             {
                 try
                 {
-                    SetAttributesNormal(destinationDirectory);
                     Directory.Delete(destinationDirectory, recursive: true);
                 }
                 catch { }
 
+                string sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(solutionFilePath));
                 try
                 {
-                    DirectoryInfo sourceDirectory = new DirectoryInfo(Path.GetDirectoryName(solutionFilePath));
-                    try
-                    {
-                        CopyDirectory(sourceDirectory, new DirectoryInfo(destinationDirectory), cancellationToken);
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        var _gitDirectory = Path.Combine(sourceDirectory.ToString(), ".git");
-                        if (Directory.Exists(_gitDirectory))
-                            SetAttributesNormal(_gitDirectory);
-                        SetAttributesNormal(destinationDirectory);
+                    GitCommandLine.Clone(sourceDirectory, destinationDirectory);
 
-                        CopyDirectory(sourceDirectory, new DirectoryInfo(destinationDirectory), cancellationToken);
-                    }
+                    //explicitly copy packages because git doesn't include those
+                    string packagesSourceDirectory = Path.Combine(sourceDirectory, "packages");
+                    if (Directory.Exists(packagesSourceDirectory))
+                        CopyDirectory(new DirectoryInfo(packagesSourceDirectory), new DirectoryInfo(Path.Combine(destinationDirectory, "packages")), cancellationToken);
+
                     error = null;
                 }
                 catch (Exception e)
                 {
                     error = e.Message;
-                    return null;
                 }
             }
             return Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath));
-
-            void SetAttributesNormal(string dirPath)
-            {
-                SetAttributesNormalImpl(new DirectoryInfo(dirPath));
-            }
-            void SetAttributesNormalImpl(DirectoryInfo dir)
-            {
-                foreach (var subDir in dir.GetDirectories())
-                    SetAttributesNormalImpl(subDir);
-                foreach (var file in dir.GetFiles())
-                {
-                    file.Attributes = FileAttributes.Normal;
-                }
-            }
         }
         /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
         private static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
         {
-            //TODO: maybe generalize/parameterize everything that should be excluded. Below .vs is hardcoded 
             foreach (DirectoryInfo dir in source.GetDirectories())
             {
-                if (cancellationToken.IsCancellationRequested)
-                    throw new TaskCanceledException();
-
-                if (!(dir.Name.StartsWith(".vs") || dir.Name == "bin" || dir.Name == "obj") || dir.Name == "TestResults")
-                    CopyDirectory(dir, target.CreateSubdirectory(dir.Name), cancellationToken);
+                CopyDirectory(dir, target.CreateSubdirectory(dir.Name), cancellationToken);
             }
             foreach (FileInfo file in source.GetFiles())
             {
                 if (cancellationToken.IsCancellationRequested)
                     throw new TaskCanceledException();
-
-                if (file.Name != ".testresults") // can't copy because this program currently has a filestream opened on it
-                    file.CopyTo(Path.Combine(target.FullName, file.Name), true);
+                file.CopyTo(Path.Combine(target.FullName, file.Name), true);
             }
         }
 
