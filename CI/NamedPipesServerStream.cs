@@ -6,6 +6,7 @@ using System.IO.Pipes;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using System.Collections.ObjectModel;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -43,12 +44,13 @@ namespace JBSnorro.GitTools.CI
                 }
             }
         }
-        private NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, CancellationToken cancellationToken = default(CancellationToken), bool spawnLazily = false)
+        internal NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, CancellationToken cancellationToken = default(CancellationToken), bool spawnLazily = false)
         {
             this.PipeName = pipeName;
             this.isQuitSignal = isQuitSignal;
             this.expectedNumberOfConnections = expectedNumberOfConnections;
             this.spawnLazily = spawnLazily;
+            this.Pipes = new ReadOnlyCollection<NamedPipeServerStream>(this.pipes);
             this.CancellationTokenSource = new CancellationTokenSource();
 
             cancellationToken.Register(this.Dispose);
@@ -155,5 +157,6 @@ namespace JBSnorro.GitTools.CI
 
         // testing members
         internal bool IsDisposed { get; private set; }
+        internal readonly IReadOnlyList<NamedPipeServerStream> Pipes;
     }
 }
