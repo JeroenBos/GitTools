@@ -605,10 +605,19 @@ namespace JBSnorro.GitTools.CI
             void StartMessageWriter(string assemblyPath)
             {
                 string appDomainBase = Path.GetDirectoryName(assemblyPath);
-                using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, ConfigurationFile = assemblyPath + ".config" }))
+                AppDomain testerAppDomain = null;
+                try
                 {
-                    int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, writeMessagesBackOfTesting);
-                    Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);
+                    using (AppDomainContext testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, ConfigurationFile = assemblyPath + ".config" }))
+                    {
+                        testerAppDomain = testerDomain.Domain;
+                        int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, writeMessagesBackOfTesting);
+                        Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);
+                    }
+                }
+                finally
+                {
+                    AppDomain.Unload(testerAppDomain);
                 }
             }
 
