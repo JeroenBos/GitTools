@@ -7,12 +7,10 @@ using System.Threading.Tasks;
 
 namespace CI.UI.Tests
 {
-#if !NOT_DUMMY_TESTS
     [TestFixture]
-#endif
     public class __TESTS__
     {
-        [Test]
+        [IndirectTest]
         public void Method()
         {
 

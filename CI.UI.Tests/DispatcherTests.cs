@@ -24,6 +24,7 @@ namespace CI.UI.Tests
         [Test]
         public void RunTests()
         {
+            const int expectedSuccessfulTests = 1;
             Task waitForHandledMessage = WaitForHandledMessage();
             using (NotificationIcon icon = new NotificationIcon())
             using (Dispatcher.StartCIUI(icon))
@@ -39,8 +40,7 @@ namespace CI.UI.Tests
                 if (!waitForHandledMessage.Wait(5000))
                     throw new TimeoutException("The message was never handled");
 
-                int expected = typeof(__TESTS__).GetMethods().Where(TestClassExtensions.IsTestMethod).Count();
-                Contract.Assert(icon.Text == $"Done. {expected} tests successful");
+                Contract.Assert(icon.Text == $"Done. {expectedSuccessfulTests} tests successful");
             }
         }
         private static Task WaitForHandledMessage()
