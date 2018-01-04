@@ -19,6 +19,7 @@ namespace CI.UI
     public class Program : IDisposable
     {
         internal const string TEST_ARGUMENT = "TEST_ARGUMENT";
+        public const string DISREGARD_PARENT_COMMIT_OUTCOME_ARGUMENT = "-disregard_parent_outcome";
         public static void Main(string[] args)
         {
             if (args.Length != 0)
@@ -142,8 +143,10 @@ namespace CI.UI
                 return;
             }
 
-            if (input.Length > 2)
-                throw new ArgumentException($"Too many arguments provided: expected 1 or 2, received {input.Length}");
+
+
+            if (input.Length > 3)
+                throw new ArgumentException($"Too many arguments provided: expected 1, 2 or 3, received {input.Length}");
 
             if (!input[0].EndsWith(".sln"))
                 throw new ArgumentException("The first argument is expected to be a .sln file");
@@ -152,9 +155,16 @@ namespace CI.UI
             string solutionFilePath = input[0];
 
             string hash = null;
-            if (input.Length == 2)
+            if (input.Length == 3)
             {
-                if (!GitCommandLine.IsValidCommitHash(input[1]))
+                if (input[2] != DISREGARD_PARENT_COMMIT_OUTCOME_ARGUMENT)
+                    throw new ArgumentException($"The only viable third argument is {DISREGARD_PARENT_COMMIT_OUTCOME_ARGUMENT}");
+                else
+                    ignoreParentFailed = true;
+            }
+            if (input.Length >= 2)
+            {
+                if (!GitCommandLine.IsValidCommitHash(input[1]) && input[1] != DISREGARD_PARENT_COMMIT_OUTCOME_ARGUMENT)
                     throw new ArgumentException($"The second argument, the commit hash {input[1]}, is not a valid hash");
                 hash = input[1];
             }
