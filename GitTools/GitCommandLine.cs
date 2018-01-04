@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace JBSnorro.GitTools
@@ -52,6 +53,8 @@ namespace JBSnorro.GitTools
 
             List<string> results = new List<string>();
 
+            bool repeatedCommand = false;
+            bool firstCommand = true;
             // invoke the commands
             using (Process gitProcess = new Process())
             {
@@ -63,11 +66,20 @@ namespace JBSnorro.GitTools
                     gitProcess.Start();
 
                     string error = gitProcess.StandardError.ReadToEnd();
-                    results.Add(gitProcess.StandardOutput.ReadToEnd());
-
                     gitProcess.WaitForExit();
+                    if (!string.IsNullOrEmpty(error) && firstCommand && !repeatedCommand)
+                    {
+                        Thread.Sleep(100);
+                        repeatedCommand = true;
+                        gitProcess.Start(); // start with same parameters
+                        error = gitProcess.StandardError.ReadToEnd();
+                        gitProcess.WaitForExit();
+                    }
+
+                    results.Add(gitProcess.StandardOutput.ReadToEnd());
                     if (!string.IsNullOrEmpty(error))
                         return (results, error);
+                    firstCommand = false;
                 }
             }
 
