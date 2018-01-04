@@ -81,6 +81,7 @@ namespace JBSnorro.GitTools.CI
             }
             Task.Run(async () =>
             {
+                bool failed = false;
                 try
                 {
                     await pipe.WaitForConnectionAsyncWithCancellation(this.CancellationTokenSource.Token);
@@ -88,11 +89,18 @@ namespace JBSnorro.GitTools.CI
                         Spawn();
                     await Loop(pipe);
                 }
-                catch (TaskCanceledException) { }
-                catch (ObjectDisposedException) { }
-                catch (IOException) { }
+                catch (Exception e)
+                {
+                    failed = true;
+                    Logger.Log("decrementing alive connection: error = " + e.Message);
+                    if (e is TaskCanceledException || e is ObjectDisposedException || e is IOException)
+                        return;
+                    throw;
+                }
                 finally
                 {
+                    if (!failed)
+                        Logger.Log("decrementing alive connection: no error");
                     lock (pipesLock)
                     {
                         this.pipes.Remove(pipe);
