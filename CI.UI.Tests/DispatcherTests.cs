@@ -25,7 +25,7 @@ namespace CI.UI.Tests
         public void RunTests()
         {
             const int expectedSuccessfulTests = 1;
-            Task waitForHandledMessage = WaitForHandledMessage();
+            Task waitForHandledMessage = WaitForHandledMessageAsync();
             using (NotificationIcon icon = new NotificationIcon())
             using (Dispatcher.StartCIUI(icon))
             {
@@ -43,7 +43,7 @@ namespace CI.UI.Tests
                 Contract.Assert(icon.Text == $"Done. {expectedSuccessfulTests} tests successful");
             }
         }
-        private static Task WaitForHandledMessage()
+        private static Task WaitForHandledMessageAsync()
         {
             ManualResetEvent @event = new ManualResetEvent(false);
             ReceivingPipe.OnHandledMessage += (sender, message) => { try { @event.Set(); } catch (ObjectDisposedException) { } };
