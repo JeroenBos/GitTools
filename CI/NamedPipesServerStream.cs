@@ -125,7 +125,12 @@ namespace JBSnorro.GitTools.CI
         {
             IsDisposed = true;
             Console.WriteLine("Disposing reader");
-            this.CancellationTokenSource.Cancel();
+            try
+            {
+                this.CancellationTokenSource.Cancel();
+            }
+            catch (ObjectDisposedException) { }
+            this.CancellationTokenSource.Dispose();
             lock (pipesLock)
             {
                 foreach (var pipe in this.pipes)
