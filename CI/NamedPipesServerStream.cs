@@ -15,6 +15,7 @@ namespace JBSnorro.GitTools.CI
     /// </summary>
     public class NamedPipesServerStream : IEnumerable<string>, IDisposable
     {
+        private readonly object pipesLock = new object();
         private readonly List<NamedPipeServerStream> pipes = new List<NamedPipeServerStream>();
         private readonly ConcurrentQueue<string> queue = new ConcurrentQueue<string>();
         protected CancellationTokenSource CancellationTokenSource { get; }
@@ -74,7 +75,10 @@ namespace JBSnorro.GitTools.CI
             Interlocked.Decrement(ref this.expectedNumberOfConnections);
             Interlocked.Increment(ref this.aliveConnections);
             var pipe = this.CreateReader();
-            this.pipes.Add(pipe);
+            lock (pipesLock)
+            {
+                this.pipes.Add(pipe);
+            }
             Task.Run(async () =>
             {
                 try
@@ -89,6 +93,10 @@ namespace JBSnorro.GitTools.CI
                 catch (IOException) { }
                 finally
                 {
+                    lock (pipesLock)
+                    {
+                        this.pipes.Remove(pipe);
+                    }
                     Interlocked.Decrement(ref this.aliveConnections);
                     pipe.Dispose();
                 }
@@ -118,8 +126,14 @@ namespace JBSnorro.GitTools.CI
             IsDisposed = true;
             Console.WriteLine("Disposing reader");
             this.CancellationTokenSource.Cancel();
-            foreach (var pipe in this.pipes)
-                pipe.Dispose();
+            lock (pipesLock)
+            {
+                foreach (var pipe in this.pipes)
+                {
+                    pipe.Dispose();
+                }
+                pipes.Clear();
+            }
         }
 
         public IEnumerator<string> GetEnumerator()
