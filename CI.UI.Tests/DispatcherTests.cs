@@ -34,7 +34,7 @@ namespace CI.UI.Tests
                 Contract.Assert<NotImplementedException>(!slnPath.Contains(' '));
 
                 //Act
-                bool messageSent = Dispatcher.TrySendMessage(Dispatcher.ComposeMessage(slnPath, hash));
+                bool messageSent = Dispatcher.TrySendMessage(Dispatcher.ComposeMessage(slnPath, hash, Program.DISREGARD_PARENT_COMMIT_OUTCOME_ARGUMENT));
                 Contract.Assert(messageSent);
 
                 if (!waitForHandledMessage.Wait(5000))
