@@ -108,7 +108,12 @@ namespace JBSnorro.GitTools
         /// </summary>
         public static string GetCurrentCommitHash(string repositoryPath)
         {
-            return ExecuteWithThrow(repositoryPath, "rev-parse head").First();
+            var output = ExecuteWithThrow(repositoryPath, "rev-parse head").Single();
+            Contract.Assert(output.Length == CommitHashLength + "\n".Length);
+            Contract.Assert(output.Last() == '\n');
+            var result = output.Substring(0, CommitHashLength);
+            Contract.Ensures(IsValidCommitHash(result));
+            return result;
         }
         /// <summary>
         /// Checks out the specified commit in the repository.
