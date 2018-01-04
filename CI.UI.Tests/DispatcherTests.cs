@@ -17,6 +17,7 @@ namespace CI.UI.Tests
     [TestFixture]
     public class DispatcherTests
     {
+        public static bool IsDebugging => new StackFrame(2).GetMethod().Name == "Main";
         /// <summary>
         /// Runs the CI.UI program on the tests in <see cref="__TESTS__"/>. 
         /// </summary>
@@ -37,7 +38,7 @@ namespace CI.UI.Tests
                 bool messageSent = Dispatcher.TrySendMessage(Dispatcher.ComposeMessage(slnPath, hash, Program.DISREGARD_PARENT_COMMIT_OUTCOME_ARGUMENT));
                 Contract.Assert(messageSent);
 
-                if (!waitForHandledMessage.Wait(5000))
+                if (!waitForHandledMessage.Wait(IsDebugging ? -1 : 5000))
                     throw new TimeoutException("The message was never handled");
 
                 Contract.Assert(icon.Text == $"Done. {expectedSuccessfulTests} tests successful");
