@@ -29,7 +29,7 @@ namespace CI.UI.Tests
             using (NotificationIcon icon = new NotificationIcon())
             using (Dispatcher.StartCIUI(icon))
             {
-                string slnPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\Tests.sln");
+                string slnPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\Tests.sln"));
                 string hash = GitCommandLine.GetCurrentCommitHash(Path.GetDirectoryName(slnPath));
                 Contract.Assert<NotImplementedException>(!slnPath.Contains(' '));
 
