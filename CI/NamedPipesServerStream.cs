@@ -61,7 +61,7 @@ namespace JBSnorro.GitTools.CI
 
         protected virtual NamedPipeServerStream CreateReader()
         {
-            return new NamedPipeServerStream(this.PipeName, PipeDirection.In, NamedPipeServerStream.MaxAllowedServerInstances);
+            return new NamedPipeServerStream(this.PipeName, PipeDirection.In, NamedPipeServerStream.MaxAllowedServerInstances, PipeTransmissionMode.Message, PipeOptions.Asynchronous);
         }
 
         private void Spawn()
@@ -83,7 +83,7 @@ namespace JBSnorro.GitTools.CI
             {
                 try
                 {
-                    await pipe.WaitForConnectionAsync(this.CancellationTokenSource.Token);
+                    await pipe.WaitForConnectionAsyncWithCancellation(this.CancellationTokenSource.Token);
                     if (spawnLazily)
                         Spawn();
                     await Loop(pipe);
@@ -177,5 +177,7 @@ namespace JBSnorro.GitTools.CI
         // testing members
         internal bool IsDisposed { get; private set; }
         internal readonly IReadOnlyList<NamedPipeServerStream> Pipes;
+        internal int AliveConnections => this.aliveConnections;
+        internal int ExpectedNumberOfConnections => this.expectedNumberOfConnections;
     }
 }
