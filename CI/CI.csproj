@@ -84,7 +84,6 @@
   <ItemGroup>
     <Compile Include="ICopyBuildTestSolutions.cs" />
     <Compile Include="Logger.cs" />
-    <Compile Include="NamedPipeExtensions.cs" />
     <Compile Include="NamedPipesServerStream.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

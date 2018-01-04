@@ -1,14 +1,13 @@
 ﻿using JBSnorro.Diagnostics;
-using System;
 using System.IO;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace JBSnorro
+namespace CI.UI
 {
-    public static class NamedPipeExtensions
+    public static class NamedPipeClientStreamExtensions
     {
         /// <summary>
         /// Asynchronously connects to a waiting server within the specified timeout period and monitors cancellation requests.
@@ -16,9 +15,9 @@ namespace JBSnorro
         /// </summary>
         /// <exception cref="TaskCanceledException">The task has been canceled.</exception>
         /// <exception cref="ObjectDisposedException">The provided cancellationToken has already been disposed.</exception>
-        public static async Task ConnectAsyncWithBetterPerformance(this NamedPipeClientStream pipe,
-                                                                   string pipeName,
-                                                                   CancellationToken cancellationToken,
+        public static async Task ConnectAsyncWithBetterPerformance(this NamedPipeClientStream pipe, 
+                                                                   string pipeName, 
+                                                                   CancellationToken cancellationToken, 
                                                                    int retryDelay_ms = 10)
         {
             Contract.Requires(pipe != null);
@@ -66,52 +65,6 @@ namespace JBSnorro
             catch
             {
                 return false; // assume it doesn't exist
-            }
-        }
-
-        /// <summary>
-        /// Asynchronously waits for a client to connect to this <see cref="NamedPipeServerStream"/> object and monitors cancellation requests.
-        /// Actually monitors cancellation requests, as opposed to the .NET implementation.
-        /// </summary>
-        /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-        /// <returns>A task that represents the asynchronous wait operation.</returns>
-        public static async Task WaitForConnectionAsyncWithCancellation(this NamedPipeServerStream pipe, CancellationToken cancellationToken)
-        {
-            Contract.Requires(pipe != null);
-
-            if (pipe.IsConnected)
-                return;
-
-            if (cancellationToken.IsCancellationRequested)
-                return;
-
-            bool connected = false;
-
-            IAsyncResult asyncResult = null;
-            try
-            {
-                asyncResult = pipe.BeginWaitForConnection(onConnect, null);
-
-                void onConnect(object _)
-                {
-                    connected = true;
-                }
-
-                await Task.Run(async () =>
-                {
-                    while (!cancellationToken.IsCancellationRequested)
-                    {
-                        if (connected)
-                            return;
-
-                        await Task.Delay(10, cancellationToken);
-                    }
-                });
-            }
-            finally
-            {
-                if (asyncResult != null)
-                    pipe.EndWaitForConnection(asyncResult);
             }
         }
     }
