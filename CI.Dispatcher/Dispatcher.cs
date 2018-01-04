@@ -2,7 +2,6 @@
 using System.Linq;
 using JBSnorro;
 using JBSnorro.Diagnostics;
-using JBSnorro.GitTools.CI;
 using System;
 using System.Configuration;
 using System.Diagnostics;
@@ -10,6 +9,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
+using JBSnorro.GitTools.CI;
 
 namespace CI
 {
@@ -118,7 +118,7 @@ namespace CI
             Contract.Requires(!inProcessUIIsRunning, "The UI is already running in process");
 
             Logger.Log("Starting CI.UI in process");
-            return new RunnableTaskCancellableByDisposal(token => Program.Start(icon, token));
+            return new RunnableTaskCancellableByDisposal(token => UI.Program.Start(icon, token));
         }
         /// <summary>
         /// Starts the UI with a new icon.
@@ -129,7 +129,7 @@ namespace CI
             Contract.Requires(!inProcessUIIsRunning, "The UI is already running in process");
 
             Logger.Log("Starting CI.UI in process");
-            return new RunnableTaskCancellableByDisposal(Program.Start);
+            return new RunnableTaskCancellableByDisposal(UI.Program.Start);
         }
         private static IDisposable StartCIUIOutOfProcess()
         {

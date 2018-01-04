@@ -91,6 +91,10 @@
       <Project>{b0fc2fbf-2166-457f-ad5f-5e2ab5c76eca}</Project>
       <Name>CI.UI</Name>
     </ProjectReference>
+    <ProjectReference Include="..\CI\CI.csproj">
+      <Project>{53B9CF71-9E2F-4F3B-AEAE-271B4D3B3F5F}</Project>
+      <Name>CI</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
