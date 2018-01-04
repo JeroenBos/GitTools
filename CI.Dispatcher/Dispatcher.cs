@@ -41,40 +41,43 @@ namespace CI
         /// </summary>
         internal static void Main(string[] args)
         {
-            IDisposable ui = null;
-            Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
-            try
+            using (var cts = new CancellationTokenSource())
             {
-                if (args.Length > 0 && args[0] == START_UI_ARG)
+                IDisposable ui = null;
+                Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
+                try
                 {
+                    if (args.Length > 0 && args[0] == START_UI_ARG)
+                    {
 #if DEBUG
-                    ui = StartCIUIInProcess();
+                        ui = StartCIUIInProcess();
 #else
-                    ui = StartCIUIOutOfProcess();
+                        ui = StartCIUIOutOfProcess();
 #endif
-                    args = args.Skip(1).ToArray();
-                }
-
-                var message = ComposeMessage(args);
-                if (message != null)
-                {
-                    TrySendMessage(message);
-                }
+                        args = args.Skip(1).ToArray();
+                    }
+                    var message = ComposeMessage(args);
+                    if (message != null)
+                    {
+                        TrySendMessage(message, cts.Token);
+                    }
 #if DEBUG
-                Console.ReadLine();
-                ((RunnableTaskCancellableByDisposal)ui).Cancel();
+                    Console.ReadLine();
+                    ((RunnableTaskCancellableByDisposal)ui).Cancel();
 #endif
-            }
-            catch (Exception e)
-            {
-                Logger.Log("exception: " + e.Message);
-            }
-            finally
-            {
-                if (ui != null)
+                }
+                catch (Exception e)
                 {
-                    Logger.Log("Disposing started UI");
-                    ui.Dispose();
+                    Logger.Log("exception: " + e.Message);
+                }
+                finally
+                {
+                    cts.Cancel(); // cancels NamedPipeServerStream.WaitForConnectionAsync
+                    if (ui != null)
+                    {
+                        Logger.Log("Disposing started UI");
+                        ui.Dispose();
+                    }
                 }
             }
         }
@@ -87,7 +90,7 @@ namespace CI
             return string.Join(CIReceivingPipe.PipeMessageSeparator, args);
         }
 
-        private static NamedPipeServerStream TrySetupConnection()
+        private static NamedPipeServerStream TrySetupConnection(CancellationToken cancellationToken)
         {
             if (!inProcessUIIsRunning && Process.GetProcessesByName("CI.UI").Length == 0)
             {
@@ -97,7 +100,7 @@ namespace CI
 
             var pipe = new NamedPipeServerStream(CIReceivingPipe.GetPipeName(), PipeDirection.Out);
             // try to make connection, or start the executable in case it's not responding
-            Task makeConnectionTask = pipe.WaitForConnectionAsync();
+            Task makeConnectionTask = pipe.WaitForConnectionAsync(cancellationToken);
             if (makeConnectionTask.Wait(timeout))
             {
                 Logger.Log("Found listener");
@@ -189,13 +192,25 @@ namespace CI
                 }
             }
         }
-
         /// <summary>
-        /// By default, the message is the sln file, possibly with a hash of a particular commit. Prepend with <see cref="START_UI_ARG"/> to start the UI. All separated by <see cref="CIReceivingPipe.PipeMessageSeparator"/>.
+        /// Sends the specified message and immediately closes the connection again.
         /// </summary>
+        /// <param name="message"> By default, the message is the sln file, possibly with a hash of a particular commit. 
+        /// Prepend with <see cref="START_UI_ARG"/> to start the UI. All separated by <see cref="CIReceivingPipe.PipeMessageSeparator"/>. 
+        /// The last argument can also be <see cref="UI.Program.DISREGARD_PARENT_COMMIT_OUTCOME_ARGUMENT"/>. </param>
+        /// <returns> whether the message was sent. </returns>
         internal static bool TrySendMessage(string message)
         {
-            using (var pipe = TrySetupConnection())
+            using (CancellationTokenSource cts = new CancellationTokenSource())
+            {
+                var result = TrySendMessage(message, cts.Token);
+                cts.Cancel(); // cancels NamedPipeServerStream.WaitForConnectionAsync
+                return result;
+            }
+        }
+        private static bool TrySendMessage(string message, CancellationToken cancellationToken)
+        {
+            using (var pipe = TrySetupConnection(cancellationToken))
             {
                 if (pipe != null)
                 {
