@@ -359,21 +359,15 @@ namespace JBSnorro.GitTools.CI
 
             if (!skipCopySolution)
             {
-                try
-                {
-                    Directory.Delete(destinationDirectory, recursive: true);
-                }
-                catch { }
-
                 string sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(solutionFilePath));
                 try
                 {
+                    DeleteDirectory(destinationDirectory);
+
                     GitCommandLine.Clone(sourceDirectory, destinationDirectory);
 
                     //explicitly copy packages because git doesn't include those
-                    string packagesSourceDirectory = Path.Combine(sourceDirectory, "packages");
-                    if (Directory.Exists(packagesSourceDirectory))
-                        CopyDirectory(new DirectoryInfo(packagesSourceDirectory), new DirectoryInfo(Path.Combine(destinationDirectory, "packages")), cancellationToken);
+                    CopyDirectoryIfExists(new DirectoryInfo(Path.Combine(sourceDirectory, "packages")), new DirectoryInfo(Path.Combine(destinationDirectory, "packages")), cancellationToken);
 
                     error = null;
                 }
@@ -384,8 +378,16 @@ namespace JBSnorro.GitTools.CI
             }
             return Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath));
         }
+
+        public static void CopyDirectoryIfExists(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
+        {
+            if (source.Exists)
+            {
+                CopyDirectory(source, target, cancellationToken);
+            }
+        }
         /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
-        private static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
+        public static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
         {
             foreach (DirectoryInfo dir in source.GetDirectories())
             {
@@ -398,7 +400,65 @@ namespace JBSnorro.GitTools.CI
                 file.CopyTo(Path.Combine(target.FullName, file.Name), true);
             }
         }
+        /// <remarks> https://stackoverflow.com/questions/329355/cannot-delete-directory-with-directory-deletepath-true </remarks>
+        public static void DeleteDirectory(string path)
+        {
+            // this cryptic error message means some file in some directory is open somewhere
+            const string SOME_FILE_IS_OPEN_ERROR_MESSAGE = "The directory is not empty.\r\n";
 
+            if (Directory.Exists(path))
+            {
+                foreach (string nestedDirectory in Directory.GetDirectories(path))
+                {
+                    DeleteDirectory(nestedDirectory);
+                }
+
+                try
+                {
+                    Directory.Delete(path, recursive: true);
+                }
+                catch (IOException e) when (e.Message == SOME_FILE_IS_OPEN_ERROR_MESSAGE)
+                {
+                    Thread.Sleep(10); // Some programs like Windows Explorer use this time to release the handle 
+                    try
+                    {
+                        Directory.Delete(path, recursive: true);
+                    }
+                    catch (IOException ex) when (ex.Message == SOME_FILE_IS_OPEN_ERROR_MESSAGE)
+                    {
+                        throw new Exception("An unknown file is opened somewhere and cannot be deleted");
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    SetAttributesNormal(new DirectoryInfo(path));
+                    try
+                    {
+                        Directory.Delete(path, recursive: true);
+                    }
+                    catch (UnauthorizedAccessException e) when (e.Message.Count(c => c == '\'') == 2)
+                    {
+                        int indexOfOpeningQuote = e.Message.IndexOf('\'');
+                        int indexOfClosingQuote = e.Message.IndexOf('\'', indexOfOpeningQuote + 1);
+                        string file = e.Message.Substring(indexOfOpeningQuote, indexOfClosingQuote - indexOfOpeningQuote);
+
+                        throw new UnauthorizedAccessException($"Access to the path '{Path.Combine(path, file)}' is denied.", e);
+                    }
+                }
+            }
+
+            void SetAttributesNormal(DirectoryInfo directory)
+            {
+                foreach (var nestedDirectory in directory.GetDirectories())
+                {
+                    SetAttributesNormal(nestedDirectory);
+                }
+                foreach (var file in directory.GetFiles())
+                {
+                    file.Attributes = FileAttributes.Normal;
+                }
+            }
+        }
 
         private static IReadOnlyList<string> GetProjectPaths(string destinationSolutionFilepath, out string error)
         {
