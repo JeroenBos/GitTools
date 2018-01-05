@@ -21,14 +21,27 @@ namespace CI.UI
         private static string iconsPath => Path.Combine(executingAssemblyDirectory, ConfigurationManager.AppSettings["iconsPath"] ?? throw new AppSettingNotFoundException("iconsPath"));
         private static readonly ReadOnlyDictionary<NotificationIconStatus, Bitmap> bitmaps = new ReadOnlyDictionary<NotificationIconStatus, Bitmap>(new Dictionary<NotificationIconStatus, Bitmap>
         {
-            [NotificationIconStatus.Default] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "default_status.png")),
-            [NotificationIconStatus.Ok] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "ok_status.png")),
-            [NotificationIconStatus.Working] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "working_status.png")),
-            [NotificationIconStatus.Bad] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "bad_status.png")),
-            [NotificationIconStatus.BadParent] = (Bitmap)Image.FromFile(Path.Combine(iconsPath, "bad_status.png")),
+            [NotificationIconStatus.Default] = ReadImage("default_status.png"),
+            [NotificationIconStatus.Ok] = ReadImage("ok_status.png"),
+            [NotificationIconStatus.Working] = ReadImage("working_status.png"),
+            [NotificationIconStatus.Bad] = ReadImage("bad_status.png"),
+            [NotificationIconStatus.BadParent] = ReadImage("bad_status.png"),
         });
         private static readonly ReadOnlyDictionary<NotificationIconStatus, Icon> icons = new ReadOnlyDictionary<NotificationIconStatus, Icon>(bitmaps.ToDictionary(kvp => kvp.Key, kvp => Convert(kvp.Value)));
         private static readonly Bitmap reusableBitmap = (Bitmap)bitmaps[NotificationIconStatus.Working].Clone();
+        private static Bitmap ReadImage(string filename)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(filename));
+
+            string path = Path.GetFullPath(Path.Combine(iconsPath, filename));
+            Contract.Requires(File.Exists(path), $"Could not find file '{path}'");
+
+            //we're cloning so that we can release the file handle
+            using (var image = new Bitmap(path))
+            {
+                return new Bitmap(image);
+            }
+        }
 
         /// <summary>
         /// Gets the icon representing the specified status.
@@ -51,16 +64,6 @@ namespace CI.UI
             return bitmaps[status];
         }
 
-        private static Icon Convert(string file)
-        {
-            using (var stream = File.OpenRead(file))
-                return Convert(stream);
-        }
-        private static Icon Convert(Stream iconImage)
-        {
-            Bitmap bitmap = (Bitmap)Image.FromStream(iconImage);
-            return Icon.FromHandle(bitmap.GetHicon());
-        }
         private static Icon Convert(Bitmap image)
         {
             return Icon.FromHandle(image.GetHicon());
