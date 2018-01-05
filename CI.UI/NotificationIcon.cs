@@ -125,7 +125,7 @@ namespace CI.UI
                     throw new InvalidAppSettingException(settingName, "A number was expected. ");
                 }
 
-                return (new Timer(_ => this.Reset(), null, setting_ms, -1), TimeSpan.FromMilliseconds(setting_ms));
+                return (new Timer(_ => { if (this.Status != NotificationIconStatus.Ok) { this.Reset(); } }, null, setting_ms, -1), TimeSpan.FromMilliseconds(setting_ms));
             }
         }
 
