@@ -169,7 +169,11 @@ namespace CI.UI
                 hash = input[1];
             }
 
-            var work = new CopyBuildTestSolutionInjection(solutionFilePath, ConfigurationManager.AppSettings["destinationDirectory"], hash);
+            string baseDestinationDirectory = ConfigurationManager.AppSettings["destinationDirectory"] ?? throw new AppSettingNotFoundException("destinationDirectory");
+            if (TestClassExtensions.IsRunningFromUnitTest)
+                baseDestinationDirectory = Path.Combine(baseDestinationDirectory, "TESTS");
+
+            var work = new CopyBuildTestSolutionInjection(solutionFilePath, baseDestinationDirectory, hash);
 
             HandleCommit(work, icon, externalCancellationToken, ignoreParentFailed);
         }
