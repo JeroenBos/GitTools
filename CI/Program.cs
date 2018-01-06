@@ -22,7 +22,6 @@ using System.IO.Pipes;
 using System.Collections.Concurrent;
 using System.Configuration;
 
-
 namespace JBSnorro.GitTools.CI
 {
     /// <summary>
@@ -598,9 +597,10 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                foreach (string appDomainBase in projectsInBuildOrder.Select(GetAssemblyPath).Select(Path.GetDirectoryName))
+                foreach (Project project in projectsInBuildOrder)
                 {
-                    CopyDependenciesToNewAppDomainBaseDirectory(appDomainBase);
+                    string binDirectory = Path.GetDirectoryName(GetAssemblyPath(project));
+                    CopyDependenciesToNewAppDomainBaseDirectory(project.DirectoryPath, binDirectory);
                 }
 
                 int processedProjectsCount = 0;
@@ -799,15 +799,84 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
-        private static void CopyDependenciesToNewAppDomainBaseDirectory(string appDomainBase)
-        {
-            foreach (string source in Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory))
-            {
-                if (source.EndsWith(".dll") || source.EndsWith(".exe"))
-                {
-                    string destination = Path.Combine(appDomainBase, Path.GetFileName(source));
 
-                    File.Copy(source, destination, overwrite: true);
+        /// <summary>
+        /// Copies the dependencies of this project to the bin directory of the new app domain.
+        /// </summary>
+        /// <param name="binDirectory"> The bin directory where a project is to be built. </param>
+        private static void CopyDependenciesToNewAppDomainBaseDirectory(string projectFileDirectory, string newAppDomainBaseDirectory)
+        {
+            string packagesDirectory = getPackagesDirectory(newAppDomainBaseDirectory);
+
+            IEnumerable<string> dependencies = new string[]
+            {
+                "AppDomainToolkit",
+                "NUnit",
+                "GitTools",
+                "CI",
+                "JBSnorro",
+            };
+
+            var dependencyPaths = dependencies.Select(find).ToList();
+            if (packagesDirectory == null)
+            {
+                Contract.AssertForAll(dependencies, dependencyPath => !dependencyPath.Contains("{0}"), "Cannot find package for '{1}'");
+            }
+
+
+            var dependencyFullPaths = dependencyPaths.Select(path => Path.GetFullPath(string.Format(path, packagesDirectory ?? "", AppDomain.CurrentDomain.BaseDirectory))).ToList();
+            Contract.AssertForAll(dependencyFullPaths, File.Exists, "The specified file '{1}' does not exist");
+
+            copy(dependencyFullPaths);
+
+
+
+
+            // maps the dependency names to the paths where they can be found
+            // the return type should be formatted with {0} the package directory, and {1} by the currently running app domain directory
+            string find(string dependencyName)
+            {
+                switch (dependencyName)
+                {
+                    case "AppDomainToolkit":
+                        return @"{0}\AppDomainToolkit.1.0.4.3\lib\net\AppDomainToolkit.dll";
+                    case "NUnit":
+                        return @"{0}\NUnit.3.9.0\lib\net45\nunit.framework.dll";
+                    case "JBSnorro":
+                        return @"{0}\JBSnorro.CI.dll";
+                    case "GitTools":
+                        return @"{1}\JBSnorro.GitTools.exe";
+                    case "CI":
+                        return @"{1}\JBSnorro.GitTools.CI.exe";
+                    default:
+                        throw new ContractException($"Don't know where to find the dependency '{dependencyName}'");
+                }
+            }
+
+            // returns null if the package directory was not found
+            string getPackagesDirectory(string dir)
+            {
+                var debug = Directory.GetDirectories(dir);
+                if (Directory.GetDirectories(dir).Any(nestedDir => nestedDir.EndsWith(Path.DirectorySeparatorChar + "packages")))
+                    return Path.Combine(dir, "packages");
+
+                var parent = Directory.GetParent(dir);
+
+                return parent == null ? null : getPackagesDirectory(parent.FullName);
+            }
+
+            void copy(IEnumerable<string> fullPaths)
+            {
+                foreach (string fullPath in fullPaths)
+                {
+                    if (File.Exists(fullPath))
+                    {
+                        string destination = Path.Combine(newAppDomainBaseDirectory, Path.GetFileName(fullPath));
+                        if (!File.Exists(destination))
+                            File.Copy(fullPath, destination);
+                    }
+                    else
+                        Logger.Log($"The depend file '{fullPath}' could not be found");
                 }
             }
         }

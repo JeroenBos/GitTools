@@ -53,8 +53,9 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="JBSnorro">
-      <HintPath>D:\ASDE\JBSnorro\bin\x86\Debug\JBSnorro.dll</HintPath>
+    <Reference Include="JBSnorro.CI, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\JBSnorro.CI.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
