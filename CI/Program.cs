@@ -656,6 +656,7 @@ namespace JBSnorro.GitTools.CI
                         // this exception gets thrown because NamedPipeServerStream.WaitForConnectionAsync has a bug: it doesn't cancel when the specified CancellationToken cancels
                         // I can't cancel it using Thread.Abort or something related because the waiting happens in native code (the land where Thread.Abort holds no power)
                         // A workaround would be (I think, because I've read that in comments on referencesource.microsoft.com in NamedPipeServerStream) to use new thread instead of a ThreadPool thread
+                        Logger.Log("Appdomain could not be disposed of");
                     }
                 }
             }
