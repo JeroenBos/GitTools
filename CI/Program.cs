@@ -440,7 +440,7 @@ namespace JBSnorro.GitTools.CI
                     {
                         int indexOfOpeningQuote = e.Message.IndexOf('\'');
                         int indexOfClosingQuote = e.Message.IndexOf('\'', indexOfOpeningQuote + 1);
-                        string file = e.Message.Substring(indexOfOpeningQuote, indexOfClosingQuote - indexOfOpeningQuote);
+                        string file = e.Message.Substring(indexOfOpeningQuote + 1, indexOfClosingQuote - (indexOfOpeningQuote + 1));
 
                         throw new UnauthorizedAccessException($"Access to the path '{Path.Combine(path, file)}' is denied.", e);
                     }
