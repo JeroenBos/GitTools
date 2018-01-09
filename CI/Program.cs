@@ -362,12 +362,22 @@ namespace JBSnorro.GitTools.CI
                 try
                 {
                     DeleteDirectory(destinationDirectory);
-
+                }
+                catch (Exception e)
+                {
+                    error = e.Message;
+                }
+                try
+                {
                     GitCommandLine.Clone(sourceDirectory, destinationDirectory);
-
-                    //explicitly copy packages because git doesn't include those
+                }
+                catch (Exception e)
+                {
+                    error = e.Message;
+                }
+                try
+                {
                     CopyDirectoryIfExists(new DirectoryInfo(Path.Combine(sourceDirectory, "packages")), new DirectoryInfo(Path.Combine(destinationDirectory, "packages")), cancellationToken);
-
                     error = null;
                 }
                 catch (Exception e)
@@ -806,7 +816,7 @@ namespace JBSnorro.GitTools.CI
         /// <param name="binDirectory"> The bin directory where a project is to be built. </param>
         private static void CopyDependenciesToNewAppDomainBaseDirectory(string projectFileDirectory, string newAppDomainBaseDirectory)
         {
-            string packagesDirectory = getPackagesDirectory(newAppDomainBaseDirectory);
+            List<string> packagesDirectories = new string[] { newAppDomainBaseDirectory, AppDomain.CurrentDomain.BaseDirectory }.Select(getPackagesDirectory).Where(p => p != null).ToList();
 
             IEnumerable<string> dependencies = new string[]
             {
@@ -818,16 +828,38 @@ namespace JBSnorro.GitTools.CI
             };
 
             var dependencyPaths = dependencies.Select(find).ToList();
-            if (packagesDirectory == null)
+            if (packagesDirectories.Count == 0)
             {
                 Contract.AssertForAll(dependencies, dependencyPath => !dependencyPath.Contains("{0}"), "Cannot find package for '{1}'");
             }
 
 
-            var dependencyFullPaths = dependencyPaths.Select(path => Path.GetFullPath(string.Format(path, packagesDirectory ?? "", AppDomain.CurrentDomain.BaseDirectory))).ToList();
+            var dependencyFullPaths = dependencyPaths.Select(selectPackageDirectory).ToList();
             Contract.AssertForAll(dependencyFullPaths, File.Exists, "The specified file '{1}' does not exist");
 
             copy(dependencyFullPaths);
+
+
+            string selectPackageDirectory(string path)
+            {
+                if (!path.Contains("{0}")) //doesn't matter
+                {
+                    string result = Path.GetFullPath(string.Format(path, "", AppDomain.CurrentDomain.BaseDirectory));
+                    Contract.Ensures(File.Exists(result), $"The specified file '{result}' does not exist");
+                    return result;
+                }
+
+                Contract.Assert(packagesDirectories.Count != 0, "No package directory was found but was required");
+
+                foreach (string packageDirectory in packagesDirectories)
+                {
+                    string result = Path.GetFullPath(string.Format(path, packageDirectory, AppDomain.CurrentDomain.BaseDirectory));
+                    if (File.Exists(result))
+                        return result;
+                }
+
+                throw new ContractException($"No package directory contains contains the package '{Path.GetFileName(path)}'");
+            }
 
 
 
