@@ -7,6 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -107,5 +108,25 @@ namespace CI.UI
 
             return Convert(reusableBitmap);
         }
+        /// <summary>
+        /// Releases the icon if it is not going to be reused any more.
+        /// </summary>
+        public static void ReleaseIfNecessary(Icon icon)
+        {
+            if (icon == null)
+                return;
+
+            IEnumerable<Icon> reusableIcons = icons.Values;
+            if (!reusableIcons.Contains(icon))
+            {
+                icon.Dispose();
+                if (icon.Handle != IntPtr.Zero)
+                {
+                    DestroyIcon(icon.Handle);
+                }
+            }
+        }
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private extern static bool DestroyIcon(IntPtr handle);
     }
 }

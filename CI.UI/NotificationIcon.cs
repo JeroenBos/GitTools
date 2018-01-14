@@ -136,7 +136,7 @@ namespace CI.UI
 
             if (this.Icon.Visible)
             {
-                RepeatIfNullReferenceException(() => this.Icon.Icon = Icons.GetIcon(this.Status));
+                RepeatIfNullReferenceException(() => SetIcon(Icons.GetIcon(this.Status)));
             }
 
             RefreshContextMenuItems();
@@ -185,7 +185,22 @@ namespace CI.UI
         {
             if (this.Status == NotificationIconStatus.Working)
             {
-                this.Icon.Icon = Icons.GetIcon(NotificationIconStatus.Working, NotificationIconStatus.Ok, this.Percentage);
+                this.SetIcon(Icons.GetIcon(NotificationIconStatus.Working, NotificationIconStatus.Ok, this.Percentage));
+            }
+        }
+        private void SetIcon(System.Drawing.Icon icon)
+        {
+            if (this.Icon.Icon != icon)
+            {
+                var previousIcon = this.Icon.Icon;
+                try
+                {
+                    this.Icon.Icon = icon;
+                }
+                finally
+                {
+                    Icons.ReleaseIfNecessary(previousIcon);
+                }
             }
         }
         private static readonly Action<NotifyIcon, bool> _updateIcon = typeof(NotifyIcon).GetMethod("UpdateIcon", BindingFlags.NonPublic | BindingFlags.Instance).ToAction<NotifyIcon, bool>();
@@ -252,7 +267,6 @@ namespace CI.UI
         {
             IsDisposed = true;
             this.resetTimer.timer?.Dispose();
-            this.Icon.Dispose();
             ProcessExit.Event -= onProcessExit;
         }
 
