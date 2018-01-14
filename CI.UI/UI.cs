@@ -391,7 +391,7 @@ namespace CI.UI
                 {
                     overallStatus = TestResult.Failure;
                     Logger.Log($"{Status.UnhandledException.ToTitle()}: " + e.Message);
-                    throw new ContractException(e.StackTrace);
+                    throw new ContractException(e.Message + " " + e.StackTrace);
                 }
                 finally
                 {

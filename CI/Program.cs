@@ -190,8 +190,9 @@ namespace JBSnorro.GitTools.CI
                 return EnumerableExtensions.Concat(loadSolutionMessages, buildSolutionMessages, testMessages)
                                            .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
             }
-            catch
+            catch (Exception e)
             {
+                Console.WriteLine(e.Message);
                 throw new ContractException();
             }
         }
