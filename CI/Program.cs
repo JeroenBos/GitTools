@@ -838,7 +838,7 @@ namespace JBSnorro.GitTools.CI
             var dependencyFullPaths = dependencyPaths.Select(selectPackageDirectory).ToList();
             Contract.AssertForAll(dependencyFullPaths, File.Exists, "The specified file '{1}' does not exist");
 
-            copy(dependencyFullPaths);
+            copy(dependencyFullPaths, newAppDomainBaseDirectory);
 
 
             string selectPackageDirectory(string path)
@@ -898,13 +898,13 @@ namespace JBSnorro.GitTools.CI
                 return parent == null ? null : getPackagesDirectory(parent.FullName);
             }
 
-            void copy(IEnumerable<string> fullPaths)
+            void copy(IEnumerable<string> fullPaths, string destinationDirectory)
             {
                 foreach (string fullPath in fullPaths)
                 {
                     if (File.Exists(fullPath))
                     {
-                        string destination = Path.Combine(newAppDomainBaseDirectory, Path.GetFileName(fullPath));
+                        string destination = Path.Combine(destinationDirectory, Path.GetFileName(fullPath));
                         if (!File.Exists(destination))
                             File.Copy(fullPath, destination);
                     }
