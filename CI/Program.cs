@@ -184,7 +184,7 @@ namespace JBSnorro.GitTools.CI
 
 
                 IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
-                IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, cancellationToken);
+                IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFile, cancellationToken);
                 IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
 
                 return EnumerableExtensions.Concat(loadSolutionMessages, buildSolutionMessages, testMessages)
@@ -529,10 +529,12 @@ namespace JBSnorro.GitTools.CI
         /// <summary>
         /// Tries to build the solution and returns the projects if successful; otherwise an error message.
         /// </summary>
-        private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<Project> projectsInBuildOrder, CancellationToken cancellationToken)
+        private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<Project> projectsInBuildOrder, string destinationSolutionFile, CancellationToken cancellationToken)
         {
             if (skipBuild)
                 yield break;
+
+            NuGetRestore(destinationSolutionFile);
 
             foreach (var project in projectsInBuildOrder)
             {
@@ -810,6 +812,15 @@ namespace JBSnorro.GitTools.CI
             }
         }
 
+        /// <summary>
+        /// Performs a nuget restore operation.
+        /// </summary>
+        private static void NuGetRestore(string destinationSolutionFile)
+        {
+            string nugetExe = ConfigurationManager.AppSettings["nuget.exe"] ?? throw new AppSettingNotFoundException("nuget.exe");
+
+            ProcessExtensions.StartIndependentlyInvisiblyAsync(nugetExe, destinationSolutionFile).Wait();
+        }
 
         /// <summary>
         /// Copies the dependencies of this project to the bin directory of the new app domain.
@@ -818,7 +829,6 @@ namespace JBSnorro.GitTools.CI
         private static void CopyDependenciesToNewAppDomainBaseDirectory(string projectFileDirectory, string newAppDomainBaseDirectory)
         {
             List<string> packagesDirectories = new string[] { newAppDomainBaseDirectory, AppDomain.CurrentDomain.BaseDirectory }.Select(getPackagesDirectory).Where(p => p != null).ToList();
-
             IEnumerable<string> dependencies = new string[]
             {
                 "AppDomainToolkit",
