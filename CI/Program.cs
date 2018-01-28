@@ -446,13 +446,33 @@ namespace JBSnorro.GitTools.CI
                     {
                         Directory.Delete(path, recursive: true);
                     }
-                    catch (UnauthorizedAccessException e) when (e.Message.Count(c => c == '\'') == 2)
+                    catch (UnauthorizedAccessException)
                     {
-                        int indexOfOpeningQuote = e.Message.IndexOf('\'');
-                        int indexOfClosingQuote = e.Message.IndexOf('\'', indexOfOpeningQuote + 1);
-                        string file = e.Message.Substring(indexOfOpeningQuote + 1, indexOfClosingQuote - (indexOfOpeningQuote + 1));
+                        const int attemptCount = 12;
+                        for (int i = 0; i < attemptCount; i++)
+                        {
+                            Thread.Sleep(1000);
+                            try
+                            {
+                                Directory.Delete(path, recursive: true);
+                                return;
+                            }
+                            catch (UnauthorizedAccessException e)
+                            {
+                                if (i + 1 == attemptCount)
+                                {
+                                    if (e.Message.Count(c => c == '\'') == 2)
+                                    {
+                                        int indexOfOpeningQuote = e.Message.IndexOf('\'');
+                                        int indexOfClosingQuote = e.Message.IndexOf('\'', indexOfOpeningQuote + 1);
+                                        string file = e.Message.Substring(indexOfOpeningQuote + 1, indexOfClosingQuote - (indexOfOpeningQuote + 1));
 
-                        throw new UnauthorizedAccessException($"Access to the path '{Path.Combine(path, file)}' is denied.", e);
+                                        throw new UnauthorizedAccessException($"Access to the path '{Path.Combine(path, file)}' is denied.", e);
+                                    }
+                                    throw;
+                                }
+                            }
+                        }
                     }
                 }
             }
