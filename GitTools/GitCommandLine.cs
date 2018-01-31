@@ -64,22 +64,21 @@ namespace JBSnorro.GitTools
                     info.Arguments = command;
 
                     gitProcess.StartInfo = info;
-                    gitProcess.Start();
 
-                    string error = gitProcess.StandardError.ReadToEnd();
-                    gitProcess.WaitForExit();
-                    if (!string.IsNullOrEmpty(error) && firstCommand && !repeatedCommand)
+                    var (outputs, errors, _) = StartWaitForExitAndReadStreams(gitProcess);
+
+                    if (errors.Count != 0 && firstCommand && !repeatedCommand)
                     {
                         Thread.Sleep(100);
                         repeatedCommand = true;
-                        gitProcess.Start(); // start with same parameters
-                        error = gitProcess.StandardError.ReadToEnd();
-                        gitProcess.WaitForExit();
+
+                        // start with same parameters
+                        (outputs, errors, _) = StartWaitForExitAndReadStreams(gitProcess);
                     }
 
-                    results.Add(gitProcess.StandardOutput.ReadToEnd());
-                    if (!string.IsNullOrEmpty(error))
-                        return (results, error);
+                    results.AddRange(outputs.Select(output => output + "\n"));
+                    if (errors.Count != 0)
+                        return (results, string.Concat(errors.Select(output => output + "\n")));
                     firstCommand = false;
                 }
             }
@@ -159,6 +158,59 @@ namespace JBSnorro.GitTools
             string parentHash = ExecuteWithThrow(repositoryPath, $"log -1 --pretty=format:%P \"{hash}\"").First();
             Contract.Ensures(IsValidCommitHash(parentHash));
             return parentHash;
+        }
+
+        /// <summary>
+        /// Starts the process, waits for exit and reads the output and error streams. 
+        /// </summary>
+        /// <param name="process"> The process to start. </param>
+        /// <param name="timeout">Specify <see cref="int.MaxValue"/> for no timeout. </param>
+        /// <remarks>https://stackoverflow.com/a/7608823/308451</remarks>
+        /// TODO: move to JBSnorro.csproj
+        public static (IList<string> Outputs, IList<string> Errors, bool TimedOut) StartWaitForExitAndReadStreams(Process process, int timeout = int.MaxValue)
+        {
+            Contract.Requires(process != null);
+
+            List<string> outputs = new List<string>();
+            List<string> errors = new List<string>();
+
+            using (AutoResetEvent outputWaitHandle = new AutoResetEvent(false))
+            using (AutoResetEvent errorWaitHandle = new AutoResetEvent(false))
+            {
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (e.Data == null) // if signal that stream is closing
+                    {
+                        outputWaitHandle.Set();
+                    }
+                    else
+                    {
+                        outputs.Add(e.Data);
+                    }
+                };
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (e.Data == null) // if signal that stream is closing
+                    {
+                        errorWaitHandle.Set();
+                    }
+                    else
+                    {
+                        errors.Add(e.Data);
+                    }
+                };
+
+                process.Start();
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                bool timedOut = !(process.WaitForExit(timeout) &&
+                                  outputWaitHandle.WaitOne(timeout) &&
+                                  errorWaitHandle.WaitOne(timeout));
+
+                return (outputs, errors, timedOut);
+            }
         }
 
         public static void Clone(string repositoryPath, string destinationPath)
