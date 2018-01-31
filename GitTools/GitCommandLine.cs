@@ -169,5 +169,28 @@ namespace JBSnorro.GitTools
 
             ExecuteWithThrow(repositoryPath, $"clone --quiet --no-hardlinks \"{repositoryPath}\" \"{destinationPath}\"");
         }
+
+        public static void StashAll(string repositoryPath)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
+
+            var output = Execute(repositoryPath, $"stash --include-untracked --all"); //--quiet
+        }
+        public static void StashIndex(string repositoryPath)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
+
+            var output = Execute(repositoryPath, $"stash --include-untracked --keep-index"); //--quiet
+        }
+
+        /// <returns> whether the pop succeeded; otherwise false, meaning that there are unsaved changes. </returns>
+        public static bool PopStash(string repositoryPath)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
+
+            var output = Execute(repositoryPath, $"stash pop");
+
+            return true;
+        }
     }
 }
