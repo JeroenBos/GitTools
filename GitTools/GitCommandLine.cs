@@ -34,9 +34,9 @@ namespace JBSnorro.GitTools
         /// <param name="commands"> The commands to execute. Should exclude the keyword 'git'. </param>
         public static (IReadOnlyList<string> result, string error) Execute(string repositoryPath, params string[] commands)
         {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
-            Contract.Requires(commands != null);
-            Contract.RequiresForAll(commands, command => command != null);
+            Contract.Requires(!string.IsNullOrEmpty(repositoryPath), "The specified repository path cannot be null or empty");
+            Contract.Requires(commands != null, "No commands were specified to execute");
+            Contract.RequiresForAll(commands, command => command != null, "Commands may not be null");
             Contract.RequiresForAll(commands, command => !command.TrimStart().StartsWith("git "), "Git commands mustn't specify the word 'git' explicitly");
 
             if (commands.Length == 0)
