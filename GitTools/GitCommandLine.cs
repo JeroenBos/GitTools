@@ -244,5 +244,14 @@ namespace JBSnorro.GitTools
 
             return true;
         }
+        /// <summary>
+        /// Pops the stash. Merges the stash with unsaved changes, if any.
+        /// </summary>
+        public static void PopStashAnyway(string repositoryPath)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
+
+            throw new NotImplementedException();
+        }
     }
 }
