@@ -244,15 +244,6 @@ namespace JBSnorro.GitTools
 
             var output = Execute(repositoryPath, $"stash --include-untracked --keep-index"); //--quiet
         }
-        /// <summary>
-        /// Stashes the files in the working stage but leaves the index and untracked files as is. 
-        /// </summary>
-        public static void StashWorkingStage(string repositoryPath)
-        {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
-
-            throw new NotImplementedException();
-        }
 
         /// <returns> whether the pop succeeded; otherwise false, meaning that there are unsaved changes. </returns>
         public static bool PopStash(string repositoryPath)
