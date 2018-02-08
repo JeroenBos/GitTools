@@ -228,6 +228,16 @@ namespace JBSnorro.GitTools
 
             var output = Execute(repositoryPath, $"stash --include-untracked --all"); //--quiet
         }
+        /// <summary>
+        /// Amends the top stash with all current changes. 
+        /// </summary>
+        public static void AmendStashAll(string repositoryPath)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
+
+            throw new NotImplementedException();
+        }
+
         public static void StashIndex(string repositoryPath)
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
