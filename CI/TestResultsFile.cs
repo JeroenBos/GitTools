@@ -152,6 +152,12 @@ namespace JBSnorro.GitTools.CI
         private const int previewLength = 7;
         public static string ToLine(string hash, TestResult result, string commitMessage, int seconds, int testCount)
         {
+            Contract.Requires(GitCommandLine.IsValidCommitHash(hash));
+            Contract.Requires(commitMessage != null);
+
+            // We can't have multiple lines in our .testresults file, so cut the commit message off in case it has more.
+            commitMessage = TakeFirstLine(commitMessage);
+
             if (result == TestResult.Ignored)
                 return null;
 
@@ -198,6 +204,18 @@ namespace JBSnorro.GitTools.CI
             }
 
             return (hash, testResult, timing, testCount);
+        }
+        /// <summary>
+        /// Takes the first line of the specified string, or the entire string if it doesn't contain the newline character.
+        /// </summary>
+        private static string TakeFirstLine(string s)
+        {
+            Contract.Requires(s != null);
+
+            int indexOfNewLine = s.IndexOf("\n");
+            if (indexOfNewLine != -1)
+                return s.Substring(0, indexOfNewLine);
+            return s;
         }
     }
 }
