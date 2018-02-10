@@ -275,7 +275,11 @@ namespace JBSnorro.GitTools
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
 
-            throw new NotImplementedException();
+            Execute(repositoryPath,
+                "commit -a --untracked-files --allow-empty --message=\"temporary pop_stash_anyway commit\"",
+                "stash apply",
+                "stash drop",
+                "reset head~ -q");
         }
     }
 }
