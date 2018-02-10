@@ -115,7 +115,7 @@ namespace JBSnorro.GitTools
             for (int i = errors.Count - 1; i >= 0; i--)
             {
                 string error = errors[i];
-                if (error.IsAnyOf("CI not enabled", 
+                if (error.IsAnyOf("CI not enabled",
                                   "Disposing started UI")
                  || error.StartsWith("in dispatcher. args: "))
                 {
@@ -294,17 +294,20 @@ namespace JBSnorro.GitTools
         /// <summary>
         /// Pops the stash. Merges the stash with unsaved changes, if any.
         /// </summary>
-        public static void PopStashAnyway(string repositoryPath)
+        /// <returns> whether the pop stash anyway operation succeeded. </returns>
+        public static bool PopStashAnyway(string repositoryPath)
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
 
             using (new TemporaryCIDisabler(repositoryPath))
             {
-                Execute(repositoryPath,
+                var (outputs, error) = Execute(repositoryPath,
                     "commit -a --untracked-files --allow-empty --no-verify --no-post-rewrite --message=\"temporary pop_stash_anyway commit\"",
                     "stash apply",
                     "stash drop",
                     "reset head~ -q");
+
+                return error == null;
             }
         }
     }
