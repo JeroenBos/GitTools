@@ -227,7 +227,7 @@ namespace JBSnorro.GitTools
                 {
                     process.OutputDataReceived += onOutputReceived;
                     process.ErrorDataReceived += onErrorReceived;
-                    
+
                     process.Start();
 
                     process.BeginOutputReadLine();
@@ -298,11 +298,14 @@ namespace JBSnorro.GitTools
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
 
-            Execute(repositoryPath,
-                "commit -a --untracked-files --allow-empty --message=\"temporary pop_stash_anyway commit\"",
-                "stash apply",
-                "stash drop",
-                "reset head~ -q");
+            using (new TemporaryCIDisabler(repositoryPath))
+            {
+                Execute(repositoryPath,
+                    "commit -a --untracked-files --allow-empty --no-verify --no-post-rewrite --message=\"temporary pop_stash_anyway commit\"",
+                    "stash apply",
+                    "stash drop",
+                    "reset head~ -q");
+            }
         }
     }
 }
