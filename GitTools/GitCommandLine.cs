@@ -177,7 +177,7 @@ namespace JBSnorro.GitTools
             using (AutoResetEvent outputWaitHandle = new AutoResetEvent(false))
             using (AutoResetEvent errorWaitHandle = new AutoResetEvent(false))
             {
-                process.OutputDataReceived += (sender, e) =>
+                void onOutputReceived(object sender, DataReceivedEventArgs e)
                 {
                     if (e.Data == null) // if signal that stream is closing
                     {
@@ -187,8 +187,8 @@ namespace JBSnorro.GitTools
                     {
                         outputs.Add(e.Data);
                     }
-                };
-                process.ErrorDataReceived += (sender, e) =>
+                }
+                void onErrorReceived(object sender, DataReceivedEventArgs e)
                 {
                     if (e.Data == null) // if signal that stream is closing
                     {
@@ -198,18 +198,32 @@ namespace JBSnorro.GitTools
                     {
                         errors.Add(e.Data);
                     }
-                };
+                }
 
-                process.Start();
+                try
+                {
+                    process.OutputDataReceived += onOutputReceived;
+                    process.ErrorDataReceived += onErrorReceived;
+                    
+                    process.Start();
 
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
 
-                bool timedOut = !(process.WaitForExit(timeout) &&
-                                  outputWaitHandle.WaitOne(timeout) &&
-                                  errorWaitHandle.WaitOne(timeout));
+                    bool timedOut = !(process.WaitForExit(timeout)
+                                  && outputWaitHandle.WaitOne(timeout)
+                                  && errorWaitHandle.WaitOne(timeout));
 
-                return (outputs, errors, timedOut);
+                    return (outputs, errors, timedOut);
+                }
+                finally
+                {
+                    process.OutputDataReceived -= onOutputReceived;
+                    process.ErrorDataReceived -= onErrorReceived;
+
+                    process.CancelOutputRead();
+                    process.CancelErrorRead();
+                }
             }
         }
 
