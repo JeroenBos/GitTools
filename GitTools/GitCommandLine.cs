@@ -272,7 +272,9 @@ namespace JBSnorro.GitTools
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
 
-            throw new NotImplementedException();
+            bool success = PopStashAnyway(repositoryPath);
+            if (success)
+                StashAll(repositoryPath);
         }
 
         public static void StashIndex(string repositoryPath)
