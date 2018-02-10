@@ -10,6 +10,7 @@ using System.IO.Pipes;
 using System.Threading;
 using System.Threading.Tasks;
 using JBSnorro.GitTools.CI;
+using JBSnorro.GitTools;
 
 namespace CI
 {
@@ -45,6 +46,13 @@ namespace CI
             {
                 IDisposable ui = null;
                 Logger.Log("in dispatcher. args: " + string.Join(" ", args.Select(arg => '"' + arg + '"')));
+
+                if (IsCIDisabled(args))
+                {
+                    Logger.Log("CI not enabled");
+                    return;
+                }
+
                 try
                 {
                     if (args.Length > 0 && args[0] == START_UI_ARG)
@@ -90,6 +98,26 @@ namespace CI
             return string.Join(CIReceivingPipe.PipeMessageSeparator, args);
         }
 
+        /// <summary>
+        /// Reads from the main arguments whether the CI is disabled. So this method knows about the contents of the arguments, whereas in the rest of the dispatcher they're simply concatenated and passed on.
+        /// I chose this because reading them (after having been passed on) happens asynchronously and thus the CI disabled flag may be removed by the time it is read.
+        /// </summary>
+        private static bool IsCIDisabled(string[] args)
+        {
+            try
+            {
+                string file = args[2];
+                string solutionDirectory = Path.GetDirectoryName(file);
+                Contract.Assert(Directory.Exists(solutionDirectory), $"Directory '{solutionDirectory}' does not exist");
+
+                return TemporaryCIDisabler.IsDisabled(solutionDirectory);
+            }
+            catch (Exception e)
+            {
+                Logger.Log(e.Message);
+                return false;
+            }
+        }
         private static NamedPipeServerStream TrySetupConnection(CancellationToken cancellationToken)
         {
             if (!inProcessUIIsRunning && Process.GetProcessesByName("CI.UI").Length == 0)

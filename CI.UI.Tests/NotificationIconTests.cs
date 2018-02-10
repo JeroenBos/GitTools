@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using JBSnorro.GitTools;
 using JBSnorro.GitTools.CI;
 using NUnit.Framework;
 using static CI.UI.NotificationIcon;
