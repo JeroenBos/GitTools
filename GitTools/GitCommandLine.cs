@@ -32,7 +32,7 @@ namespace JBSnorro.GitTools
         /// Invokes the specified commands on the specified repository and returns the results or an error.
         /// </summary>
         /// <param name="commands"> The commands to execute. Should exclude the keyword 'git'. </param>
-        public static (IReadOnlyList<string> result, string error) Execute(string repositoryPath, params string[] commands)
+        public static (IReadOnlyList<string> Result, string Error) Execute(string repositoryPath, params string[] commands)
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath), "The specified repository path cannot be null or empty");
             Contract.Requires(commands != null, "No commands were specified to execute");
@@ -66,6 +66,7 @@ namespace JBSnorro.GitTools
                     gitProcess.StartInfo = info;
 
                     var (outputs, errors, _) = StartWaitForExitAndReadStreams(gitProcess);
+                    SortOutOutputs(outputs, errors);
 
                     if (errors.Count != 0 && firstCommand && !repeatedCommand)
                     {
@@ -74,6 +75,7 @@ namespace JBSnorro.GitTools
 
                         // start with same parameters
                         (outputs, errors, _) = StartWaitForExitAndReadStreams(gitProcess);
+                        SortOutOutputs(outputs, errors);
                     }
 
                     results.AddRange(outputs.Select(output => output + "\n"));
@@ -99,6 +101,27 @@ namespace JBSnorro.GitTools
             else
             {
                 return results;
+            }
+        }
+        /// <summary>
+        /// Sometimes git writes to stderr when it should have written to stdout. 
+        /// This methods aims at hardcodedly sorting that mess out by moving the erroneously written to the error stream from the errors to the outputs.
+        /// </summary>
+        private static void SortOutOutputs(IList<string> outputs, IList<string> errors)
+        {
+            Contract.Requires(outputs != null);
+            Contract.Requires(errors != null);
+
+            for (int i = errors.Count - 1; i >= 0; i--)
+            {
+                string error = errors[i];
+                if (error.IsAnyOf("CI not enabled", 
+                                  "Disposing started UI")
+                 || error.StartsWith("in dispatcher. args: "))
+                {
+                    outputs.Add(error);
+                    errors.RemoveAt(i);
+                }
             }
         }
 
