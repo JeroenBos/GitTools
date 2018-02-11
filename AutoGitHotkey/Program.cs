@@ -109,7 +109,7 @@ namespace JBSnorro.AutoGitHotkey
         private static string GetRepositoryPath(string windowTitle)
         {
             const string gitTitleStart = "Administrator: posh~git ~ ";
-            const string vsTitleEnd = "Microsoft Visual Studio (Administrator)";
+            const string vsTitleEnd = "Microsoft Visual Studio  (Administrator)";
 
             string projectStart = null;
             if (windowTitle.StartsWith(gitTitleStart))

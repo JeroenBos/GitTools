@@ -14,7 +14,7 @@ namespace JBSnorro.AutoGitHotkey.Tests
         [TestMethod]
         public void GetPathFromConfigFile()
         {
-            IActiveWindowTitle titleGetter = new MockActiveWindow("ASDE - Microsoft Visual Studio (Administrator)");
+            IActiveWindowTitle titleGetter = new MockActiveWindow("ASDE - Microsoft Visual Studio  (Administrator)");
             string path = Program.GetRepositoryPath(titleGetter);
             Assert.IsTrue(DirectoryPathEqualityComparer.Equals(@"D:\ASDE", path));
         }
@@ -22,7 +22,7 @@ namespace JBSnorro.AutoGitHotkey.Tests
         [TestMethod]
         public void FailToGetPathFromConfigFile()
         {
-            IActiveWindowTitle titleGetter = new MockActiveWindow("Doesn't exist - Microsoft Visual Studio (Administrator)");
+            IActiveWindowTitle titleGetter = new MockActiveWindow("Doesn't exist - Microsoft Visual Studio  (Administrator)");
 
             string path = Program.GetRepositoryPath(titleGetter);
 
