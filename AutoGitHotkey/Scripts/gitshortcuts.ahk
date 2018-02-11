@@ -8,5 +8,5 @@
 
 applyShortcut(arg)
 {
-	Run, D:\GitTools\AutoGitHotkey\bin\x86\Debug\JBSnorro.AutoGitHotkey.exe %arg%
+	Run, D:\GitTools\AutoGitHotkey\bin\x86\Debug\JBSnorro.AutoGitHotkey.exe %arg%,, Hide
 }
