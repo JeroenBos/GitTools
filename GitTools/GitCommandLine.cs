@@ -49,20 +49,20 @@ namespace JBSnorro.GitTools
             this.RedirectOutput = redirectOutput;
         }
 
-        public void Execute(params string[] commands)
+        public bool Execute(params string[] commands)
         {
-            if (commands.Length == 0)
-                return;
-
-            bool executed = false;
+            bool executedSuccessfully = false;
             if (this.RedirectOutput)
             {
-                executed = TrySendToExistingCLI(commands);
+                executedSuccessfully = TrySendToExistingCLI(commands);
             }
-            if (!executed)
+            if (!executedSuccessfully) // if executed unsuccessfully, an exception was thrown
             {
-                ExecuteOnNewProcess(commands);
+                var (_, errorMessage) = ExecuteOnNewProcess(commands);
+                executedSuccessfully = errorMessage == null;
             }
+
+            return executedSuccessfully;
         }
         /// <summary>
         /// Invokes the specified commands on the specified repository and returns the results or an error.
@@ -182,7 +182,7 @@ namespace JBSnorro.GitTools
                 string message = "git " + command + (char)VK_RETURN;
                 bool success = Send(cli, message);
                 if (!success)
-                    return false;
+                    throw new Exception("Sending keystroke failed");
             }
             return true;
 
@@ -376,13 +376,10 @@ namespace JBSnorro.GitTools
         {
             using (new TemporaryCIDisabler(this.RepositoryPath))
             {
-                var (outputs, error) = ExecuteOnNewProcess(
-                    "commit -a --untracked-files --allow-empty --no-verify --no-post-rewrite --message=\"temporary pop_stash_anyway commit\"",
-                    "stash apply",
-                    "stash drop",
-                    "reset head~ -q");
-
-                return error == null;
+                return Execute("commit -a --untracked-files --allow-empty --no-verify --no-post-rewrite --message=\"temporary pop_stash_anyway commit\"",
+                               "stash apply",
+                               "stash drop",
+                               "reset head~");
             }
         }
     }
