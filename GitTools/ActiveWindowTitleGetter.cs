@@ -28,15 +28,6 @@ namespace JBSnorro.GitTools
 
             return handle.GetWindowText();
         }
-        /// <summary>
-        /// Gets the title of the specified process.
-        /// </summary>
-        public static string GetWindowText(this Process process)
-        {
-            Contract.Requires(process != null);
-
-            return process.Handle.GetWindowText();
-        }
 
         private static string GetWindowText(this IntPtr handle)
         {
@@ -55,6 +46,6 @@ namespace JBSnorro.GitTools
         private static extern IntPtr GetForegroundWindow();
         [DllImport("user32.dll")]
         private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
-        
+
     }
 }
