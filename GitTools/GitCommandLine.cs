@@ -5,6 +5,7 @@ using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -34,20 +35,40 @@ namespace JBSnorro.GitTools
         /// Gets the directory the git commands are invoked on.
         /// </summary>
         public string RepositoryPath { get; }
+        /// <summary>
+        /// Gets or sets whether the output of any git command is redirected to any git bash CLI, if found.
+        /// </summary>
+        public bool RedirectOutput { get; set; }
 
         /// <param name="repositoryPath"> The directory the git commands are invoked on</param>
-        public GitCommandLine(string repositoryPath)
+        public GitCommandLine(string repositoryPath, bool redirectOutput = true)
         {
             Contract.Requires(!string.IsNullOrEmpty(repositoryPath), "The specified repository path cannot be null or empty");
 
             this.RepositoryPath = repositoryPath;
+            this.RedirectOutput = redirectOutput;
         }
 
+        public void Execute(params string[] commands)
+        {
+            if (commands.Length == 0)
+                return;
+
+            bool executed = false;
+            if (this.RedirectOutput)
+            {
+                executed = TrySendToExistingCLI(commands);
+            }
+            if (!executed)
+            {
+                ExecuteOnNewProcess(commands);
+            }
+        }
         /// <summary>
         /// Invokes the specified commands on the specified repository and returns the results or an error.
         /// </summary>
         /// <param name="commands"> The commands to execute. Should exclude the keyword 'git'. </param>
-        public (IReadOnlyList<string> Result, string Error) Execute(params string[] commands)
+        private (IReadOnlyList<string> Result, string Error) ExecuteOnNewProcess(params string[] commands)
         {
             Contract.Requires(commands != null, "No commands were specified to execute");
             Contract.RequiresForAll(commands, command => command != null, "Commands may not be null");
@@ -105,9 +126,9 @@ namespace JBSnorro.GitTools
         /// Invokes the specified commands on the specified repository and returns the results; or throws the error if one occurred.
         /// </summary>
         /// <param name="commands"> The commands to execute. Should exclude the keyword 'git'. </param>
-        public IReadOnlyList<string> ExecuteWithThrow(params string[] commands)
+        public IReadOnlyList<string> ExecuteOnNewProcessWithThrow(params string[] commands)
         {
-            var (results, error) = Execute(commands);
+            var (results, error) = ExecuteOnNewProcess(commands);
             if (error != null)
             {
                 throw new GitCommandException(error);
@@ -139,12 +160,61 @@ namespace JBSnorro.GitTools
             }
         }
 
+        [DllImport("user32.dll")]
+        private static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+        /// <summary>
+        /// Tries to send the specified commands to an existing git CLI.
+        /// </summary>
+        /// <returns> whether the commands were successfully received and executed. </returns>
+        private static bool TrySendToExistingCLI(params string[] commands)
+        {
+            Contract.Requires(commands != null);
+            if (commands.Length == 0)
+                return true;
+
+            var cli = FindGitProcess();
+            if (cli == null)
+                return false;
+
+            const Int32 VK_RETURN = 0x0D;
+            foreach (var command in commands)
+            {
+                string message = "git " + command + (char)VK_RETURN;
+                bool success = Send(cli, message);
+                if (!success)
+                    return false;
+            }
+            return true;
+
+            Process FindGitProcess()
+            {
+                return Process.GetProcesses().FirstOrDefault(process => process.MainWindowTitle?.StartsWith("Administrator: posh~git ~ ") ?? false);
+            }
+        }
+        /// <summary>
+        /// Sends the specified message to the specified process.
+        /// </summary>
+        private static bool Send(Process process, string message)
+        {
+            Contract.Requires(process != null);
+            Contract.Requires(message != null);
+
+            const int WM_CHAR = 0x0102;
+            for (int i = 0; i < message.Length; i++)
+            {
+                bool success = PostMessage(process.MainWindowHandle, WM_CHAR, (IntPtr)message[i], IntPtr.Zero);
+                if (!success)
+                    return false;
+            }
+            return true;
+        }
+
         /// <summary>
         /// Gets the hash of the current commit; or throws if somehow an error is thrown during execution.
         /// </summary>
         public string GetCurrentCommitHash()
         {
-            var output = ExecuteWithThrow("rev-parse head").Single();
+            var output = ExecuteOnNewProcessWithThrow("rev-parse head").Single();
             Contract.Assert(output.Length == CommitHashLength + "\n".Length);
             Contract.Assert(output.Last() == '\n');
             var result = output.Substring(0, CommitHashLength);
@@ -158,7 +228,7 @@ namespace JBSnorro.GitTools
         {
             Contract.Requires(IsValidCommitHash(hash));
 
-            ExecuteWithThrow("checkout " + hash);
+            ExecuteOnNewProcessWithThrow("checkout " + hash);
         }
         /// <summary>
         /// Checks out the specified commit in the repository with option '--hard'.
@@ -174,7 +244,7 @@ namespace JBSnorro.GitTools
         {
             Contract.Requires(IsValidCommitHash(hash));
 
-            ExecuteWithThrow("reset --hard " + hash);
+            ExecuteOnNewProcessWithThrow("reset --hard " + hash);
         }
         /// <summary>
         /// Gets the commit message of the commit with the specified hash.
@@ -183,7 +253,7 @@ namespace JBSnorro.GitTools
         {
             Contract.Requires(IsValidCommitHash(hash));
 
-            return ExecuteWithThrow("log -1 --pretty=format:%s " + hash).First();
+            return ExecuteOnNewProcessWithThrow("log -1 --pretty=format:%s " + hash).First();
         }
         /// <summary>
         /// Gets the hash of the parent of the specified hash.
@@ -192,7 +262,7 @@ namespace JBSnorro.GitTools
         {
             Contract.Requires(IsValidCommitHash(hash));
 
-            string parentHash = ExecuteWithThrow($"log -1 --pretty=format:%P \"{hash}\"").First();
+            string parentHash = ExecuteOnNewProcessWithThrow($"log -1 --pretty=format:%P \"{hash}\"").First();
             Contract.Ensures(IsValidCommitHash(parentHash));
             return parentHash;
         }
@@ -269,12 +339,12 @@ namespace JBSnorro.GitTools
             Contract.Requires(!string.IsNullOrEmpty(destinationPath));
             Contract.Requires(!Directory.Exists(destinationPath) || Directory.GetFiles(destinationPath).Length == 0, "You cannot clone into a non-empty directory");
 
-            ExecuteWithThrow($"clone --quiet --no-hardlinks \"{this.RepositoryPath}\" \"{destinationPath}\"");
+            ExecuteOnNewProcessWithThrow($"clone --quiet --no-hardlinks \"{this.RepositoryPath}\" \"{destinationPath}\"");
         }
 
         public void StashAll()
         {
-            var output = Execute($"stash --include-untracked --all"); //--quiet
+            Execute($"stash --include-untracked --all"); //--quiet
         }
         /// <summary>
         /// Amends the top stash with all current changes. 
@@ -288,13 +358,13 @@ namespace JBSnorro.GitTools
 
         public void StashIndex()
         {
-            var output = Execute($"stash --include-untracked --keep-index"); //--quiet
+            Execute($"stash --include-untracked --keep-index"); //--quiet
         }
 
         /// <returns> whether the pop succeeded; otherwise false, meaning that there are unsaved changes. </returns>
         public bool PopStash()
         {
-            var output = Execute($"stash pop");
+            Execute($"stash pop");
 
             return true;
         }
@@ -306,7 +376,7 @@ namespace JBSnorro.GitTools
         {
             using (new TemporaryCIDisabler(this.RepositoryPath))
             {
-                var (outputs, error) = Execute(
+                var (outputs, error) = ExecuteOnNewProcess(
                     "commit -a --untracked-files --allow-empty --no-verify --no-post-rewrite --message=\"temporary pop_stash_anyway commit\"",
                     "stash apply",
                     "stash drop",
