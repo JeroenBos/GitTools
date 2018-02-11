@@ -1,6 +1,7 @@
 ﻿using JBSnorro.Diagnostics;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -27,7 +28,7 @@ namespace JBSnorro.GitTools
         /// <summary>
         /// Gets or sets the path of the git executable.
         /// </summary>
-        public static string GitPath = @"C:\Program Files\Git\bin\git.exe";
+        public static string GitPath => ConfigurationManager.AppSettings["gitpath"] ?? throw new AppSettingNotFoundException("gitpath");
         /// <summary>
         /// Invokes the specified commands on the specified repository and returns the results or an error.
         /// </summary>
