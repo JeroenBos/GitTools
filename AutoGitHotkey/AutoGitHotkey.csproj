@@ -54,11 +54,9 @@
     <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="JBSnorro">
+    <Reference Include="JBSnorro, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\ASDE\JBSnorro\bin\x86\Debug\JBSnorro.dll</HintPath>
-    </Reference>
-    <Reference Include="JBSnorro.GitTools">
-      <HintPath>..\..\GitTools\GitTools\bin\x86\Debug\JBSnorro.GitTools.exe</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
@@ -74,6 +72,12 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="Scripts\gitshortcuts.ahk" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GitTools\GitTools.csproj">
+      <Project>{e5df85d7-f393-4435-a565-883aa70951cd}</Project>
+      <Name>GitTools</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
