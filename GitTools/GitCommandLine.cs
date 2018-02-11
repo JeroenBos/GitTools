@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace JBSnorro.GitTools
 {
-    public static class GitCommandLine
+    public sealed class GitCommandLine
     {
         public const int CommitHashLength = 40;
         private static readonly Regex hashRegex = new Regex($"^[a-fA-F0-9]{CommitHashLength}$");
@@ -29,13 +29,26 @@ namespace JBSnorro.GitTools
         /// Gets or sets the path of the git executable.
         /// </summary>
         public static string GitPath => ConfigurationManager.AppSettings["gitpath"] ?? throw new AppSettingNotFoundException("gitpath");
+
+        /// <summary>
+        /// Gets the directory the git commands are invoked on.
+        /// </summary>
+        public string RepositoryPath { get; }
+
+        /// <param name="repositoryPath"> The directory the git commands are invoked on</param>
+        public GitCommandLine(string repositoryPath)
+        {
+            Contract.Requires(!string.IsNullOrEmpty(repositoryPath), "The specified repository path cannot be null or empty");
+
+            this.RepositoryPath = repositoryPath;
+        }
+
         /// <summary>
         /// Invokes the specified commands on the specified repository and returns the results or an error.
         /// </summary>
         /// <param name="commands"> The commands to execute. Should exclude the keyword 'git'. </param>
-        public static (IReadOnlyList<string> Result, string Error) Execute(string repositoryPath, params string[] commands)
+        public (IReadOnlyList<string> Result, string Error) Execute(params string[] commands)
         {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath), "The specified repository path cannot be null or empty");
             Contract.Requires(commands != null, "No commands were specified to execute");
             Contract.RequiresForAll(commands, command => command != null, "Commands may not be null");
             Contract.RequiresForAll(commands, command => !command.TrimStart().StartsWith("git "), "Git commands mustn't specify the word 'git' explicitly");
@@ -46,7 +59,7 @@ namespace JBSnorro.GitTools
             ProcessStartInfo info = new ProcessStartInfo()
             {
                 FileName = GitPath,
-                WorkingDirectory = repositoryPath,
+                WorkingDirectory = this.RepositoryPath,
                 CreateNoWindow = true,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
@@ -92,9 +105,9 @@ namespace JBSnorro.GitTools
         /// Invokes the specified commands on the specified repository and returns the results; or throws the error if one occurred.
         /// </summary>
         /// <param name="commands"> The commands to execute. Should exclude the keyword 'git'. </param>
-        public static IReadOnlyList<string> ExecuteWithThrow(string repositoryPath, params string[] commands)
+        public IReadOnlyList<string> ExecuteWithThrow(params string[] commands)
         {
-            var (results, error) = Execute(repositoryPath, commands);
+            var (results, error) = Execute(commands);
             if (error != null)
             {
                 throw new GitCommandException(error);
@@ -129,9 +142,9 @@ namespace JBSnorro.GitTools
         /// <summary>
         /// Gets the hash of the current commit; or throws if somehow an error is thrown during execution.
         /// </summary>
-        public static string GetCurrentCommitHash(string repositoryPath)
+        public string GetCurrentCommitHash()
         {
-            var output = ExecuteWithThrow(repositoryPath, "rev-parse head").Single();
+            var output = ExecuteWithThrow("rev-parse head").Single();
             Contract.Assert(output.Length == CommitHashLength + "\n".Length);
             Contract.Assert(output.Last() == '\n');
             var result = output.Substring(0, CommitHashLength);
@@ -141,45 +154,45 @@ namespace JBSnorro.GitTools
         /// <summary>
         /// Checks out the specified commit in the repository.
         /// </summary>
-        public static void Checkout(string repositoryPath, string hash)
+        public void Checkout(string hash)
         {
             Contract.Requires(IsValidCommitHash(hash));
 
-            ExecuteWithThrow(repositoryPath, "checkout " + hash);
+            ExecuteWithThrow("checkout " + hash);
         }
         /// <summary>
         /// Checks out the specified commit in the repository with option '--hard'.
         /// </summary>
-        public static void CheckoutHard(string repositoryPath, string hash)
+        public void CheckoutHard(string hash)
         {
-            ResetHard(repositoryPath, hash);
+            ResetHard(hash);
         }
         /// <summary>
         /// Checks out the specified commit in the repository with option '--hard'.
         /// </summary>
-        public static void ResetHard(string repositoryPath, string hash)
+        public void ResetHard(string hash)
         {
             Contract.Requires(IsValidCommitHash(hash));
 
-            ExecuteWithThrow(repositoryPath, "reset --hard " + hash);
+            ExecuteWithThrow("reset --hard " + hash);
         }
         /// <summary>
         /// Gets the commit message of the commit with the specified hash.
         /// </summary>
-        public static string GetCommitMessage(string repositoryPath, string hash)
+        public string GetCommitMessage(string hash)
         {
             Contract.Requires(IsValidCommitHash(hash));
 
-            return ExecuteWithThrow(repositoryPath, "log -1 --pretty=format:%s " + hash).First();
+            return ExecuteWithThrow("log -1 --pretty=format:%s " + hash).First();
         }
         /// <summary>
         /// Gets the hash of the parent of the specified hash.
         /// </summary>
-        public static string GetParentCommitHash(string repositoryPath, string hash)
+        public string GetParentCommitHash(string hash)
         {
             Contract.Requires(IsValidCommitHash(hash));
 
-            string parentHash = ExecuteWithThrow(repositoryPath, $"log -1 --pretty=format:%P \"{hash}\"").First();
+            string parentHash = ExecuteWithThrow($"log -1 --pretty=format:%P \"{hash}\"").First();
             Contract.Ensures(IsValidCommitHash(parentHash));
             return parentHash;
         }
@@ -251,46 +264,37 @@ namespace JBSnorro.GitTools
             }
         }
 
-        public static void Clone(string repositoryPath, string destinationPath)
+        public void Clone(string destinationPath)
         {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
             Contract.Requires(!string.IsNullOrEmpty(destinationPath));
             Contract.Requires(!Directory.Exists(destinationPath) || Directory.GetFiles(destinationPath).Length == 0, "You cannot clone into a non-empty directory");
 
-            ExecuteWithThrow(repositoryPath, $"clone --quiet --no-hardlinks \"{repositoryPath}\" \"{destinationPath}\"");
+            ExecuteWithThrow($"clone --quiet --no-hardlinks \"{this.RepositoryPath}\" \"{destinationPath}\"");
         }
 
-        public static void StashAll(string repositoryPath)
+        public void StashAll()
         {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
-
-            var output = Execute(repositoryPath, $"stash --include-untracked --all"); //--quiet
+            var output = Execute($"stash --include-untracked --all"); //--quiet
         }
         /// <summary>
         /// Amends the top stash with all current changes. 
         /// </summary>
-        public static void AmendStashAll(string repositoryPath)
+        public void AmendStashAll()
         {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
-
-            bool success = PopStashAnyway(repositoryPath);
+            bool success = PopStashAnyway();
             if (success)
-                StashAll(repositoryPath);
+                StashAll();
         }
 
-        public static void StashIndex(string repositoryPath)
+        public void StashIndex()
         {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
-
-            var output = Execute(repositoryPath, $"stash --include-untracked --keep-index"); //--quiet
+            var output = Execute($"stash --include-untracked --keep-index"); //--quiet
         }
 
         /// <returns> whether the pop succeeded; otherwise false, meaning that there are unsaved changes. </returns>
-        public static bool PopStash(string repositoryPath)
+        public bool PopStash()
         {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
-
-            var output = Execute(repositoryPath, $"stash pop");
+            var output = Execute($"stash pop");
 
             return true;
         }
@@ -298,13 +302,11 @@ namespace JBSnorro.GitTools
         /// Pops the stash. Merges the stash with unsaved changes, if any.
         /// </summary>
         /// <returns> whether the pop stash anyway operation succeeded. </returns>
-        public static bool PopStashAnyway(string repositoryPath)
+        public bool PopStashAnyway()
         {
-            Contract.Requires(!string.IsNullOrEmpty(repositoryPath));
-
-            using (new TemporaryCIDisabler(repositoryPath))
+            using (new TemporaryCIDisabler(this.RepositoryPath))
             {
-                var (outputs, error) = Execute(repositoryPath,
+                var (outputs, error) = Execute(
                     "commit -a --untracked-files --allow-empty --no-verify --no-post-rewrite --message=\"temporary pop_stash_anyway commit\"",
                     "stash apply",
                     "stash drop",

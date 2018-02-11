@@ -31,7 +31,7 @@ namespace CI.UI.Tests
             using (Dispatcher.StartCIUI(icon))
             {
                 string slnPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\Tests.sln"));
-                string hash = GitCommandLine.GetCurrentCommitHash(Path.GetDirectoryName(slnPath));
+                string hash = new GitCommandLine(Path.GetDirectoryName(slnPath)).GetCurrentCommitHash();
                 Contract.Assert<NotImplementedException>(!slnPath.Contains(' '));
 
                 //Act

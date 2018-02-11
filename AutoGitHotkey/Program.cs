@@ -58,22 +58,23 @@ namespace JBSnorro.AutoGitHotkey
             Contract.Requires(!string.IsNullOrEmpty(operation), $"{nameof(operation)} is null or empty");
             Contract.Requires(!string.IsNullOrEmpty(path), $"{nameof(path)} is null or empty");
 
+            var cli = new GitCommandLine(path);
             switch (operation)
             {
                 case STASH:
-                    GitCommandLine.StashAll(path);
+                    cli.StashAll();
                     break;
                 case STASH_INDEX:
-                    GitCommandLine.StashIndex(path);
+                    cli.StashIndex();
                     break;
                 case POP:
-                    GitCommandLine.PopStash(path);
+                    cli.PopStash();
                     break;
                 case POP_ANYWAY:
-                    GitCommandLine.PopStashAnyway(path);
+                    cli.PopStashAnyway();
                     break;
                 case POP_AND_ASK_FOR_ANYWAY:
-                    bool success = GitCommandLine.PopStash(path);
+                    bool success = cli.PopStash();
                     if (!success)
                     {
                         var result = MessageBox.Show("Would you like to stash pop into unsaved changes? ", "Unsaved changes", MessageBoxButtons.OKCancel);
@@ -84,7 +85,7 @@ namespace JBSnorro.AutoGitHotkey
                     }
                     break;
                 case AMEND_STASH:
-                    GitCommandLine.AmendStashAll(path);
+                    cli.AmendStashAll();
                     break;
                 default:
                     throw new DefaultSwitchCaseUnreachableException();

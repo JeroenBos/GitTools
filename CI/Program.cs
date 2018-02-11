@@ -173,7 +173,7 @@ namespace JBSnorro.GitTools.CI
                     return (Status.CopyingError, error).ToSingleton();
                 }
 
-                GitCommandLine.CheckoutHard(destinationDirectory, hash);
+                new GitCommandLine(destinationDirectory).CheckoutHard(hash);
 
                 var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
                 if (error != null)
@@ -301,7 +301,7 @@ namespace JBSnorro.GitTools.CI
 
             try
             {
-                commitMessage = GitCommandLine.GetCommitMessage(sourceDirectory, hash);
+                commitMessage = new GitCommandLine(sourceDirectory).GetCommitMessage(hash);
                 bool skip = GetAllIgnorePrefixes().Any(commitMessage.StartsWith);
                 error = skip ? "The commit message starts with a prefix signaling to ignore" : null;
                 return skip;
@@ -325,7 +325,7 @@ namespace JBSnorro.GitTools.CI
         {
             try
             {
-                string parentHash = GitCommandLine.GetParentCommitHash(sourceDirectory, hash);
+                string parentHash = new GitCommandLine(sourceDirectory).GetParentCommitHash(hash);
                 if (resultsFile.Hashes.TryGetValue(parentHash, out TestResult testResult) && testResult == TestResult.Failure)
                 {
                     error = "The parent commit already failed";
@@ -370,7 +370,7 @@ namespace JBSnorro.GitTools.CI
                 }
                 try
                 {
-                    GitCommandLine.Clone(sourceDirectory, destinationDirectory);
+                    new GitCommandLine(sourceDirectory).Clone(destinationDirectory);
                 }
                 catch (Exception e)
                 {
