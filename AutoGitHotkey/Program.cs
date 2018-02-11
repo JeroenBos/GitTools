@@ -29,6 +29,7 @@ namespace JBSnorro.AutoGitHotkey
                 yield return POP;
                 yield return POP_ANYWAY;
                 yield return POP_AND_ASK_FOR_ANYWAY;
+                yield return AMEND_STASH;
             }
         }
         static void Main(string[] args)
