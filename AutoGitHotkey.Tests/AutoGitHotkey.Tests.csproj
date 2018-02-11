@@ -88,6 +88,10 @@
       <Project>{D30B9F01-4555-407B-9F87-4E070BD856D3}</Project>
       <Name>AutoGitHotkey</Name>
     </ProjectReference>
+    <ProjectReference Include="..\GitTools\GitTools.csproj">
+      <Project>{E5DF85D7-F393-4435-A565-883AA70951CD}</Project>
+      <Name>GitTools</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

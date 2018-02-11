@@ -5,13 +5,13 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace JBSnorro.AutoGitHotkey
+namespace JBSnorro.GitTools
 {
-    internal interface IActiveWindowTitle
+    public interface IActiveWindowTitle
     {
         string GetActiveWindowTitle();
     }
-    class ActiveWindowTitleGetter : IActiveWindowTitle
+    public sealed class ActiveWindowTitleGetter : IActiveWindowTitle
     {
         [DllImport("user32.dll")]
         static extern IntPtr GetForegroundWindow();

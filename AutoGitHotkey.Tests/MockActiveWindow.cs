@@ -1,5 +1,6 @@
 ﻿using JBSnorro.AutoGitHotkey;
 using JBSnorro.Diagnostics;
+using JBSnorro.GitTools;
 
 namespace JBSnorro.AutoGitHotkey.Tests
 {

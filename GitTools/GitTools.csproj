@@ -62,6 +62,7 @@
     <Reference Include="System.Configuration" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ActiveWindowTitleGetter.cs" />
     <Compile Include="ExitCodes.cs" />
     <Compile Include="FullyQuantifiedMethodName.cs" />
     <Compile Include="GitCommandLine.cs" />
