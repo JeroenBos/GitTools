@@ -13,10 +13,6 @@
 		<Reference Include="JBSnorro">
 		  <HintPath>..\..\ASDE\JBSnorro\bin\Debug\netstandard2.0\JBSnorro.dll</HintPath>
 		</Reference>
-		<Reference Include="JBSnorro.CI, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
-			<SpecificVersion>False</SpecificVersion>
-			<HintPath>..\packages\JBSnorro.CI.dll</HintPath>
-		</Reference>
 		<Reference Include="System.Windows.Forms">
 		  <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7\System.Windows.Forms.dll</HintPath>
 		</Reference>
