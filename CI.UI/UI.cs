@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
+using Debug = System.Diagnostics.Debug;
 
 namespace CI.UI
 {

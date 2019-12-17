@@ -122,7 +122,7 @@ namespace CI.UI
 
                 if (!int.TryParse(rawSetting, out int setting_ms))
                 {
-                    throw new InvalidAppSettingException(settingName, "A number was expected. ");
+                    throw new Exception($"A number was expected for configuration key with name '{settingName}'. ");
                 }
 
                 return (new Timer(_ => { if (this.Status != NotificationIconStatus.Ok) { this.Reset(); } }, null, setting_ms, -1), TimeSpan.FromMilliseconds(setting_ms));

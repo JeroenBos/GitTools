@@ -21,6 +21,7 @@ using JBSnorro.Diagnostics;
 using System.IO.Pipes;
 using System.Collections.Concurrent;
 using System.Configuration;
+using Debug = System.Diagnostics.Debug;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -958,8 +959,17 @@ namespace JBSnorro.GitTools.CI
                 Action invocation = () => testMethod.Invoke(testClassInstance, new object[0]);
                 if (timeout != null)
                 {
-                    if (!invocation.InvokeWithTimeOut(timeout.Value))
-                        return "{0} timed out";
+					var task = Task.Run(invocation);
+					var whenAnyTask = Task.WhenAny(task, Task.Delay(timeout.Value));
+					whenAnyTask.Wait();
+					if (whenAnyTask.Result == task)
+					{
+						return null;
+					}
+					else
+					{
+						return "{0} timed out";
+					}
                 }
                 else
                 {
