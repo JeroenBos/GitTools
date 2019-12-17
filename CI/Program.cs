@@ -23,940 +23,940 @@ using Debug = System.Diagnostics.Debug;
 
 namespace JBSnorro.GitTools.CI
 {
-    /// <summary>
-    /// This program copies a solution, builds it and runs all its tests.
-    /// </summary>
-    public sealed class Program
-    {
-        /// <summary>
-        /// Gets the number of threads used for testing. At most one thread is used per test project.
-        /// </summary>
-        public static readonly int TEST_THREAD_COUNT = ConfigurationManagerExtensions.ParseAppSettingInt("TEST_THREAD_COUNT", ifMissing: 1);
+	/// <summary>
+	/// This program copies a solution, builds it and runs all its tests.
+	/// </summary>
+	public sealed class Program
+	{
+		/// <summary>
+		/// Gets the number of threads used for testing. At most one thread is used per test project.
+		/// </summary>
+		public static readonly int TEST_THREAD_COUNT = ConfigurationManagerExtensions.ParseAppSettingInt("TEST_THREAD_COUNT", ifMissing: 1);
 
-        private const string TaskCanceledMessage = "Task canceled";
+		private const string TaskCanceledMessage = "Task canceled";
 
 #if DEBUG
-        /// <summary>
-        /// Debugging flag to disable copying the solution.
-        /// </summary>
-        private static readonly bool skipCopySolution = false;
-        /// <summary>
-        /// Debugging flag to disable building.
-        /// </summary>
-        private static readonly bool skipBuild = skipCopySolution && true;
-        /// <summary>
-        /// Debugging flag to disable the check if a hash already exists in the .testresults.
-        /// </summary>
-        private static readonly bool disregardTestResultsFile = true;
+		/// <summary>
+		/// Debugging flag to disable copying the solution.
+		/// </summary>
+		private static readonly bool skipCopySolution = false;
+		/// <summary>
+		/// Debugging flag to disable building.
+		/// </summary>
+		private static readonly bool skipBuild = skipCopySolution && true;
+		/// <summary>
+		/// Debugging flag to disable the check if a hash already exists in the .testresults.
+		/// </summary>
+		private static readonly bool disregardTestResultsFile = true;
 #else
         private static readonly bool skipBuild = false;
         private static readonly bool skipCopySolution = false;
         private static readonly bool disregardTestResultsFile = false;
 #endif
-        /// <param name="args"> Must contain the path of the solution file, and the directory where to copy the solution to. </param>
-        static void Main(string[] args)
-        {
-            if (args == null) { throw new ArgumentNullException(nameof(args)); }
-            if (args.Length != 2) { throw new ArgumentException("Two arguments must be specified", nameof(args)); }
+		/// <param name="args"> Must contain the path of the solution file, and the directory where to copy the solution to. </param>
+		static void Main(string[] args)
+		{
+			if (args == null) { throw new ArgumentNullException(nameof(args)); }
+			if (args.Length != 2) { throw new ArgumentException("Two arguments must be specified", nameof(args)); }
 
-            string solutionFilePath = args[0];
-            string destinationDirectory = args[1];
+			string solutionFilePath = args[0];
+			string destinationDirectory = args[1];
 
-            foreach ((Status status, string message) in CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory))
-            {
-                Console.WriteLine(message);
-                Debug.Write(message);
-            }
-            Console.ReadLine();
-        }
+			foreach ((Status status, string message) in CopySolutionAndExecuteTests(solutionFilePath, destinationDirectory))
+			{
+				Console.WriteLine(message);
+				Debug.Write(message);
+			}
+			Console.ReadLine();
+		}
 
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            TestResultsFile resultsFile = null;
-            try
-            {
-                throw new NotImplementedException();
-                //return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, out int projectCount, hash, cancellationToken);
-            }
-            finally
-            {
-                if (resultsFile != null)
-                    resultsFile.Dispose();
-            }
-        }
-        /// <summary>
-        /// Does work that is actually part of the preamble of <see cref="CopySolutionAndExecuteTests(string, string, bool, out int, string, CancellationToken)"/>
-        /// </summary>
-        public static Prework Prework(string solutionFilePath, string baseDestinationDirectory, string hash, bool ignoreParentFailed)
-        {
-            Contract.Requires(solutionFilePath != null, nameof(solutionFilePath));
-            Contract.Requires(baseDestinationDirectory != null, nameof(baseDestinationDirectory));
+		public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
+		{
+			TestResultsFile resultsFile = null;
+			try
+			{
+				throw new NotImplementedException();
+				//return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, out int projectCount, hash, cancellationToken);
+			}
+			finally
+			{
+				if (resultsFile != null)
+					resultsFile.Dispose();
+			}
+		}
+		/// <summary>
+		/// Does work that is actually part of the preamble of <see cref="CopySolutionAndExecuteTests(string, string, bool, out int, string, CancellationToken)"/>
+		/// </summary>
+		public static Prework Prework(string solutionFilePath, string baseDestinationDirectory, string hash, bool ignoreParentFailed)
+		{
+			Contract.Requires(solutionFilePath != null, nameof(solutionFilePath));
+			Contract.Requires(baseDestinationDirectory != null, nameof(baseDestinationDirectory));
 
-            string error = ValidateSolutionFilePath(solutionFilePath);
-            if (error != null)
-            {
-                return new Prework(Status.ArgumentError, error);
-            }
+			string error = ValidateSolutionFilePath(solutionFilePath);
+			if (error != null)
+			{
+				return new Prework(Status.ArgumentError, error);
+			}
 
-            error = ValidateDestinationDirectory(baseDestinationDirectory);
-            if (error != null)
-            {
-                return new Prework(Status.ArgumentError, error);
-            }
+			error = ValidateDestinationDirectory(baseDestinationDirectory);
+			if (error != null)
+			{
+				return new Prework(Status.ArgumentError, error);
+			}
 
-            (string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
-            TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
-            bool disposeResultsFile = true;
-            try
-            {
-                if (error != null)
-                {
-                    return new Prework(Status.MiscellaneousError, error);
-                }
+			(string sourceDirectory, string destinationDirectory) = GetDirectories(solutionFilePath, baseDestinationDirectory);
+			TestResultsFile resultsFile = TestResultsFile.TryReadFile(sourceDirectory, out error);
+			bool disposeResultsFile = true;
+			try
+			{
+				if (error != null)
+				{
+					return new Prework(Status.MiscellaneousError, error);
+				}
 
-                hash = hash ?? RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
-                if (error != null)
-                {
-                    return new Prework(Status.MiscellaneousError, error);
-                }
+				hash = hash ?? RetrieveCommitHash(Path.GetDirectoryName(solutionFilePath), out error);
+				if (error != null)
+				{
+					return new Prework(Status.MiscellaneousError, error);
+				}
 
-                bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
-                if (skipCommit)
-                {
-                    return new Prework(Status.Skipped, error);
-                }
-                else if (error != null)
-                {
-                    return new Prework(Status.MiscellaneousError, error);
-                }
+				bool skipCommit = CheckCommitMessage(sourceDirectory, hash, resultsFile, out string commitMessage, out error);
+				if (skipCommit)
+				{
+					return new Prework(Status.Skipped, error);
+				}
+				else if (error != null)
+				{
+					return new Prework(Status.MiscellaneousError, error);
+				}
 
-                if (!ignoreParentFailed)
-                {
-                    bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
-                    if (parentCommitFailed)
-                    {
-                        return new Prework(Status.ParentFailed, error);
-                    }
-                    else if (error != null)
-                    {
-                        return new Prework(Status.MiscellaneousError, error);
-                    }
-                }
-                disposeResultsFile = false;
-                return new Prework(resultsFile, commitMessage, destinationDirectory);
-            }
-            finally
-            {
-                if (disposeResultsFile)
-                    resultsFile?.Dispose();
-            }
-        }
-        /// <summary>
-        /// Copies the solution to a temporary destination directory, build the solution and executes the tests and returns any errors.
-        /// </summary>
-        /// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
-        /// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
-        public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath,
-                                                                                string destinationDirectory,
-                                                                                out int projectCount,
-                                                                                string hash = null,
-                                                                                CancellationToken cancellationToken = default(CancellationToken))
-        {
-            try
-            {
-                projectCount = -1;
+				if (!ignoreParentFailed)
+				{
+					bool parentCommitFailed = CheckParentCommit(sourceDirectory, hash, resultsFile, out error);
+					if (parentCommitFailed)
+					{
+						return new Prework(Status.ParentFailed, error);
+					}
+					else if (error != null)
+					{
+						return new Prework(Status.MiscellaneousError, error);
+					}
+				}
+				disposeResultsFile = false;
+				return new Prework(resultsFile, commitMessage, destinationDirectory);
+			}
+			finally
+			{
+				if (disposeResultsFile)
+					resultsFile?.Dispose();
+			}
+		}
+		/// <summary>
+		/// Copies the solution to a temporary destination directory, build the solution and executes the tests and returns any errors.
+		/// </summary>
+		/// <param name="solutionFilePath"> The path of the .sln file of the solution to run tests of. </param>
+		/// <param name="hash "> The hash of the commit to execute the tests on. Specifiy null to indicate the current commit. </param>
+		public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath,
+																				string destinationDirectory,
+																				out int projectCount,
+																				string hash = null,
+																				CancellationToken cancellationToken = default(CancellationToken))
+		{
+			try
+			{
+				projectCount = -1;
 
-                string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out string error);
-                if (error != null)
-                {
-                    return (Status.CopyingError, error).ToSingleton();
-                }
+				string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out string error);
+				if (error != null)
+				{
+					return (Status.CopyingError, error).ToSingleton();
+				}
 
-                new GitCommandLine(destinationDirectory).CheckoutHard(hash);
+				new GitCommandLine(destinationDirectory).CheckoutHard(hash);
 
-                var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
-                if (error != null)
-                {
-                    return (Status.ProjectLoadingError, error).ToSingleton();
-                }
-                projectCount = projectFilePaths.Count;
-
-
-                IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
-                IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFile, cancellationToken);
-                IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
-
-                return EnumerableExtensions.Concat(loadSolutionMessages, buildSolutionMessages, testMessages)
-                                           .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-                throw new ContractException();
-            }
-        }
-        /// <summary>
-        /// Yields the elements of the second sequence only if all elements in the first sequence match the specified predicate.
-        /// </summary>
-        public static IEnumerable<T> ConcatIfAllPreviouses<T>(IEnumerable<T> firstSequence, Func<T, bool> predicate, Func<IEnumerable<T>> secondSequence)
-        {
-            Contract.Requires(firstSequence != null);
-            Contract.Requires(predicate != null);
-            Contract.Requires(secondSequence != null);
-
-            bool allMatchPredicate = true;
-            foreach (T element in firstSequence)
-            {
-                allMatchPredicate = allMatchPredicate && predicate(element);
-                yield return element;
-            }
-            if (allMatchPredicate)
-            {
-                foreach (T element in secondSequence())
-                {
-                    yield return element;
-                }
-            }
-        }
-        private static string ValidateSolutionFilePath(string solutionFilePath)
-        {
-            if (solutionFilePath == null) { throw new ArgumentNullException(nameof(solutionFilePath)); }
-            if (!solutionFilePath.EndsWith(".sln")) { throw new ArgumentException("No solution file was provided", nameof(solutionFilePath)); }
-
-            try
-            {
-                if (File.Exists(solutionFilePath))
-                {
-                    return null;
-                }
-                else
-                {
-                    return "The specified solution file could not be found";
-                }
-            }
-            catch (Exception e)
-            {
-                return e.Message;
-            }
-        }
-        private static string ValidateDestinationDirectory(string destinationDirectory)
-        {
-            try
-            {
-                if (Directory.Exists(destinationDirectory))
-                    return null;
-
-                if (File.Exists(destinationDirectory))
-                    return "The specified path is not a directory";
-
-                Directory.CreateDirectory(destinationDirectory); // this gets deleted again shortly. It's just part of the check
-                return null;
-            }
-            catch (Exception e)
-            {
-                return e.Message;
-            }
-        }
-        private static string RetrieveCommitHash(string solutionDirectory, out string error)
-        {
-            error = null;
-            try
-            {
-                var branchName = File.ReadAllText(Path.Combine(solutionDirectory, @".git\HEAD"));
-                Contract.Assume(branchName.StartsWith("ref: refs"));
-
-                branchName = branchName.Substring("ref: ".Length, branchName.Length - "\n".Length - "ref: ".Length);
-                var commitHash = File.ReadAllText(Path.Combine(solutionDirectory, @".git\", branchName)).Substring(0, 40);
-                return commitHash;
-            }
-            catch (DirectoryNotFoundException e) when (e.Message.Contains(".git"))
-            {
-                // if there is no git, don't copy to a directory called "no-git"
-                return "no-git";
-            }
-            catch (Exception e)
-            {
-                error = e.Message;
-                return null;
-            }
-        }
-
-        private static (string sourceDirectory, string destinationDirectory) GetDirectories(string solutionFilePath, string baseDestinationDirectory)
-        {
-            string sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(solutionFilePath));
-            string solutionName = sourceDirectory.Substring(sourceDirectory.LastIndexOf(Path.DirectorySeparatorChar) + 1);
-            Contract.Assert(!solutionName.EndsWith(".."), "Path error");
-            string destinationDirectory = Path.Combine(baseDestinationDirectory, solutionName);
-            return (sourceDirectory, destinationDirectory);
-        }
-        private static bool CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile, out string commitMessage, out string error)
-        {
-            if (resultsFile.Hashes.ContainsKey(hash) && !disregardTestResultsFile)
-            {
-                commitMessage = null;
-                error = "It is present in .testresults";
-                return true;
-            }
-
-            try
-            {
-                commitMessage = new GitCommandLine(sourceDirectory).GetCommitMessage(hash);
-                bool skip = GetAllIgnorePrefixes().Any(commitMessage.StartsWith);
-                error = skip ? "The commit message starts with a prefix signaling to ignore" : null;
-                return skip;
-            }
-            catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
-            {
-                throw new ArgumentException("The specified hash does not exist");
-            }
-            catch (Exception e)
-            {
-                commitMessage = null;
-                error = e.Message;
-                return false;
-            }
-        }
-        /// <summary>
-        /// Determines the parent commit of the specified commit is not registed as having failed in the results file. 
-        /// If it has failed, the solution corresponding to the specified hash should not be copied, built and tested, because its parent already failed.
-        /// </summary>
-        private static bool CheckParentCommit(string sourceDirectory, string hash, TestResultsFile resultsFile, out string error)
-        {
-            try
-            {
-                string parentHash = new GitCommandLine(sourceDirectory).GetParentCommitHash(hash);
-                if (resultsFile.Hashes.TryGetValue(parentHash, out TestResult testResult) && testResult == TestResult.Failure)
-                {
-                    error = "The parent commit already failed";
-                    return true;
-                }
-                else
-                {
-                    error = null;
-                    return false;
-                }
-            }
-            catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
-            {
-                throw new ArgumentException("The specified hash does not exist");
-            }
-            catch (Exception e)
-            {
-                error = e.Message;
-                return false;
-            }
-        }
-        private static IEnumerable<string> GetAllIgnorePrefixes()
-        {
-            return ConfigurationManager.AppSettings.AllKeys
-                                                   .Where(key => key.StartsWith("ignore_prefix"))
-                                                   .Select(key => ConfigurationManager.AppSettings[key]);
-        }
-        private static string TryCopySolution(string solutionFilePath, string destinationDirectory, CancellationToken cancellationToken, out string error)
-        {
-            error = null;
-
-            if (!skipCopySolution)
-            {
-                string sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(solutionFilePath));
-                try
-                {
-                    DeleteDirectory(destinationDirectory);
-                }
-                catch (Exception e)
-                {
-                    error = e.Message;
-                }
-                try
-                {
-                    new GitCommandLine(sourceDirectory).Clone(destinationDirectory);
-                }
-                catch (Exception e)
-                {
-                    error = e.Message;
-                }
-                try
-                {
-                    CopyDirectoryIfExists(new DirectoryInfo(Path.Combine(sourceDirectory, "packages")), new DirectoryInfo(Path.Combine(destinationDirectory, "packages")), cancellationToken);
-                    error = null;
-                }
-                catch (Exception e)
-                {
-                    error = e.Message;
-                }
-            }
-            return Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath));
-        }
-
-        public static void CopyDirectoryIfExists(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
-        {
-            if (source.Exists)
-            {
-                CopyDirectory(source, target, cancellationToken);
-            }
-        }
-        /// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
-        public static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
-        {
-            foreach (DirectoryInfo dir in source.GetDirectories())
-            {
-                CopyDirectory(dir, target.CreateSubdirectory(dir.Name), cancellationToken);
-            }
-            foreach (FileInfo file in source.GetFiles())
-            {
-                if (cancellationToken.IsCancellationRequested)
-                    throw new TaskCanceledException();
-                file.CopyTo(Path.Combine(target.FullName, file.Name), true);
-            }
-        }
-        /// <remarks> https://stackoverflow.com/questions/329355/cannot-delete-directory-with-directory-deletepath-true </remarks>
-        public static void DeleteDirectory(string path)
-        {
-            // this cryptic error message means some file in some directory is open somewhere
-            const string SOME_FILE_IS_OPEN_ERROR_MESSAGE = "The directory is not empty.\r\n";
-
-            if (Directory.Exists(path))
-            {
-                foreach (string nestedDirectory in Directory.GetDirectories(path))
-                {
-                    DeleteDirectory(nestedDirectory);
-                }
-
-                try
-                {
-                    Directory.Delete(path, recursive: true);
-                }
-                catch (IOException e) when (e.Message == SOME_FILE_IS_OPEN_ERROR_MESSAGE)
-                {
-                    Thread.Sleep(10); // Some programs like Windows Explorer use this time to release the handle 
-                    try
-                    {
-                        Directory.Delete(path, recursive: true);
-                    }
-                    catch (IOException ex) when (ex.Message == SOME_FILE_IS_OPEN_ERROR_MESSAGE)
-                    {
-                        throw new Exception("An unknown file is opened somewhere and cannot be deleted");
-                    }
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    SetAttributesNormal(new DirectoryInfo(path));
-                    try
-                    {
-                        Directory.Delete(path, recursive: true);
-                    }
-                    catch (UnauthorizedAccessException)
-                    {
-                        const int attemptCount = 12;
-                        for (int i = 0; i < attemptCount; i++)
-                        {
-                            Thread.Sleep(1000);
-                            try
-                            {
-                                Directory.Delete(path, recursive: true);
-                                return;
-                            }
-                            catch (UnauthorizedAccessException e)
-                            {
-                                if (i + 1 == attemptCount)
-                                {
-                                    if (e.Message.Count(c => c == '\'') == 2)
-                                    {
-                                        int indexOfOpeningQuote = e.Message.IndexOf('\'');
-                                        int indexOfClosingQuote = e.Message.IndexOf('\'', indexOfOpeningQuote + 1);
-                                        string file = e.Message.Substring(indexOfOpeningQuote + 1, indexOfClosingQuote - (indexOfOpeningQuote + 1));
-
-                                        throw new UnauthorizedAccessException($"Access to the path '{Path.Combine(path, file)}' is denied.", e);
-                                    }
-                                    throw;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            void SetAttributesNormal(DirectoryInfo directory)
-            {
-                foreach (var nestedDirectory in directory.GetDirectories())
-                {
-                    SetAttributesNormal(nestedDirectory);
-                }
-                foreach (var file in directory.GetFiles())
-                {
-                    file.Attributes = FileAttributes.Normal;
-                }
-            }
-        }
-
-        private static IReadOnlyList<string> GetProjectPaths(string destinationSolutionFilepath, out string error)
-        {
-            error = null;
-            try
-            {
-                var file = SolutionFile.Parse(destinationSolutionFilepath);
-                return file.ProjectsInOrder
-                           .Where(project => File.Exists(project.AbsolutePath))
-                           .Select(project => project.AbsolutePath)
-                           .ToReadOnlyList();
-            }
-            catch (Exception e)
-            {
-                error = e.Message;
-                return null;
-            }
-        }
-        private static IEnumerable<(Status Status, string Message)> LoadSolution(IReadOnlyList<string> projectFilePaths, CancellationToken cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder)
-        {
-            var inBuildOrder = new List<Project>();
-            projectsInBuildOrder = new ReadOnlyCollection<Project>(inBuildOrder);
-
-            var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true };
-            return messages().ContinueWith(() => inBuildOrder.AddRange(ToBuildOrder(projects.LoadedProjects))).OnDisposal(projects.Dispose);
-
-            IEnumerable<(Status, string)> messages()
-            {
-                foreach (var projectPath in projectFilePaths)
-                {
-                    string errorMessage = null;
-                    try
-                    {
-                        projects.LoadProject(projectPath);
-                    }
-                    catch (Exception e)
-                    {
-                        errorMessage = e.Message;
-                    }
-
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        yield return (Status.Canceled, TaskCanceledMessage);
-                        yield break;
-                    }
-                    else if (errorMessage == null)
-                    {
-                        yield return (Status.ProjectLoadSuccess, $"Assembly {Path.GetFileName(projectPath)} loaded successfully");
-                    }
-                    else
-                    {
-                        yield return (Status.ProjectLoadingError, errorMessage);
-                        yield break;
-                    }
-                }
-            }
-        }
-        /// <summary>
-        /// Tries to build the solution and returns the projects if successful; otherwise an error message.
-        /// </summary>
-        private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<Project> projectsInBuildOrder, string destinationSolutionFile, CancellationToken cancellationToken)
-        {
-            if (skipBuild)
-                yield break;
-
-            NuGetRestore(destinationSolutionFile);
-
-            foreach (var project in projectsInBuildOrder)
-            {
-                string errorMessage = null;
-                bool success = false;
-                try
-                {
-                    success = project.Build(new ConsoleLogger());
-                }
-                catch (Exception e)
-                {
-                    errorMessage = e.Message;
-                }
-
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    yield return (Status.Canceled, TaskCanceledMessage);
-                    yield break;
-                }
-                else if (success)
-                {
-                    yield return (Status.BuildSuccess, $"Assembly {Path.GetFileName(project.FullPath)} built successfully");
-                }
-                else
-                {
-                    yield return (Status.BuildError, errorMessage ?? "Compilation failed");
-                    yield break;
-                }
-            }
-        }
-
-        private static List<Project> ToBuildOrder(IEnumerable<Project> projects)
-        {
-            var remaining = projects.ToList();
-            var result = new List<Project>();
-            while (remaining.Count != 0)
-            {
-                var next = findTop(remaining);
-                result.Add(next);
-                remaining.Remove(next);
-            }
-            return result;
+				var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
+				if (error != null)
+				{
+					return (Status.ProjectLoadingError, error).ToSingleton();
+				}
+				projectCount = projectFilePaths.Count;
 
 
-            // returns the guid of a project in the specified list that has no dependencies on the specified projects
-            Project findTop(List<Project> unbuiltProjects)
-            {
-                return unbuiltProjects.First(project =>
-                {
-                    var dependencies = GetProjectReferenceGuids(project);
-                    return dependencies.All(dependency => !unbuiltProjects.Select(GetGuid).Contains(dependency));
-                });
-            }
+				IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
+				IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFile, cancellationToken);
+				IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
 
-            // Gets the guids of the project references upon which the specified project depends
-            IEnumerable<string> GetProjectReferenceGuids(Project p)
-            {
-                return p.Items
-                        .Where(i => i.ItemType == "ProjectReference")
-                        .Select(item => item.GetMetadata("Project").EvaluatedValue)
-                        .Select(s => s.ToUpper())
-                        .EnsureSingleEnumerationDEBUG();
-            }
+				return EnumerableExtensions.Concat(loadSolutionMessages, buildSolutionMessages, testMessages)
+										   .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.Message);
+				throw new ContractException();
+			}
+		}
+		/// <summary>
+		/// Yields the elements of the second sequence only if all elements in the first sequence match the specified predicate.
+		/// </summary>
+		public static IEnumerable<T> ConcatIfAllPreviouses<T>(IEnumerable<T> firstSequence, Func<T, bool> predicate, Func<IEnumerable<T>> secondSequence)
+		{
+			Contract.Requires(firstSequence != null);
+			Contract.Requires(predicate != null);
+			Contract.Requires(secondSequence != null);
 
-            // Gets the guid of the specified project
-            string GetGuid(Project project)
-            {
-                return project.GetProperty("ProjectGuid").EvaluatedValue.ToUpper();
-            }
-        }
+			bool allMatchPredicate = true;
+			foreach (T element in firstSequence)
+			{
+				allMatchPredicate = allMatchPredicate && predicate(element);
+				yield return element;
+			}
+			if (allMatchPredicate)
+			{
+				foreach (T element in secondSequence())
+				{
+					yield return element;
+				}
+			}
+		}
+		private static string ValidateSolutionFilePath(string solutionFilePath)
+		{
+			if (solutionFilePath == null) { throw new ArgumentNullException(nameof(solutionFilePath)); }
+			if (!solutionFilePath.EndsWith(".sln")) { throw new ArgumentException("No solution file was provided", nameof(solutionFilePath)); }
 
-        private static IEnumerable<(Status, string)> RunTests(IReadOnlyList<Project> projectsInBuildOrder, CancellationToken cancellationToken)
-        {
-            try
-            {
-                foreach (Project project in projectsInBuildOrder)
-                {
-                    string binDirectory = Path.GetDirectoryName(GetAssemblyPath(project));
-                    CopyDependenciesToNewAppDomainBaseDirectory(project.DirectoryPath, binDirectory);
-                }
+			try
+			{
+				if (File.Exists(solutionFilePath))
+				{
+					return null;
+				}
+				else
+				{
+					return "The specified solution file could not be found";
+				}
+			}
+			catch (Exception e)
+			{
+				return e.Message;
+			}
+		}
+		private static string ValidateDestinationDirectory(string destinationDirectory)
+		{
+			try
+			{
+				if (Directory.Exists(destinationDirectory))
+					return null;
 
-                int processedProjectsCount = 0;
-                var remainingProjects = new ConcurrentQueue<Project>(projectsInBuildOrder);
+				if (File.Exists(destinationDirectory))
+					return "The specified path is not a directory";
 
-                for (int i = 0; i < TEST_THREAD_COUNT; i++)
-                {
-                    void processRemainingProjects()
-                    {
-                        while (remainingProjects.TryDequeue(out Project project) && !cancellationToken.IsCancellationRequested)
-                        {
-                            Interlocked.Increment(ref processedProjectsCount);
-                            StartMessageWriter(GetAssemblyPath(project));
-                        }
-                    }
+				Directory.CreateDirectory(destinationDirectory); // this gets deleted again shortly. It's just part of the check
+				return null;
+			}
+			catch (Exception e)
+			{
+				return e.Message;
+			}
+		}
+		private static string RetrieveCommitHash(string solutionDirectory, out string error)
+		{
+			error = null;
+			try
+			{
+				var branchName = File.ReadAllText(Path.Combine(solutionDirectory, @".git\HEAD"));
+				Contract.Assume(branchName.StartsWith("ref: refs"));
 
-                    var staThread = new Thread(processRemainingProjects) { IsBackground = true, Priority = ThreadPriority.AboveNormal };
-                    staThread.SetApartmentState(ApartmentState.STA);
-                    staThread.Start();
-                }
+				branchName = branchName.Substring("ref: ".Length, branchName.Length - "\n".Length - "ref: ".Length);
+				var commitHash = File.ReadAllText(Path.Combine(solutionDirectory, @".git\", branchName)).Substring(0, 40);
+				return commitHash;
+			}
+			catch (DirectoryNotFoundException e) when (e.Message.Contains(".git"))
+			{
+				// if there is no git, don't copy to a directory called "no-git"
+				return "no-git";
+			}
+			catch (Exception e)
+			{
+				error = e.Message;
+				return null;
+			}
+		}
 
-                return NamedPipesServerStream.Read(Parse, PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count, cancellationToken);
-            }
-            catch (TaskCanceledException)
-            {
-                return (Status.Canceled, TaskCanceledMessage).ToSingleton();
-            }
-            catch (Exception e)
-            {
-                return (Status.MiscellaneousError, e.Message).ToSingleton();
-            }
+		private static (string sourceDirectory, string destinationDirectory) GetDirectories(string solutionFilePath, string baseDestinationDirectory)
+		{
+			string sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(solutionFilePath));
+			string solutionName = sourceDirectory.Substring(sourceDirectory.LastIndexOf(Path.DirectorySeparatorChar) + 1);
+			Contract.Assert(!solutionName.EndsWith(".."), "Path error");
+			string destinationDirectory = Path.Combine(baseDestinationDirectory, solutionName);
+			return (sourceDirectory, destinationDirectory);
+		}
+		private static bool CheckCommitMessage(string sourceDirectory, string hash, TestResultsFile resultsFile, out string commitMessage, out string error)
+		{
+			if (resultsFile.Hashes.ContainsKey(hash) && !disregardTestResultsFile)
+			{
+				commitMessage = null;
+				error = "It is present in .testresults";
+				return true;
+			}
 
-            void StartMessageWriter(string assemblyPath)
-            {
-                string appDomainBase = Path.GetDirectoryName(assemblyPath);
+			try
+			{
+				commitMessage = new GitCommandLine(sourceDirectory).GetCommitMessage(hash);
+				bool skip = GetAllIgnorePrefixes().Any(commitMessage.StartsWith);
+				error = skip ? "The commit message starts with a prefix signaling to ignore" : null;
+				return skip;
+			}
+			catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
+			{
+				throw new ArgumentException("The specified hash does not exist");
+			}
+			catch (Exception e)
+			{
+				commitMessage = null;
+				error = e.Message;
+				return false;
+			}
+		}
+		/// <summary>
+		/// Determines the parent commit of the specified commit is not registed as having failed in the results file. 
+		/// If it has failed, the solution corresponding to the specified hash should not be copied, built and tested, because its parent already failed.
+		/// </summary>
+		private static bool CheckParentCommit(string sourceDirectory, string hash, TestResultsFile resultsFile, out string error)
+		{
+			try
+			{
+				string parentHash = new GitCommandLine(sourceDirectory).GetParentCommitHash(hash);
+				if (resultsFile.Hashes.TryGetValue(parentHash, out TestResult testResult) && testResult == TestResult.Failure)
+				{
+					error = "The parent commit already failed";
+					return true;
+				}
+				else
+				{
+					error = null;
+					return false;
+				}
+			}
+			catch (GitCommandException e) when (e.Message == "fatal: bad object " + hash + "\n")
+			{
+				throw new ArgumentException("The specified hash does not exist");
+			}
+			catch (Exception e)
+			{
+				error = e.Message;
+				return false;
+			}
+		}
+		private static IEnumerable<string> GetAllIgnorePrefixes()
+		{
+			return ConfigurationManager.AppSettings.AllKeys
+												   .Where(key => key.StartsWith("ignore_prefix"))
+												   .Select(key => ConfigurationManager.AppSettings[key]);
+		}
+		private static string TryCopySolution(string solutionFilePath, string destinationDirectory, CancellationToken cancellationToken, out string error)
+		{
+			error = null;
+
+			if (!skipCopySolution)
+			{
+				string sourceDirectory = Path.GetFullPath(Path.GetDirectoryName(solutionFilePath));
+				try
+				{
+					DeleteDirectory(destinationDirectory);
+				}
+				catch (Exception e)
+				{
+					error = e.Message;
+				}
+				try
+				{
+					new GitCommandLine(sourceDirectory).Clone(destinationDirectory);
+				}
+				catch (Exception e)
+				{
+					error = e.Message;
+				}
+				try
+				{
+					CopyDirectoryIfExists(new DirectoryInfo(Path.Combine(sourceDirectory, "packages")), new DirectoryInfo(Path.Combine(destinationDirectory, "packages")), cancellationToken);
+					error = null;
+				}
+				catch (Exception e)
+				{
+					error = e.Message;
+				}
+			}
+			return Path.Combine(destinationDirectory, Path.GetFileName(solutionFilePath));
+		}
+
+		public static void CopyDirectoryIfExists(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
+		{
+			if (source.Exists)
+			{
+				CopyDirectory(source, target, cancellationToken);
+			}
+		}
+		/// <remarks> https://stackoverflow.com/questions/58744/copy-the-entire-contents-of-a-directory-in-c-sharp </remarks>
+		public static void CopyDirectory(DirectoryInfo source, DirectoryInfo target, CancellationToken cancellationToken)
+		{
+			foreach (DirectoryInfo dir in source.GetDirectories())
+			{
+				CopyDirectory(dir, target.CreateSubdirectory(dir.Name), cancellationToken);
+			}
+			foreach (FileInfo file in source.GetFiles())
+			{
+				if (cancellationToken.IsCancellationRequested)
+					throw new TaskCanceledException();
+				file.CopyTo(Path.Combine(target.FullName, file.Name), true);
+			}
+		}
+		/// <remarks> https://stackoverflow.com/questions/329355/cannot-delete-directory-with-directory-deletepath-true </remarks>
+		public static void DeleteDirectory(string path)
+		{
+			// this cryptic error message means some file in some directory is open somewhere
+			const string SOME_FILE_IS_OPEN_ERROR_MESSAGE = "The directory is not empty.\r\n";
+
+			if (Directory.Exists(path))
+			{
+				foreach (string nestedDirectory in Directory.GetDirectories(path))
+				{
+					DeleteDirectory(nestedDirectory);
+				}
+
+				try
+				{
+					Directory.Delete(path, recursive: true);
+				}
+				catch (IOException e) when (e.Message == SOME_FILE_IS_OPEN_ERROR_MESSAGE)
+				{
+					Thread.Sleep(10); // Some programs like Windows Explorer use this time to release the handle 
+					try
+					{
+						Directory.Delete(path, recursive: true);
+					}
+					catch (IOException ex) when (ex.Message == SOME_FILE_IS_OPEN_ERROR_MESSAGE)
+					{
+						throw new Exception("An unknown file is opened somewhere and cannot be deleted");
+					}
+				}
+				catch (UnauthorizedAccessException)
+				{
+					SetAttributesNormal(new DirectoryInfo(path));
+					try
+					{
+						Directory.Delete(path, recursive: true);
+					}
+					catch (UnauthorizedAccessException)
+					{
+						const int attemptCount = 12;
+						for (int i = 0; i < attemptCount; i++)
+						{
+							Thread.Sleep(1000);
+							try
+							{
+								Directory.Delete(path, recursive: true);
+								return;
+							}
+							catch (UnauthorizedAccessException e)
+							{
+								if (i + 1 == attemptCount)
+								{
+									if (e.Message.Count(c => c == '\'') == 2)
+									{
+										int indexOfOpeningQuote = e.Message.IndexOf('\'');
+										int indexOfClosingQuote = e.Message.IndexOf('\'', indexOfOpeningQuote + 1);
+										string file = e.Message.Substring(indexOfOpeningQuote + 1, indexOfClosingQuote - (indexOfOpeningQuote + 1));
+
+										throw new UnauthorizedAccessException($"Access to the path '{Path.Combine(path, file)}' is denied.", e);
+									}
+									throw;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			void SetAttributesNormal(DirectoryInfo directory)
+			{
+				foreach (var nestedDirectory in directory.GetDirectories())
+				{
+					SetAttributesNormal(nestedDirectory);
+				}
+				foreach (var file in directory.GetFiles())
+				{
+					file.Attributes = FileAttributes.Normal;
+				}
+			}
+		}
+
+		private static IReadOnlyList<string> GetProjectPaths(string destinationSolutionFilepath, out string error)
+		{
+			error = null;
+			try
+			{
+				var file = SolutionFile.Parse(destinationSolutionFilepath);
+				return file.ProjectsInOrder
+						   .Where(project => File.Exists(project.AbsolutePath))
+						   .Select(project => project.AbsolutePath)
+						   .ToReadOnlyList();
+			}
+			catch (Exception e)
+			{
+				error = e.Message;
+				return null;
+			}
+		}
+		private static IEnumerable<(Status Status, string Message)> LoadSolution(IReadOnlyList<string> projectFilePaths, CancellationToken cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder)
+		{
+			var inBuildOrder = new List<Project>();
+			projectsInBuildOrder = new ReadOnlyCollection<Project>(inBuildOrder);
+
+			var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true };
+			return messages().ContinueWith(() => inBuildOrder.AddRange(ToBuildOrder(projects.LoadedProjects))).OnDisposal(projects.Dispose);
+
+			IEnumerable<(Status, string)> messages()
+			{
+				foreach (var projectPath in projectFilePaths)
+				{
+					string errorMessage = null;
+					try
+					{
+						projects.LoadProject(projectPath);
+					}
+					catch (Exception e)
+					{
+						errorMessage = e.Message;
+					}
+
+					if (cancellationToken.IsCancellationRequested)
+					{
+						yield return (Status.Canceled, TaskCanceledMessage);
+						yield break;
+					}
+					else if (errorMessage == null)
+					{
+						yield return (Status.ProjectLoadSuccess, $"Assembly {Path.GetFileName(projectPath)} loaded successfully");
+					}
+					else
+					{
+						yield return (Status.ProjectLoadingError, errorMessage);
+						yield break;
+					}
+				}
+			}
+		}
+		/// <summary>
+		/// Tries to build the solution and returns the projects if successful; otherwise an error message.
+		/// </summary>
+		private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<Project> projectsInBuildOrder, string destinationSolutionFile, CancellationToken cancellationToken)
+		{
+			if (skipBuild)
+				yield break;
+
+			NuGetRestore(destinationSolutionFile);
+
+			foreach (var project in projectsInBuildOrder)
+			{
+				string errorMessage = null;
+				bool success = false;
+				try
+				{
+					success = project.Build(new ConsoleLogger());
+				}
+				catch (Exception e)
+				{
+					errorMessage = e.Message;
+				}
+
+				if (cancellationToken.IsCancellationRequested)
+				{
+					yield return (Status.Canceled, TaskCanceledMessage);
+					yield break;
+				}
+				else if (success)
+				{
+					yield return (Status.BuildSuccess, $"Assembly {Path.GetFileName(project.FullPath)} built successfully");
+				}
+				else
+				{
+					yield return (Status.BuildError, errorMessage ?? "Compilation failed");
+					yield break;
+				}
+			}
+		}
+
+		private static List<Project> ToBuildOrder(IEnumerable<Project> projects)
+		{
+			var remaining = projects.ToList();
+			var result = new List<Project>();
+			while (remaining.Count != 0)
+			{
+				var next = findTop(remaining);
+				result.Add(next);
+				remaining.Remove(next);
+			}
+			return result;
+
+
+			// returns the guid of a project in the specified list that has no dependencies on the specified projects
+			Project findTop(List<Project> unbuiltProjects)
+			{
+				return unbuiltProjects.First(project =>
+				{
+					var dependencies = GetProjectReferenceGuids(project);
+					return dependencies.All(dependency => !unbuiltProjects.Select(GetGuid).Contains(dependency));
+				});
+			}
+
+			// Gets the guids of the project references upon which the specified project depends
+			IEnumerable<string> GetProjectReferenceGuids(Project p)
+			{
+				return p.Items
+						.Where(i => i.ItemType == "ProjectReference")
+						.Select(item => item.GetMetadata("Project").EvaluatedValue)
+						.Select(s => s.ToUpper())
+						.EnsureSingleEnumerationDEBUG();
+			}
+
+			// Gets the guid of the specified project
+			string GetGuid(Project project)
+			{
+				return project.GetProperty("ProjectGuid").EvaluatedValue.ToUpper();
+			}
+		}
+
+		private static IEnumerable<(Status, string)> RunTests(IReadOnlyList<Project> projectsInBuildOrder, CancellationToken cancellationToken)
+		{
+			try
+			{
+				foreach (Project project in projectsInBuildOrder)
+				{
+					string binDirectory = Path.GetDirectoryName(GetAssemblyPath(project));
+					CopyDependenciesToNewAppDomainBaseDirectory(project.DirectoryPath, binDirectory);
+				}
+
+				int processedProjectsCount = 0;
+				var remainingProjects = new ConcurrentQueue<Project>(projectsInBuildOrder);
+
+				for (int i = 0; i < TEST_THREAD_COUNT; i++)
+				{
+					void processRemainingProjects()
+					{
+						while (remainingProjects.TryDequeue(out Project project) && !cancellationToken.IsCancellationRequested)
+						{
+							Interlocked.Increment(ref processedProjectsCount);
+							StartMessageWriter(GetAssemblyPath(project));
+						}
+					}
+
+					var staThread = new Thread(processRemainingProjects) { IsBackground = true, Priority = ThreadPriority.AboveNormal };
+					staThread.SetApartmentState(ApartmentState.STA);
+					staThread.Start();
+				}
+
+				return NamedPipesServerStream.Read(Parse, PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count, cancellationToken);
+			}
+			catch (TaskCanceledException)
+			{
+				return (Status.Canceled, TaskCanceledMessage).ToSingleton();
+			}
+			catch (Exception e)
+			{
+				return (Status.MiscellaneousError, e.Message).ToSingleton();
+			}
+
+			void StartMessageWriter(string assemblyPath)
+			{
+				string appDomainBase = Path.GetDirectoryName(assemblyPath);
 				IAppDomainContext testerDomain = null;
-                try
-                {
+				try
+				{
 					testerDomain = BackwardsCompatibility.CreateAppDomain(appDomainBase, assemblyPath);
 
-                    int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, writeMessagesBackOfTesting);
-                    Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);
-                }
-                finally
-                {
-                    try
-                    {
-                        if (testerDomain != null)
-                            testerDomain.Dispose();
-                    }
-                    catch (CannotUnloadAppDomainException)
-                    {
-                        // this exception gets thrown because NamedPipeServerStream.WaitForConnectionAsync has a bug: it doesn't cancel when the specified CancellationToken cancels
-                        // I can't cancel it using Thread.Abort or something related because the waiting happens in native code (the land where Thread.Abort holds no power)
-                        // A workaround would be (I think, because I've read that in comments on referencesource.microsoft.com in NamedPipeServerStream) to use new thread instead of a ThreadPool thread
-                        Logger.Log("Appdomain could not be disposed of");
-                    }
-                }
-            }
+					int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, writeMessagesBackOfTesting);
+					Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);
+				}
+				finally
+				{
+					try
+					{
+						if (testerDomain != null)
+							testerDomain.Dispose();
+					}
+					catch (CannotUnloadAppDomainException)
+					{
+						// this exception gets thrown because NamedPipeServerStream.WaitForConnectionAsync has a bug: it doesn't cancel when the specified CancellationToken cancels
+						// I can't cancel it using Thread.Abort or something related because the waiting happens in native code (the land where Thread.Abort holds no power)
+						// A workaround would be (I think, because I've read that in comments on referencesource.microsoft.com in NamedPipeServerStream) to use new thread instead of a ThreadPool thread
+						Logger.Log("Appdomain could not be disposed of");
+					}
+				}
+			}
 
-            int writeMessagesBackOfTesting(string assemblyPath)
-            {
-                Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPath), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPath)}");
+			int writeMessagesBackOfTesting(string assemblyPath)
+			{
+				Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPath), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPath)}");
 
-                try
-                {
-                    using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
-                    {
-                        outPipe.Connect();
-                        using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
-                        {
-                            int totalTestCount = 0;
-                            int messagesCount = 0;
-                            try
-                            {
-                                foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPath))
-                                {
-                                    writer.WriteLine(STARTED_CODON + $"{method.DeclaringType.FullName}.{method.Name}");
-                                    messagesCount++;
+				try
+				{
+					using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
+					{
+						outPipe.Connect();
+						using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
+						{
+							int totalTestCount = 0;
+							int messagesCount = 0;
+							try
+							{
+								foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPath))
+								{
+									writer.WriteLine(STARTED_CODON + $"{method.DeclaringType.FullName}.{method.Name}");
+									messagesCount++;
 
-                                    string methodError = RunTest(method);
+									string methodError = RunTest(method);
 
-                                    if (!outPipe.IsConnected)
-                                        break;
+									if (!outPipe.IsConnected)
+										break;
 
-                                    totalTestCount++;
-                                    if (methodError == null)
-                                    {
-                                        const string successMessage = "";
-                                        writer.WriteLine(SUCCESS_CODON + successMessage);
-                                        messagesCount++;
-                                    }
-                                    else
-                                    {
-                                        string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
-                                        writer.WriteLine(ERROR_CODON + message);
-                                        messagesCount++;
-                                    }
-                                }
-                            }
-                            catch (ReflectionTypeLoadException e)
-                            {
-                                foreach (var loadException in e.LoaderExceptions)
-                                {
-                                    writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
-                                    messagesCount++;
-                                }
-                            }
-                            catch (TargetInvocationException te)
-                            {
-                                Exception e = te.InnerException;
-                                if (e.InnerException != null)
-                                {
-                                    writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
-                                    messagesCount++;
-                                }
-                                else
-                                {
-                                    writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
-                                    messagesCount++;
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
-                                messagesCount++;
-                            }
-                            finally
-                            {
-                                writer.WriteLine(STOP_CODON + totalTestCount.ToString());
-                                messagesCount++;
-                            }
-                            return messagesCount;
-                        }
-                    }
-                }
-                catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
-                catch (IOException e) { Console.WriteLine(e.Message); }
-                return 0;
-            }
-        }
+									totalTestCount++;
+									if (methodError == null)
+									{
+										const string successMessage = "";
+										writer.WriteLine(SUCCESS_CODON + successMessage);
+										messagesCount++;
+									}
+									else
+									{
+										string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
+										writer.WriteLine(ERROR_CODON + message);
+										messagesCount++;
+									}
+								}
+							}
+							catch (ReflectionTypeLoadException e)
+							{
+								foreach (var loadException in e.LoaderExceptions)
+								{
+									writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
+									messagesCount++;
+								}
+							}
+							catch (TargetInvocationException te)
+							{
+								Exception e = te.InnerException;
+								if (e.InnerException != null)
+								{
+									writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+									messagesCount++;
+								}
+								else
+								{
+									writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+									messagesCount++;
+								}
+							}
+							catch (Exception e)
+							{
+								writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
+								messagesCount++;
+							}
+							finally
+							{
+								writer.WriteLine(STOP_CODON + totalTestCount.ToString());
+								messagesCount++;
+							}
+							return messagesCount;
+						}
+					}
+				}
+				catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
+				catch (IOException e) { Console.WriteLine(e.Message); }
+				return 0;
+			}
+		}
 
-        private static string RemoveLineBreaks(string s)
-        {
-            Contract.Assert(SUCCESS_CODON.Length == STOP_CODON.Length);
-            Contract.Assert(ERROR_CODON.Length == STOP_CODON.Length);
-            Contract.Assert(STARTED_CODON.Length == STOP_CODON.Length);
+		private static string RemoveLineBreaks(string s)
+		{
+			Contract.Assert(SUCCESS_CODON.Length == STOP_CODON.Length);
+			Contract.Assert(ERROR_CODON.Length == STOP_CODON.Length);
+			Contract.Assert(STARTED_CODON.Length == STOP_CODON.Length);
 
-            return s?.Replace('\n', '-').Replace('\r', '-');
-        }
+			return s?.Replace('\n', '-').Replace('\r', '-');
+		}
 
-        private static int messagesWrittenCount;
-        public const string PIPE_NAME = "CI_internal_pipe";
-        public const string SUCCESS_CODON = "SUCCESS_CODON";
-        public const string ERROR_CODON = "ERROR___CODON";
-        public const string STOP_CODON = "STOPS___CODON";
-        public const string STARTED_CODON = "STARTED_CODON";
+		private static int messagesWrittenCount;
+		public const string PIPE_NAME = "CI_internal_pipe";
+		public const string SUCCESS_CODON = "SUCCESS_CODON";
+		public const string ERROR_CODON = "ERROR___CODON";
+		public const string STOP_CODON = "STOPS___CODON";
+		public const string STARTED_CODON = "STARTED_CODON";
 
-        public static IEnumerable<(Status, string)> Parse(IEnumerable<string> lines)
-        {
+		public static IEnumerable<(Status, string)> Parse(IEnumerable<string> lines)
+		{
 #if DEBUG
-            var cache = new List<string>();
-            lines = lines.Select(s => { cache.Add(s); return s; });
+			var cache = new List<string>();
+			lines = lines.Select(s => { cache.Add(s); return s; });
 #endif
-            bool hasErrors = false;
-            List<int> totalSuccessCounts = new List<int>();
-            foreach (string line in lines)
-            {
-                string codon = line.Substring(0, ERROR_CODON.Length);
-                string message = line.Substring(ERROR_CODON.Length);
+			bool hasErrors = false;
+			List<int> totalSuccessCounts = new List<int>();
+			foreach (string line in lines)
+			{
+				string codon = line.Substring(0, ERROR_CODON.Length);
+				string message = line.Substring(ERROR_CODON.Length);
 
-                switch (codon)
-                {
-                    case STARTED_CODON:
-                        yield return (Status.TestStarted, message);
-                        break;
-                    case SUCCESS_CODON:
-                        yield return (Status.TestSuccess, message);
-                        break;
-                    case ERROR_CODON:
-                        hasErrors = true;
-                        yield return (Status.TestError, message);
-                        break;
-                    case STOP_CODON:
-                        int successCount = int.Parse(message);
-                        if (successCount != 0)
-                            totalSuccessCounts.Add(successCount);
-                        break;
-                    default:
-                        throw new ContractException("Wrong codon received");
-                }
-            }
-            if (!hasErrors)
-            {
-                yield return (Status.Success, $"{totalSuccessCounts.Sum()} tests run successfully");
-            }
-        }
+				switch (codon)
+				{
+					case STARTED_CODON:
+						yield return (Status.TestStarted, message);
+						break;
+					case SUCCESS_CODON:
+						yield return (Status.TestSuccess, message);
+						break;
+					case ERROR_CODON:
+						hasErrors = true;
+						yield return (Status.TestError, message);
+						break;
+					case STOP_CODON:
+						int successCount = int.Parse(message);
+						if (successCount != 0)
+							totalSuccessCounts.Add(successCount);
+						break;
+					default:
+						throw new ContractException("Wrong codon received");
+				}
+			}
+			if (!hasErrors)
+			{
+				yield return (Status.Success, $"{totalSuccessCounts.Sum()} tests run successfully");
+			}
+		}
 
-        /// <summary>
-        /// Performs a nuget restore operation.
-        /// </summary>
-        private static void NuGetRestore(string destinationSolutionFile)
-        {
-            string nugetExe = ConfigurationManager.AppSettings["nuget.exe"] ?? throw new AppSettingNotFoundException("nuget.exe");
+		/// <summary>
+		/// Performs a nuget restore operation.
+		/// </summary>
+		private static void NuGetRestore(string destinationSolutionFile)
+		{
+			string nugetExe = ConfigurationManager.AppSettings["nuget.exe"] ?? throw new AppSettingNotFoundException("nuget.exe");
 
-            ProcessExtensions.StartIndependentlyInvisiblyAsync(nugetExe, destinationSolutionFile).Wait();
-        }
+			ProcessExtensions.StartIndependentlyInvisiblyAsync(nugetExe, destinationSolutionFile).Wait();
+		}
 
-        /// <summary>
-        /// Copies the dependencies of this project to the bin directory of the new app domain.
-        /// </summary>
-        /// <param name="binDirectory"> The bin directory where a project is to be built. </param>
-        private static void CopyDependenciesToNewAppDomainBaseDirectory(string projectFileDirectory, string newAppDomainBaseDirectory)
-        {
-            List<string> packagesDirectories = new string[] { newAppDomainBaseDirectory, AppDomain.CurrentDomain.BaseDirectory }.Select(getPackagesDirectory).Where(p => p != null).ToList();
-            IEnumerable<string> dependencies = new string[]
-            {
-                "AppDomainToolkit",
-                "NUnit",
-                "GitTools",
-                "CI",
-                "JBSnorro",
-            };
+		/// <summary>
+		/// Copies the dependencies of this project to the bin directory of the new app domain.
+		/// </summary>
+		/// <param name="binDirectory"> The bin directory where a project is to be built. </param>
+		private static void CopyDependenciesToNewAppDomainBaseDirectory(string projectFileDirectory, string newAppDomainBaseDirectory)
+		{
+			List<string> packagesDirectories = new string[] { newAppDomainBaseDirectory, AppDomain.CurrentDomain.BaseDirectory }.Select(getPackagesDirectory).Where(p => p != null).ToList();
+			IEnumerable<string> dependencies = new string[]
+			{
+				"AppDomainToolkit",
+				"NUnit",
+				"GitTools",
+				"CI",
+				"JBSnorro",
+			};
 
-            var dependencyPaths = dependencies.Select(find).ToList();
-            if (packagesDirectories.Count == 0)
-            {
-                Contract.AssertForAll(dependencies, dependencyPath => !dependencyPath.Contains("{0}"), "Cannot find package for '{1}'");
-            }
-
-
-            var dependencyFullPaths = dependencyPaths.Select(selectPackageDirectory).ToList();
-            Contract.AssertForAll(dependencyFullPaths, File.Exists, "The specified file '{1}' does not exist");
-
-            copy(dependencyFullPaths, newAppDomainBaseDirectory);
+			var dependencyPaths = dependencies.Select(find).ToList();
+			if (packagesDirectories.Count == 0)
+			{
+				Contract.AssertForAll(dependencies, dependencyPath => !dependencyPath.Contains("{0}"), "Cannot find package for '{1}'");
+			}
 
 
-            string selectPackageDirectory(string path)
-            {
-                if (!path.Contains("{0}")) //doesn't matter
-                {
-                    string result = Path.GetFullPath(string.Format(path, "", AppDomain.CurrentDomain.BaseDirectory));
-                    Contract.Ensures(File.Exists(result), $"The specified file '{result}' does not exist");
-                    return result;
-                }
+			var dependencyFullPaths = dependencyPaths.Select(selectPackageDirectory).ToList();
+			Contract.AssertForAll(dependencyFullPaths, File.Exists, "The specified file '{1}' does not exist");
 
-                Contract.Assert(packagesDirectories.Count != 0, "No package directory was found but was required");
-
-                foreach (string packageDirectory in packagesDirectories)
-                {
-                    string result = Path.GetFullPath(string.Format(path, packageDirectory, AppDomain.CurrentDomain.BaseDirectory));
-                    if (File.Exists(result))
-                        return result;
-                }
-
-                throw new ContractException($"No package directory contains contains the package '{Path.GetFileName(path)}'");
-            }
+			copy(dependencyFullPaths, newAppDomainBaseDirectory);
 
 
+			string selectPackageDirectory(string path)
+			{
+				if (!path.Contains("{0}")) //doesn't matter
+				{
+					string result = Path.GetFullPath(string.Format(path, "", AppDomain.CurrentDomain.BaseDirectory));
+					Contract.Ensures(File.Exists(result), $"The specified file '{result}' does not exist");
+					return result;
+				}
+
+				Contract.Assert(packagesDirectories.Count != 0, "No package directory was found but was required");
+
+				foreach (string packageDirectory in packagesDirectories)
+				{
+					string result = Path.GetFullPath(string.Format(path, packageDirectory, AppDomain.CurrentDomain.BaseDirectory));
+					if (File.Exists(result))
+						return result;
+				}
+
+				throw new ContractException($"No package directory contains contains the package '{Path.GetFileName(path)}'");
+			}
 
 
-            // maps the dependency names to the paths where they can be found
-            // the return type should be formatted with {0} the package directory, and {1} by the currently running app domain directory
-            string find(string dependencyName)
-            {
-                switch (dependencyName)
-                {
-                    case "AppDomainToolkit":
-                        return @"{0}\AppDomainToolkit.1.0.4.3\lib\net\AppDomainToolkit.dll";
-                    case "NUnit":
-                        return @"{0}\NUnit.3.9.0\lib\net45\nunit.framework.dll";
-                    case "JBSnorro":
-                        return @"{0}\JBSnorro.CI.dll";
-                    case "GitTools":
-                        return @"{1}\JBSnorro.GitTools.exe";
-                    case "CI":
-                        return @"{1}\JBSnorro.GitTools.CI.exe";
-                    default:
-                        throw new ContractException($"Don't know where to find the dependency '{dependencyName}'");
-                }
-            }
 
-            // returns null if the package directory was not found
-            string getPackagesDirectory(string dir)
-            {
-                var debug = Directory.GetDirectories(dir);
-                if (Directory.GetDirectories(dir).Any(nestedDir => nestedDir.EndsWith(Path.DirectorySeparatorChar + "packages")))
-                    return Path.Combine(dir, "packages");
 
-                var parent = Directory.GetParent(dir);
+			// maps the dependency names to the paths where they can be found
+			// the return type should be formatted with {0} the package directory, and {1} by the currently running app domain directory
+			string find(string dependencyName)
+			{
+				switch (dependencyName)
+				{
+					case "AppDomainToolkit":
+						return @"{0}\AppDomainToolkit.1.0.4.3\lib\net\AppDomainToolkit.dll";
+					case "NUnit":
+						return @"{0}\NUnit.3.9.0\lib\net45\nunit.framework.dll";
+					case "JBSnorro":
+						return @"{0}\JBSnorro.CI.dll";
+					case "GitTools":
+						return @"{1}\JBSnorro.GitTools.exe";
+					case "CI":
+						return @"{1}\JBSnorro.GitTools.CI.exe";
+					default:
+						throw new ContractException($"Don't know where to find the dependency '{dependencyName}'");
+				}
+			}
 
-                return parent == null ? null : getPackagesDirectory(parent.FullName);
-            }
+			// returns null if the package directory was not found
+			string getPackagesDirectory(string dir)
+			{
+				var debug = Directory.GetDirectories(dir);
+				if (Directory.GetDirectories(dir).Any(nestedDir => nestedDir.EndsWith(Path.DirectorySeparatorChar + "packages")))
+					return Path.Combine(dir, "packages");
 
-            void copy(IEnumerable<string> fullPaths, string destinationDirectory)
-            {
-                foreach (string fullPath in fullPaths)
-                {
-                    if (File.Exists(fullPath))
-                    {
-                        string destination = Path.Combine(destinationDirectory, Path.GetFileName(fullPath));
-                        if (!File.Exists(destination))
-                            File.Copy(fullPath, destination);
-                    }
-                    else
-                        Logger.Log($"The depend file '{fullPath}' could not be found");
-                }
-            }
-        }
+				var parent = Directory.GetParent(dir);
 
-        /// <returns>null means the test succeeded; otherwise the error message. </returns>
-        private static string RunTest(MethodInfo testMethod)
-        {
-            if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
+				return parent == null ? null : getPackagesDirectory(parent.FullName);
+			}
 
-            object testClassInstance = null;
-            try
-            {
-                testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
-                TestClassExtensions.RunInitializationMethod(testClassInstance);
-                int? timeout = TestClassExtensions.GetTestMethodTimeout(testMethod);
-                Action invocation = () => testMethod.Invoke(testClassInstance, new object[0]);
-                if (timeout != null)
-                {
+			void copy(IEnumerable<string> fullPaths, string destinationDirectory)
+			{
+				foreach (string fullPath in fullPaths)
+				{
+					if (File.Exists(fullPath))
+					{
+						string destination = Path.Combine(destinationDirectory, Path.GetFileName(fullPath));
+						if (!File.Exists(destination))
+							File.Copy(fullPath, destination);
+					}
+					else
+						Logger.Log($"The depend file '{fullPath}' could not be found");
+				}
+			}
+		}
+
+		/// <returns>null means the test succeeded; otherwise the error message. </returns>
+		private static string RunTest(MethodInfo testMethod)
+		{
+			if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
+
+			object testClassInstance = null;
+			try
+			{
+				testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
+				TestClassExtensions.RunInitializationMethod(testClassInstance);
+				int? timeout = TestClassExtensions.GetTestMethodTimeout(testMethod);
+				Action invocation = () => testMethod.Invoke(testClassInstance, new object[0]);
+				if (timeout != null)
+				{
 					var task = Task.Run(invocation);
 					var whenAnyTask = Task.WhenAny(task, Task.Delay(timeout.Value));
 					whenAnyTask.Wait();
@@ -968,42 +968,42 @@ namespace JBSnorro.GitTools.CI
 					{
 						return "{0} timed out";
 					}
-                }
-                else
-                {
-                    invocation();
-                }
-            }
-            catch (TargetInvocationException e)
-            {
-                if (TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
-                {
-                    return null;
-                }
-                throw;
-            }
-            finally
-            {
-                TestClassExtensions.RunCleanupMethod(testClassInstance);
-            }
+				}
+				else
+				{
+					invocation();
+				}
+			}
+			catch (TargetInvocationException e)
+			{
+				if (TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
+				{
+					return null;
+				}
+				throw;
+			}
+			finally
+			{
+				TestClassExtensions.RunCleanupMethod(testClassInstance);
+			}
 
-            return null;
-        }
-        private static string GetAssemblyPath(Project project)
-        {
-            if (!project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.StartsWith("obj"))
-                throw new NotImplementedException();
+			return null;
+		}
+		private static string GetAssemblyPath(Project project)
+		{
+			if (!project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.StartsWith("obj"))
+				throw new NotImplementedException();
 
-            //couldn't find it in the projects' AlLEvaluatedItems, so I'm hacking this together:
-            string relativePath = "bin" + project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.Substring("obj".Length);
-            string path = Path.Combine(project.DirectoryPath, relativePath);
+			//couldn't find it in the projects' AlLEvaluatedItems, so I'm hacking this together:
+			string relativePath = "bin" + project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.Substring("obj".Length);
+			string path = Path.Combine(project.DirectoryPath, relativePath);
 
-            if (!File.Exists(path))
-                if (skipCopySolution || skipBuild)
-                    throw new Exception($"Coulnd't find assembly {path}. skipCopySolution or skipBuild was true. Are you sure that is correct?");
-                else
-                    throw new NotImplementedException("Couldn't find assembly " + path);
-            return path;
-        }
-    }
+			if (!File.Exists(path))
+				if (skipCopySolution || skipBuild)
+					throw new Exception($"Coulnd't find assembly {path}. skipCopySolution or skipBuild was true. Are you sure that is correct?");
+				else
+					throw new NotImplementedException("Couldn't find assembly " + path);
+			return path;
+		}
+	}
 }
