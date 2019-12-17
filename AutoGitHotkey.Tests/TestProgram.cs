@@ -10,7 +10,7 @@ namespace JBSnorro.AutoGitHotkey.Tests
     {
         static void Main(string[] args)
         {
-            new DeterminePathTests().FailToGetPathFromConfigFile();
+            new DeterminePathTests().GetPathFromConfigFile();
         }
     }
 }
