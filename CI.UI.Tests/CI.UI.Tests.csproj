@@ -17,6 +17,7 @@
 
 
 	<ItemGroup>
+	  <Compile Include="..\AutoGitHotkey.Tests\Workaround.cs" Link="Workaround.cs" />
 	  <Compile Include="..\Tests\IndirectTest.cs" Link="IndirectTest.cs" />
 	  <Compile Include="..\Tests\__TESTS__.cs" Link="__TESTS__.cs" />
 	</ItemGroup>
