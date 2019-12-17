@@ -3,17 +3,14 @@ using JBSnorro.Diagnostics;
 using JBSnorro.GitTools.CI;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Configuration;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
 namespace CI.UI
 {
-    public sealed class CIReceivingPipe : ReceivingPipe, IDisposable
+	public sealed class CIReceivingPipe : ReceivingPipe, IDisposable
     {
         public static string GetPipeName() => ConfigurationManager.AppSettings["CI_PIPE_NAME"] ?? "CI_PIPE";
         public const string PipeMessageSeparator = "-:-";

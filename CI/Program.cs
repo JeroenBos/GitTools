@@ -672,7 +672,7 @@ namespace JBSnorro.GitTools.CI
                 AppDomainContext testerDomain = null;
                 try
                 {
-                    testerDomain = AppDomainToolkit.AppDomainContext.Create(new AppDomainSetup() { ApplicationBase = appDomainBase, ConfigurationFile = assemblyPath + ".config" });
+					testerDomain = BackwardsCompatibility.CreateAppDomain(appDomainBase, assemblyPath);
 
                     int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, writeMessagesBackOfTesting);
                     Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);

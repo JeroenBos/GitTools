@@ -2,21 +2,16 @@
 using JBSnorro.GitTools;
 using JBSnorro.GitTools.CI;
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Windows.Threading;
 
 namespace CI.UI
 {
-    public class Program : IDisposable
+	public class Program : IDisposable
     {
         internal const string TEST_ARGUMENT = "TEST_ARGUMENT";
         public const string DISREGARD_PARENT_COMMIT_OUTCOME_ARGUMENT = "-disregard_parent_outcome";

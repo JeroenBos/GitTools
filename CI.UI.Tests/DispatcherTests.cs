@@ -28,7 +28,7 @@ namespace CI.UI.Tests
             const int expectedSuccessfulTests = 1;
             Task waitForHandledMessage = WaitForHandledMessageAsync();
             using (NotificationIcon icon = new NotificationIcon())
-            using (Dispatcher.StartCIUI(icon))
+            using (CI.Dispatcher.StartCIUI(icon))
             {
                 string slnPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\..\Tests.sln"));
                 string hash = new GitCommandLine(Path.GetDirectoryName(slnPath)).GetCurrentCommitHash();

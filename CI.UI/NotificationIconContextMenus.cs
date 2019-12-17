@@ -1,16 +1,13 @@
 ﻿using JBSnorro.Diagnostics;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using static CI.UI.NotificationIconContextMenuItems;
 
 namespace CI.UI
 {
-    sealed class NotificationIconContextMenus
+	sealed class NotificationIconContextMenus
     {
         private static MenuItem exitMenuItem => new MenuItem(GetMenuItemCaption(Exit), (sender, e) => Dispatcher.CurrentDispatcher.InvokeShutdown());
         private static MenuItem cancelMenuItem(NotificationIcon icon) => new MenuItem(GetMenuItemCaption(Cancel), (sender, e) => icon.RequestCancellation());

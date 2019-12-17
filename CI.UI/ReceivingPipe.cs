@@ -7,7 +7,6 @@ using System.IO.Pipes;
 using System.IO;
 using System.Threading;
 using JBSnorro.GitTools.CI;
-using System.Windows.Threading;
 using JBSnorro.Diagnostics;
 using System.Diagnostics;
 using CI.UI;
