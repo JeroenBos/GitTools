@@ -20,8 +20,6 @@ using System.IO.Pipes;
 using System.Collections.Concurrent;
 using System.Configuration;
 using Debug = System.Diagnostics.Debug;
-using Task = System.Threading.Tasks.Task;
-using Microsoft.Build.Locator;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -513,17 +511,17 @@ namespace JBSnorro.GitTools.CI
             var inBuildOrder = new List<Project>();
             projectsInBuildOrder = new ReadOnlyCollection<Project>(inBuildOrder);
 
-            var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "Any CPU" }) { IsBuildEnabled = true };
+            var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true };
             return messages().ContinueWith(() => inBuildOrder.AddRange(ToBuildOrder(projects.LoadedProjects))).OnDisposal(projects.Dispose);
 
             IEnumerable<(Status, string)> messages()
             {
                 foreach (var projectPath in projectFilePaths)
                 {
-					string errorMessage = null;
+                    string errorMessage = null;
                     try
                     {
-						projects.LoadProject(projectPath);
+                        projects.LoadProject(projectPath);
                     }
                     catch (Exception e)
                     {
