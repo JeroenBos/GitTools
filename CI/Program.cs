@@ -15,8 +15,6 @@ using System.Threading.Tasks;
 using JBSnorro;
 using JBSnorro.Extensions;
 using System.Diagnostics;
-using AppDomainToolkit;
-using AppDomainContext = AppDomainToolkit.AppDomainContext<AppDomainToolkit.AssemblyTargetLoader, AppDomainToolkit.PathBasedAssemblyResolver>;
 using JBSnorro.Diagnostics;
 using System.IO.Pipes;
 using System.Collections.Concurrent;
@@ -670,7 +668,7 @@ namespace JBSnorro.GitTools.CI
             void StartMessageWriter(string assemblyPath)
             {
                 string appDomainBase = Path.GetDirectoryName(assemblyPath);
-                AppDomainContext testerDomain = null;
+				IAppDomainContext testerDomain = null;
                 try
                 {
 					testerDomain = BackwardsCompatibility.CreateAppDomain(appDomainBase, assemblyPath);
