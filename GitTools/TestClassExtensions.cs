@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using JBSnorro.Extensions;
 using JBSnorro.Diagnostics;
 using System.Diagnostics;
-using JBSnorro.Extensions;
 
 namespace JBSnorro.GitTools
 {
