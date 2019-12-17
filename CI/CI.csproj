@@ -10,15 +10,20 @@
 
 
 	<ItemGroup>
-		<Reference Include="JBSnorro">
-		  <HintPath>..\..\ASDE\JBSnorro\bin\Debug\netstandard2.0\JBSnorro.dll</HintPath>
-		</Reference>
+	  <Reference Include="JBSnorro.CI">
+	    <HintPath>..\packages\JBSnorro.CI.dll</HintPath>
+	  </Reference>
 	</ItemGroup>
-
-
+	
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.Build" Version="16.4.0" />
 	  <PackageReference Include="Microsoft.Build.Framework" Version="16.4.0" />
+	  <PackageReference Include="Microsoft.Build.Utilities.Core" Version="16.4.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.4.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.4.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="3.4.0" />
+	  <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="3.4.0" />
+	  <PackageReference Include="Microsoft.DotNet.Cli.Utils" Version="2.0.0" />
 	  <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.7.0" />
 	</ItemGroup>
 

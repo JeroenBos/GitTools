@@ -8,8 +8,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<Reference Include="JBSnorro">
-		  <HintPath>..\..\ASDE\JBSnorro\bin\Debug\netstandard2.0\JBSnorro.dll</HintPath>
+		<Reference Include="JBSnorro.CI">
+			<HintPath>..\packages\JBSnorro.CI.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 

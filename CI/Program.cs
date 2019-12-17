@@ -20,6 +20,7 @@ using System.IO.Pipes;
 using System.Collections.Concurrent;
 using System.Configuration;
 using Debug = System.Diagnostics.Debug;
+using Task = System.Threading.Tasks.Task;
 
 namespace JBSnorro.GitTools.CI
 {
