@@ -174,15 +174,7 @@ namespace JBSnorro.GitTools.CI
 
 				new GitCommandLine(destinationDirectory).CheckoutHard(hash);
 
-				var projectFilePaths = GetProjectPaths(destinationSolutionFile, out error);
-				if (error != null)
-				{
-					return (Status.ProjectLoadingError, error).ToSingleton();
-				}
-				projectCount = projectFilePaths.Count;
-
-
-				IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
+				IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(destinationSolutionFile, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
 				IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFile, cancellationToken);
 				IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
 
@@ -506,8 +498,15 @@ namespace JBSnorro.GitTools.CI
 				return null;
 			}
 		}
-		private static IEnumerable<(Status Status, string Message)> LoadSolution(IReadOnlyList<string> projectFilePaths, CancellationToken cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder)
+		private static IEnumerable<(Status Status, string Message)> LoadSolution(string destinationSolutionFile, CancellationToken cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder)
 		{
+			var projectFilePaths = GetProjectPaths(destinationSolutionFile, out var error);
+			if (error != null)
+			{
+				projectsInBuildOrder = null;
+				return (Status.ProjectLoadingError, error).ToSingleton();
+			}
+
 			var inBuildOrder = new List<Project>();
 			projectsInBuildOrder = new ReadOnlyCollection<Project>(inBuildOrder);
 
