@@ -17,8 +17,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoGitHotkey", "AutoGitHot
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoGitHotkey.Tests", "AutoGitHotkey.Tests\AutoGitHotkey.Tests.csproj", "{8E4EE772-966C-4605-801E-7C201AFF3F76}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackwardsCompatibility", "BackwardsCompatibility\BackwardsCompatibility.csproj", "{623F0C20-D296-44E2-A97F-F38997A459E7}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CI.ProcessStarter", "CI.ProcessStarter\CI.ProcessStarter.csproj", "{6F748866-0B1F-418C-88F6-A893553CC3F5}"
 EndProject
 Global
@@ -85,14 +83,6 @@ Global
 		{8E4EE772-966C-4605-801E-7C201AFF3F76}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8E4EE772-966C-4605-801E-7C201AFF3F76}.Release|x86.ActiveCfg = Release|Any CPU
 		{8E4EE772-966C-4605-801E-7C201AFF3F76}.Release|x86.Build.0 = Release|Any CPU
-		{623F0C20-D296-44E2-A97F-F38997A459E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{623F0C20-D296-44E2-A97F-F38997A459E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{623F0C20-D296-44E2-A97F-F38997A459E7}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{623F0C20-D296-44E2-A97F-F38997A459E7}.Debug|x86.Build.0 = Debug|Any CPU
-		{623F0C20-D296-44E2-A97F-F38997A459E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{623F0C20-D296-44E2-A97F-F38997A459E7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{623F0C20-D296-44E2-A97F-F38997A459E7}.Release|x86.ActiveCfg = Release|Any CPU
-		{623F0C20-D296-44E2-A97F-F38997A459E7}.Release|x86.Build.0 = Release|Any CPU
 		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Debug|x86.ActiveCfg = Debug|Any CPU
