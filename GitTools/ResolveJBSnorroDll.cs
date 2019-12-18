@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Text;
-
-public static class ResolveJBSnorroDll
+﻿public static class ResolveJBSnorroDll
 {
 	/// <summary>
 	/// Overrides the name mismatch JBSnorro vs JBSnorro.CI. We must have a different name because otherwise I can't use this on ASDE e.g. because of name clashes.

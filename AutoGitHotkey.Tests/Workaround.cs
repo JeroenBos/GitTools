@@ -1,7 +1,7 @@
-﻿using System.Configuration;
+﻿using NUnit.Framework;
+using System.Configuration;
 using System.IO;
 using System.Reflection;
-using NUnit.Framework;
 
 [SetUpFixture]
 public class TestSetupFixture

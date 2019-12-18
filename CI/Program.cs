@@ -1,25 +1,20 @@
-﻿using Microsoft.Build.Construction;
-using System.Threading;
+﻿using JBSnorro;
+using JBSnorro.Diagnostics;
+using JBSnorro.Extensions;
+using Microsoft.Build.Construction;
 using Microsoft.Build.Evaluation;
-using Microsoft.Build.Execution;
+using Microsoft.Build.Exceptions;
 using Microsoft.Build.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Configuration;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using JBSnorro;
-using JBSnorro.Extensions;
-using System.Diagnostics;
-using JBSnorro.Diagnostics;
-using System.IO.Pipes;
-using System.Collections.Concurrent;
-using System.Configuration;
 using Debug = System.Diagnostics.Debug;
-using Microsoft.Build.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
 namespace JBSnorro.GitTools.CI
@@ -780,7 +775,7 @@ namespace JBSnorro.GitTools.CI
 			var processStarterFiles = ConfigurationManager.AppSettings["processstarterFiles"]?.Split(',') ?? throw new AppSettingNotFoundException("processstarterFiles");
 
 			return processStarterFiles.Where(_ => !string.IsNullOrWhiteSpace(_))
-				                      .Select(fileName => Path.GetFullPath(Path.Combine(processStarterDir, fileName)));
+									  .Select(fileName => Path.GetFullPath(Path.Combine(processStarterDir, fileName)));
 		}
 
 		private static IEnumerable<(Status, string)> BuildViaDotnetTool(string destinationSolutionFile, string outputDirectory, CancellationToken cancellationToken)

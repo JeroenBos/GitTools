@@ -1,16 +1,13 @@
 ﻿using JBSnorro.Diagnostics;
 using JBSnorro.Extensions;
 using Microsoft.Build.Construction;
-using Microsoft.Build.Definition;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Exceptions;
 using Microsoft.Build.Framework;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Xml;
 
 namespace JBSnorro.GitTools.CI
 {
@@ -110,7 +107,7 @@ namespace JBSnorro.GitTools.CI
 			const string tagName = "TargetFramework";
 			const string altTagName = "TargetFrameworkVersion";
 			var moniker = (GetTagContents(csprojContents, tagName, fileName)
-					    ?? GetTagContents(csprojContents, altTagName, fileName))?.ToLowerInvariant();
+						?? GetTagContents(csprojContents, altTagName, fileName))?.ToLowerInvariant();
 
 			Contract.Assert<InvalidProjectFileException>(moniker != null, $"Expected '<{tagName}>' or '<{altTagName}>' in '{fileName}'");
 			Contract.Assert<InvalidProjectFileException>(moniker.StartsWith("netstandard") || moniker.StartsWith("netcoreapp") || moniker.StartsWith("v"), $"Unknown target framework  in '{fileName}'");

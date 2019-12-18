@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
-using JBSnorro.GitTools;
-using JBSnorro.GitTools.CI;
+﻿using JBSnorro.GitTools.CI;
 using NUnit.Framework;
-using static CI.UI.NotificationIcon;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace CI.UI.Tests
 {
@@ -16,8 +11,7 @@ namespace CI.UI.Tests
 	{
 		static NotificationIconTests() => ResolveJBSnorroDll.Resolve();
 		static void Main(string[] args)
-		
-  {
+		{
 			new DispatcherTests().RunTests();
 			new NotificationIconTests().RetryButtonRemovedOnInvocation();
 

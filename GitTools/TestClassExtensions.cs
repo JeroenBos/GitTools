@@ -1,11 +1,10 @@
-﻿using System;
+﻿using JBSnorro.Diagnostics;
+using JBSnorro.Extensions;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
-using JBSnorro.Extensions;
-using JBSnorro.Diagnostics;
-using System.Diagnostics;
 
 namespace JBSnorro.GitTools
 {
@@ -108,7 +107,7 @@ namespace JBSnorro.GitTools
 			var attribute = method.GetAttribute(TestMethodExpectedExceptionAttributeFullNames.Keys, out var key);
 			if (attribute == null)
 				return false;
-			
+
 			var verify = TestMethodExpectedExceptionAttributeFullNames[key];
 			bool result = verify(attribute, thrownException);
 
