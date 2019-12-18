@@ -47,9 +47,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\BackwardsCompatibility\BackwardsCompatibility.csproj" />
 		<ProjectReference Include="..\CI.Dispatcher\CI.Dispatcher.csproj" />
-		<ProjectReference Include="..\CI.ProcessStarter\CI.ProcessStarter.csproj">
-		  <Private>true</Private>
-		</ProjectReference>
+		<ProjectReference Include="..\CI.ProcessStarter\CI.ProcessStarter.csproj" />
 		<ProjectReference Include="..\CI.UI\CI.UI.csproj" />
 		<ProjectReference Include="..\CI\CI.csproj" />
 		<ProjectReference Include="..\GitTools\GitTools.csproj" />
