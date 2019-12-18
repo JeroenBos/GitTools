@@ -30,9 +30,9 @@ namespace JBSnorro.GitTools.CI
 	public sealed class Program
 	{
 		/// <summary>
-		/// Gets the number of threads used for testing. At most one thread is used per test project.
+		/// Gets the number of processes spawned for testing. At most one process is used per test project.
 		/// </summary>
-		public static readonly int TEST_THREAD_COUNT = ConfigurationManagerExtensions.ParseAppSettingInt("TEST_THREAD_COUNT", ifMissing: 1);
+		public static readonly int TEST_PROCESSES_COUNT = ConfigurationManagerExtensions.ParseAppSettingInt("TEST_PROCESSES_COUNT", ifMissing: 1);
 
 		private static readonly string Configuration = "Debug";
 		private static readonly string Platform = "x86";
@@ -676,7 +676,7 @@ namespace JBSnorro.GitTools.CI
 				int processedProjectsCount = 0;
 				var remainingProjects = new ConcurrentQueue<IProject>(projectsInBuildOrder);
 
-				for (int i = 0; i < TEST_THREAD_COUNT; i++)
+				for (int i = 0; i < TEST_PROCESSES_COUNT; i++)
 				{
 					Task.Run(processRemainingProjects);
 					void processRemainingProjects()
