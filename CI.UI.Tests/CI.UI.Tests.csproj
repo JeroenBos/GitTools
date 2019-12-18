@@ -1,121 +1,55 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\MSTest.TestAdapter.1.2.0\build\net45\MSTest.TestAdapter.props" Condition="Exists('..\packages\MSTest.TestAdapter.1.2.0\build\net45\MSTest.TestAdapter.props')" />
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{B88A71FA-0E5B-45EE-9635-8EAE6AB12255}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CI.UI.Tests</RootNamespace>
-    <AssemblyName>CI.UI.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">15.0</VisualStudioVersion>
-    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
-    <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
-    <IsCodedUITest>False</IsCodedUITest>
-    <TestProjectType>UnitTest</TestProjectType>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-    <TargetFrameworkProfile />
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\x86\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NOT_DUMMY_TESTS</DefineConstants>
-    <DebugType>full</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
-    <OutputPath>bin\x86\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>x86</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <ItemGroup>
-    <Reference Include="AppDomainToolkit, Version=1.0.4.1, Culture=neutral, PublicKeyToken=f2fc7ab5180cf5c4, processorArchitecture=MSIL">
-      <HintPath>..\packages\AppDomainToolkit.1.0.4.3\lib\net\AppDomainToolkit.dll</HintPath>
-    </Reference>
-    <Reference Include="JBSnorro.CI, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\JBSnorro.CI.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Build, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="Microsoft.Build.Framework, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="Microsoft.Build.Tasks.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="Microsoft.Build.Utilities.Core, Version=15.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
-    <Reference Include="nunit.framework, Version=3.9.0.0, Culture=neutral, PublicKeyToken=2638cd05610744eb, processorArchitecture=MSIL">
-      <HintPath>..\packages\NUnit.3.9.0\lib\net45\nunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Core" />
-    <Reference Include="WindowsBase" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\Tests\IndirectTest.cs">
-      <Link>IndirectTest.cs</Link>
-    </Compile>
-    <Compile Include="..\Tests\__TESTS__.cs">
-      <Link>__TESTS__.cs</Link>
-    </Compile>
-    <Compile Include="DispatcherTests.cs" />
-    <Compile Include="MockCopyBuildTestSolutions.cs" />
-    <Compile Include="NamedPipesServerStreamTests.cs" />
-    <Compile Include="NotificationIconTests.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="app.config">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CI.Dispatcher\CI.Dispatcher.csproj">
-      <Project>{44884954-1b2a-44cb-af48-f4a3ac057722}</Project>
-      <Name>CI.Dispatcher</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CI.UI\CI.UI.csproj">
-      <Project>{b0fc2fbf-2166-457f-ad5f-5e2ab5c76eca}</Project>
-      <Name>CI.UI</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\CI\CI.csproj">
-      <Project>{53B9CF71-9E2F-4F3B-AEAE-271B4D3B3F5F}</Project>
-      <Name>CI</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\GitTools\GitTools.csproj">
-      <Project>{E5DF85D7-F393-4435-A565-883AA70951CD}</Project>
-      <Name>GitTools</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+	<PropertyGroup>
+		<TargetFramework>netcoreapp3.0</TargetFramework>
+		<LangVersion>8.0</LangVersion>
+		<RootNamespace>CI.UI.Tests</RootNamespace>
+		<AssemblyName>CI.UI.Tests</AssemblyName>
+		<OutputType>Exe</OutputType>
+		<UseWPF>true</UseWPF>
+		<GenerateProgramFile>False</GenerateProgramFile>
+	</PropertyGroup>
+
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+		<DefineConstants>TRACE;DEBUG;NOT_DUMMY_TESTS</DefineConstants>
+	</PropertyGroup>
+
+
+	<ItemGroup>
+	  <Compile Include="..\AutoGitHotkey.Tests\Workaround.cs" Link="Workaround.cs" />
+	  <Compile Include="..\Tests\IndirectTest.cs" Link="IndirectTest.cs" />
+	  <Compile Include="..\Tests\__TESTS__.cs" Link="__TESTS__.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Reference Include="JBSnorro.CI">
+			<HintPath>..\packages\JBSnorro.CI.dll</HintPath>
+			<Private>true</Private>
+		</Reference>
+	</ItemGroup>
+
+
+	<ItemGroup>
+		<Folder Include="Properties\" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+		<PackageReference Include="Microsoft.Windows.Compatibility" Version="3.1.0" />
+		<PackageReference Include="NUnit" Version="3.12.0" />
+		<PackageReference Include="NUnit3TestAdapter" Version="3.15.1" />
+		<PackageReference Include="System.Drawing.Common" Version="4.7.0" />
+	</ItemGroup>
+
+
+	<ItemGroup>
+		<ProjectReference Include="..\BackwardsCompatibility\BackwardsCompatibility.csproj" />
+		<ProjectReference Include="..\CI.Dispatcher\CI.Dispatcher.csproj" />
+		<ProjectReference Include="..\CI.ProcessStarter\CI.ProcessStarter.csproj" />
+		<ProjectReference Include="..\CI.UI\CI.UI.csproj" />
+		<ProjectReference Include="..\CI\CI.csproj" />
+		<ProjectReference Include="..\GitTools\GitTools.csproj" />
+	</ItemGroup>
 </Project>
