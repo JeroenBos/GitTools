@@ -179,7 +179,7 @@ namespace JBSnorro.GitTools.CI
 				new GitCommandLine(destinationDirectory).CheckoutHard(hash);
 
 				IEnumerable<(Status, string)> loadAndBuildSolutionMessages = LoadAndBuildSolution(destinationSolutionFile, cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder);
-				IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
+				IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken)).ToList(); // TODO: Remove ToList
 
 				return loadAndBuildSolutionMessages.Concat(testMessages)
 												   .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
@@ -678,6 +678,7 @@ namespace JBSnorro.GitTools.CI
 
 				for (int i = 0; i < TEST_THREAD_COUNT; i++)
 				{
+					Task.Run(processRemainingProjects);
 					void processRemainingProjects()
 					{
 						while (remainingProjects.TryDequeue(out IProject project) && !cancellationToken.IsCancellationRequested)
@@ -686,10 +687,6 @@ namespace JBSnorro.GitTools.CI
 							StartProcessStarter(GetAssemblyPath(project));
 						}
 					}
-
-					var staThread = new Thread(processRemainingProjects) { IsBackground = true, Priority = ThreadPriority.AboveNormal };
-					staThread.SetApartmentState(ApartmentState.STA);
-					staThread.Start();
 				}
 
 				return NamedPipesServerStream.Read(Parse, PIPE_NAME, s => s.StartsWith(STOP_CODON), projectsInBuildOrder.Count, cancellationToken);
@@ -772,6 +769,8 @@ namespace JBSnorro.GitTools.CI
 			process.Wait();
 			if (process.Result.ExitCode != 0)
 				throw new Exception(process.Result.ErrorOutput);
+			// just in case I want to know this again:
+			int.TryParse(process.Result.StandardOutput, out int writtenMessagesCount);
 		}
 
 		private static IEnumerable<(Status, string)> BuildViaDotnetTool(string destinationSolutionFile, string outputDirectory, CancellationToken cancellationToken)
