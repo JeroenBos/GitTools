@@ -10,6 +10,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Configuration;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -782,20 +783,31 @@ namespace JBSnorro.GitTools.CI
 		{
 			string dotnetExe = ConfigurationManager.AppSettings["dotnet.exe"] ?? throw new AppSettingNotFoundException("dotnet.exe");
 
-			var task = ProcessExtensions.WaitForExitAndReadOutputAsync(dotnetExe, "build", destinationSolutionFile, $"--output \"{outputDirectory}\"");
-			task.Wait(cancellationToken);
+			string executable = dotnetExe;
+			var arguments = new string[] { "build", destinationSolutionFile, $"--output \"{outputDirectory}\"" };
 
-			int exitCode = task.Result.ExitCode;
-			if (exitCode == 0)
+			var startInfo = new ProcessStartInfo(executable, string.Join(" ", arguments));
+			startInfo.UseShellExecute = false;
+			startInfo.RedirectStandardOutput = true;
+			startInfo.RedirectStandardError = true;
+			var process = Process.Start(startInfo);
+
+			string output = process.StandardOutput.ReadToEnd();
+			string errorOutput = process.StandardError.ReadToEnd();
+			process.WaitForExit();
+
+			//var result = task.Result;
+			var result = (ExitCode: process.ExitCode, StandardOutput: output, ErrorOutput: errorOutput);
+			if (result.ExitCode == 0)
 			{
 				yield return (Status.ProjectLoadSuccess, $"Solution {Path.GetFileName(destinationSolutionFile)} loaded successfully");
 			}
 			else
 			{
-				if (task.Result.ErrorOutput != null)
-					yield return (Status.ProjectLoadingError, task.Result.ErrorOutput);
-				if (task.Result.StandardOutput != null)
-					yield return (Status.Info, task.Result.StandardOutput);
+				if (result.ErrorOutput != null)
+					yield return (Status.ProjectLoadingError, result.ErrorOutput);
+				if (result.StandardOutput != null)
+					yield return (Status.Info, result.StandardOutput);
 				yield return (Status.ProjectLoadingError, $"Solution {Path.GetFileName(destinationSolutionFile)} failed loading");
 			}
 		}
