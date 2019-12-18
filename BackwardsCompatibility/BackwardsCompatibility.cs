@@ -32,10 +32,10 @@ namespace JBSnorro.GitTools
 	}
 	public static class RemoteFunc
 	{
-		public static TResult Invoke<TResult>(AppDomain domain, Func<TResult> toInvoke) => RemoteFunc.Invoke(domain, toInvoke);
-		public static TResult Invoke<T, TResult>(AppDomain domain, T arg1, Func<T, TResult> toInvoke) => RemoteFunc.Invoke(domain, arg1, toInvoke);
-		public static TResult Invoke<T1, T2, TResult>(AppDomain domain, T1 arg1, T2 arg2, Func<T1, T2, TResult> toInvoke) => RemoteFunc.Invoke(domain, arg1, arg2, toInvoke);
-		public static TResult Invoke<T1, T2, T3, TResult>(AppDomain domain, T1 arg1, T2 arg2, T3 arg3, Func<T1, T2, T3, TResult> toInvoke) => RemoteFunc.Invoke(domain, arg1, arg2, arg3, toInvoke);
-		public static TResult Invoke<T1, T2, T3, T4, TResult>(AppDomain domain, T1 arg1, T2 arg2, T3 arg3, T4 arg4, Func<T1, T2, T3, T4, TResult> toInvoke) => RemoteFunc.Invoke(domain, arg1, arg2, arg3, arg4, toInvoke);
+		public static TResult Invoke<TResult>(AppDomain domain, Func<TResult> toInvoke) => AppDomainToolkit.RemoteFunc.Invoke(domain, toInvoke);
+		public static TResult Invoke<T, TResult>(AppDomain domain, T arg1, Func<T, TResult> toInvoke) => AppDomainToolkit.RemoteFunc.Invoke(domain, arg1, toInvoke);
+		public static TResult Invoke<T1, T2, TResult>(AppDomain domain, T1 arg1, T2 arg2, Func<T1, T2, TResult> toInvoke) => AppDomainToolkit.RemoteFunc.Invoke(domain, arg1, arg2, toInvoke);
+		public static TResult Invoke<T1, T2, T3, TResult>(AppDomain domain, T1 arg1, T2 arg2, T3 arg3, Func<T1, T2, T3, TResult> toInvoke) => AppDomainToolkit.RemoteFunc.Invoke(domain, arg1, arg2, arg3, toInvoke);
+		public static TResult Invoke<T1, T2, T3, T4, TResult>(AppDomain domain, T1 arg1, T2 arg2, T3 arg3, T4 arg4, Func<T1, T2, T3, T4, TResult> toInvoke) => AppDomainToolkit.RemoteFunc.Invoke(domain, arg1, arg2, arg3, arg4, toInvoke);
 	}
 }
