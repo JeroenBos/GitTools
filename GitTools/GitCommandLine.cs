@@ -344,7 +344,7 @@ namespace JBSnorro.GitTools
 
         public void StashAll()
         {
-            Execute($"stash --include-untracked --all"); //--quiet
+            Execute($"stash --include-untracked"); //--quiet
         }
         /// <summary>
         /// Amends the top stash with all current changes. 
