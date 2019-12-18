@@ -762,15 +762,25 @@ namespace JBSnorro.GitTools.CI
 		/// </summary>
 		private static void StartProcessStarter(string testAssemblyPath)
 		{
-			string processStarterExe = Path.GetFullPath(ConfigurationManager.AppSettings["processstarter"] ?? throw new AppSettingNotFoundException("processstarter"));
+			string processStarterDir = ConfigurationManager.AppSettings["processstarterDir"] ?? throw new AppSettingNotFoundException("processstarterDir");
+			string processStarterExe = ConfigurationManager.AppSettings["processstarterFiles"]?.Split(',')[0] ?? throw new AppSettingNotFoundException("processstarterFiles");
+			string processStarterPath = Path.GetFullPath(Path.Combine(processStarterDir, processStarterExe));
 
 			Console.WriteLine("Starting process starter");
-			var process = ProcessExtensions.WaitForExitAndReadOutputAsync(processStarterExe, testAssemblyPath);
+			var process = ProcessExtensions.WaitForExitAndReadOutputAsync(processStarterPath, testAssemblyPath);
 			process.Wait();
 			if (process.Result.ExitCode != 0)
 				throw new Exception(process.Result.ErrorOutput);
 			// just in case I want to know this again:
-			int.TryParse(process.Result.StandardOutput, out int writtenMessagesCount);
+			int.TryParse(process.Result.StandardOutput, out int _writtenMessagesCount);
+		}
+		private static IEnumerable<string> getProcessStarterFiles()
+		{
+			string processStarterDir = ConfigurationManager.AppSettings["processstarterDir"] ?? throw new AppSettingNotFoundException("processstarterDir");
+			var processStarterFiles = ConfigurationManager.AppSettings["processstarterFiles"]?.Split(',') ?? throw new AppSettingNotFoundException("processstarterFiles");
+
+			return processStarterFiles.Where(_ => !string.IsNullOrWhiteSpace(_))
+				                      .Select(fileName => Path.GetFullPath(Path.Combine(processStarterDir, fileName)));
 		}
 
 		private static IEnumerable<(Status, string)> BuildViaDotnetTool(string destinationSolutionFile, string outputDirectory, CancellationToken cancellationToken)
@@ -808,8 +818,6 @@ namespace JBSnorro.GitTools.CI
 				"GitTools",
 				"CI",
 				"JBSnorro",
-				//"ProcessStarter", // depends on GitTools
-				//"ProcessStarter.config",
 			};
 
 			var dependencyPaths = dependencies.Select(find).ToList();
@@ -818,9 +826,9 @@ namespace JBSnorro.GitTools.CI
 				Contract.AssertForAll(dependencies, dependencyPath => !dependencyPath.Contains("{0}"), "Cannot find package for '{1}'");
 			}
 
-			var frameworkPaths = frameworkDirectory == null ? Enumerable.Empty<string>() : NETVersionLocationResolver.Framework(frameworkDirectory);
+			var processStarterFiles = getProcessStarterFiles();
 			var dependencyFullPaths = dependencyPaths.Select(selectPackageDirectory)
-													 .Concat(frameworkPaths)
+													 .Concat(processStarterFiles)
 													 .ToList();
 			Contract.AssertForAll(dependencyFullPaths, File.Exists, "The specified file '{1}' does not exist");
 
@@ -865,10 +873,6 @@ namespace JBSnorro.GitTools.CI
 						return @"{1}\JBSnorro.GitTools.exe";
 					case "CI":
 						return @"{1}\JBSnorro.GitTools.CI.exe";
-					case "ProcessStarter":
-						return @"{1}\CI.ProcessStarter.exe";
-					case "ProcessStarter.config":
-						return @"{1}\..\..\..\..\CI.ProcessStarter\bin\Debug\netcoreapp3.0\CI.ProcessStarter.runtimeconfig.json";
 					default:
 						throw new ContractException($"Don't know where to find the dependency '{dependencyName}'");
 				}
