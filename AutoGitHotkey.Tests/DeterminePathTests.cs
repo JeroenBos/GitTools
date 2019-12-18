@@ -13,6 +13,8 @@ namespace JBSnorro.AutoGitHotkey.Tests
     [TestFixture]
     public class DeterminePathTests
     {
+		static DeterminePathTests() => ResolveJBSnorroDll.Resolve();
+
         [Test]
         public void GetPathFromConfigFile()
         {

@@ -9,12 +9,9 @@ namespace JBSnorro.AutoGitHotkey.Tests
 {
 	class TestProgram
 	{
-		static TestProgram()
-		{
-			Assembly.LoadFrom("JBSnorro.CI.dll"); // overrides the name mismatch JBSnorro vs JBSnorro.CI. We must have a different name because otherwise I can't use this on ASDE e.g. because of name clashes
-		}
 		static void Main(string[] args)
 		{
+			ResolveJBSnorroDll.Resolve();
 			new DeterminePathTests().GetPathFromConfigFile();
 		}
 	}

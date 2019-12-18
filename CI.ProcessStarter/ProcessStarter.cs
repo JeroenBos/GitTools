@@ -9,11 +9,14 @@ namespace CI.ProcessStarter
 {
 	class ProcessStarter
 	{
+		static ProcessStarter() => ResolveJBSnorroDll.Resolve();
+
 		public const string PIPE_NAME = "CI_internal_pipe";
 		public const string SUCCESS_CODON = "SUCCESS_CODON";
 		public const string ERROR_CODON = "ERROR___CODON";
 		public const string STOP_CODON = "STOPS___CODON";
 		public const string STARTED_CODON = "STARTED_CODON";
+
 		static int Main(string[] args)
 		{
 			if (args.Length != 1)
@@ -91,7 +94,7 @@ namespace CI.ProcessStarter
 							writer.WriteLine(STOP_CODON + totalTestCount.ToString());
 							messagesCount++;
 						}
-						Console.Write(messagesCount); 
+						Console.Write(messagesCount);
 					}
 				}
 			}

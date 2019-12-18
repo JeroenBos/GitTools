@@ -14,12 +14,10 @@ namespace CI.UI.Tests
 	[TestFixture]
 	public class NotificationIconTests
 	{
-		static NotificationIconTests()
-		{
-			Assembly.LoadFrom("JBSnorro.CI.dll"); // overrides the name mismatch JBSnorro vs JBSnorro.CI. We must have a different name because otherwise I can't use this on ASDE e.g. because of name clashes
-		}
+		static NotificationIconTests() => ResolveJBSnorroDll.Resolve();
 		static void Main(string[] args)
-		{
+		
+  {
 			new DispatcherTests().RunTests();
 			new NotificationIconTests().RetryButtonRemovedOnInvocation();
 
