@@ -17,6 +17,7 @@ public static class ResolveJBSnorroDll
 	// the static cctor ensures it's only called once
 	static ResolveJBSnorroDll()
 	{
-		Assembly.LoadFrom("JBSnorro.CI.dll");
+		// this has become a no-op since the assembly name of JBSnorro.CI.dll was renamed to JBSnorro.CI. 
+		// Otherwise NUnit didn't want to load the tests
 	}
 }
