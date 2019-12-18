@@ -28,6 +28,7 @@ namespace JBSnorro.GitTools.CI
         Skipped,
         ParentFailed,
         Canceled,
+		Info,
     }
 
     public static class StatusExtensions

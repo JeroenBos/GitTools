@@ -20,8 +20,8 @@ namespace CI.ProcessStarter
 				throw new ArgumentException("Expected 1 argument");
 
 			string assemblyPath = args[0];
-			if (AppDomain.CurrentDomain.BaseDirectory != Path.GetDirectoryName(assemblyPath))
-				throw new ArgumentException($"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPath)}");
+			if (!File.Exists(assemblyPath))
+				throw new FileNotFoundException(assemblyPath);
 
 			try
 			{
@@ -91,7 +91,7 @@ namespace CI.ProcessStarter
 							writer.WriteLine(STOP_CODON + totalTestCount.ToString());
 							messagesCount++;
 						}
-						Console.WriteLine(messagesCount);
+						Console.Write(messagesCount); 
 					}
 				}
 			}

@@ -375,6 +375,8 @@ namespace CI.UI
                                 overallStatus = TestResult.Success;
                                 break;
 
+							case Status.Info:
+								break;
                             case Status.ParentFailed:
                             case Status.ArgumentError:
                                 throw new ContractException("This error status should have been returned by the prework already");

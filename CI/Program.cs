@@ -3,7 +3,6 @@ using System.Threading;
 using Microsoft.Build.Evaluation;
 using Microsoft.Build.Execution;
 using Microsoft.Build.Logging;
-using Microsoft.Build.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -20,6 +19,7 @@ using System.IO.Pipes;
 using System.Collections.Concurrent;
 using System.Configuration;
 using Debug = System.Diagnostics.Debug;
+using Microsoft.Build.Exceptions;
 using Task = System.Threading.Tasks.Task;
 
 namespace JBSnorro.GitTools.CI
@@ -33,6 +33,9 @@ namespace JBSnorro.GitTools.CI
 		/// Gets the number of threads used for testing. At most one thread is used per test project.
 		/// </summary>
 		public static readonly int TEST_THREAD_COUNT = ConfigurationManagerExtensions.ParseAppSettingInt("TEST_THREAD_COUNT", ifMissing: 1);
+
+		private static readonly string Configuration = "Debug";
+		private static readonly string Platform = "x86";
 
 		private const string TaskCanceledMessage = "Task canceled";
 
@@ -175,12 +178,11 @@ namespace JBSnorro.GitTools.CI
 
 				new GitCommandLine(destinationDirectory).CheckoutHard(hash);
 
-				IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(destinationSolutionFile, cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder);
-				IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFile, cancellationToken);
+				IEnumerable<(Status, string)> loadAndBuildSolutionMessages = LoadAndBuildSolution(destinationSolutionFile, cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder);
 				IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
 
-				return EnumerableExtensions.Concat(loadSolutionMessages, buildSolutionMessages, testMessages)
-										   .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
+				return loadAndBuildSolutionMessages.Concat(testMessages)
+												   .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
 			}
 			catch (Exception e)
 			{
@@ -482,12 +484,11 @@ namespace JBSnorro.GitTools.CI
 			}
 		}
 
-		private static IReadOnlyList<string> GetProjectPaths(string destinationSolutionFilepath, out string error)
+		private static IReadOnlyList<string> GetProjectPaths(SolutionFile file, out string error)
 		{
 			error = null;
 			try
 			{
-				var file = SolutionFile.Parse(destinationSolutionFilepath);
 				return file.ProjectsInOrder
 						   .Where(project => File.Exists(project.AbsolutePath))
 						   .Select(project => project.AbsolutePath)
@@ -499,21 +500,54 @@ namespace JBSnorro.GitTools.CI
 				return null;
 			}
 		}
-		private static IEnumerable<(Status Status, string Message)> LoadSolution(string destinationSolutionFile, CancellationToken cancellationToken, out IReadOnlyList<Project> projectsInBuildOrder)
+		private static IEnumerable<(Status Status, string Message)> LoadAndBuildSolution(string destinationSolutionFilePath, CancellationToken cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder)
 		{
-			var projectFilePaths = GetProjectPaths(destinationSolutionFile, out var error);
+			var solutionFile = SolutionFile.Parse(destinationSolutionFilePath);
+			var projectFilePaths = GetProjectPaths(solutionFile, out var error);
 			if (error != null)
 			{
 				projectsInBuildOrder = null;
 				return (Status.ProjectLoadingError, error).ToSingleton();
 			}
 
-			var inBuildOrder = new List<Project>();
-			projectsInBuildOrder = new ReadOnlyCollection<Project>(inBuildOrder);
+			var tempDir = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), Guid.NewGuid().ToString());
 
-			var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = "Debug", ["Platform"] = "x86" }) { IsBuildEnabled = true };
-			return messages().ContinueWith(() => inBuildOrder.AddRange(ToBuildOrder(projects.LoadedProjects))).OnDisposal(projects.Dispose);
+			try
+			{
+				// $(MSBuildRuntimeType)' == 'Core' exists, see https://github.com/aspnet/BuildTools/blob/9ea72bcf88063cee9afbe53835681702e2efd720/src/Internal.AspNetCore.BuildTools.Tasks/build/Internal.AspNetCore.BuildTools.Tasks.props#L2-L6
 
+				var messages = BuildViaDotnetTool(destinationSolutionFilePath, tempDir, cancellationToken).ToList();
+				projectsInBuildOrder = solutionFile.ProjectsInOrder.Select(project => CoreProject.Resolve(project, solutionFile, tempDir)).ToList();
+				return messages;
+			}
+			catch
+			{
+				IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out projectsInBuildOrder);
+				IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFilePath, cancellationToken);
+				return loadSolutionMessages.Concat(buildSolutionMessages);
+			}
+		}
+		private static IEnumerable<(Status Status, string Message)> LoadSolution(IReadOnlyList<string> projectFilePaths, CancellationToken cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder)
+		{
+			var inBuildOrder = new List<IProject>();
+			projectsInBuildOrder = new ReadOnlyCollection<IProject>(inBuildOrder);
+
+			var projects = new ProjectCollection(new Dictionary<string, string> { ["configuration"] = Configuration, ["Platform"] = Platform }) { IsBuildEnabled = true };
+			try
+			{
+				var result = messages().ToList();
+				inBuildOrder.AddRange(ToBuildOrder(projects.LoadedProjects.Select(p => new FrameworkProject(p)).ToList()));
+				return result;
+			}
+			catch
+			{
+				projectsInBuildOrder = null;
+				throw;
+			}
+			finally
+			{
+				projects.Dispose();
+			}
 			IEnumerable<(Status, string)> messages()
 			{
 				foreach (var projectPath in projectFilePaths)
@@ -522,6 +556,10 @@ namespace JBSnorro.GitTools.CI
 					try
 					{
 						projects.LoadProject(projectPath);
+					}
+					catch (InvalidProjectFileException e)
+					{
+						// maybe it's a .NET Core project
 					}
 					catch (Exception e)
 					{
@@ -548,7 +586,7 @@ namespace JBSnorro.GitTools.CI
 		/// <summary>
 		/// Tries to build the solution and returns the projects if successful; otherwise an error message.
 		/// </summary>
-		private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<Project> projectsInBuildOrder, string destinationSolutionFile, CancellationToken cancellationToken)
+		private static IEnumerable<(Status Status, string Message)> BuildSolution(IReadOnlyList<IProject> projectsInBuildOrder, string destinationSolutionFile, CancellationToken cancellationToken)
 		{
 			if (skipBuild)
 				yield break;
@@ -585,10 +623,10 @@ namespace JBSnorro.GitTools.CI
 			}
 		}
 
-		private static List<Project> ToBuildOrder(IEnumerable<Project> projects)
+		private static List<IProject> ToBuildOrder(IEnumerable<IProject> projects)
 		{
 			var remaining = projects.ToList();
-			var result = new List<Project>();
+			var result = new List<IProject>();
 			while (remaining.Count != 0)
 			{
 				var next = findTop(remaining);
@@ -599,7 +637,7 @@ namespace JBSnorro.GitTools.CI
 
 
 			// returns the guid of a project in the specified list that has no dependencies on the specified projects
-			Project findTop(List<Project> unbuiltProjects)
+			IProject findTop(List<IProject> unbuiltProjects)
 			{
 				return unbuiltProjects.First(project =>
 				{
@@ -609,7 +647,7 @@ namespace JBSnorro.GitTools.CI
 			}
 
 			// Gets the guids of the project references upon which the specified project depends
-			IEnumerable<string> GetProjectReferenceGuids(Project p)
+			IEnumerable<string> GetProjectReferenceGuids(IProject p)
 			{
 				return p.Items
 						.Where(i => i.ItemType == "ProjectReference")
@@ -619,33 +657,33 @@ namespace JBSnorro.GitTools.CI
 			}
 
 			// Gets the guid of the specified project
-			string GetGuid(Project project)
+			string GetGuid(IProject project)
 			{
 				return project.GetProperty("ProjectGuid").EvaluatedValue.ToUpper();
 			}
 		}
 
-		private static IEnumerable<(Status, string)> RunTests(IReadOnlyList<Project> projectsInBuildOrder, CancellationToken cancellationToken)
+		private static IEnumerable<(Status, string)> RunTests(IReadOnlyList<IProject> projectsInBuildOrder, CancellationToken cancellationToken)
 		{
 			try
 			{
-				foreach (Project project in projectsInBuildOrder)
+				foreach (var project in projectsInBuildOrder)
 				{
 					string binDirectory = Path.GetDirectoryName(GetAssemblyPath(project));
-					CopyDependenciesToNewAppDomainBaseDirectory(project.DirectoryPath, binDirectory);
+					CopyDependenciesToNewAppDomainBaseDirectory(project.DirectoryPath, binDirectory, null);
 				}
 
 				int processedProjectsCount = 0;
-				var remainingProjects = new ConcurrentQueue<Project>(projectsInBuildOrder);
+				var remainingProjects = new ConcurrentQueue<IProject>(projectsInBuildOrder);
 
 				for (int i = 0; i < TEST_THREAD_COUNT; i++)
 				{
 					void processRemainingProjects()
 					{
-						while (remainingProjects.TryDequeue(out Project project) && !cancellationToken.IsCancellationRequested)
+						while (remainingProjects.TryDequeue(out IProject project) && !cancellationToken.IsCancellationRequested)
 						{
 							Interlocked.Increment(ref processedProjectsCount);
-							StartMessageWriter(GetAssemblyPath(project));
+							StartProcessStarter(GetAssemblyPath(project));
 						}
 					}
 
@@ -664,127 +702,8 @@ namespace JBSnorro.GitTools.CI
 			{
 				return (Status.MiscellaneousError, e.Message).ToSingleton();
 			}
-
-			void StartMessageWriter(string assemblyPath)
-			{
-				string appDomainBase = Path.GetDirectoryName(assemblyPath);
-				IAppDomainContext testerDomain = null;
-				try
-				{
-					testerDomain = BackwardsCompatibility.CreateAppDomain(appDomainBase, assemblyPath);
-
-					int messagesWrittenByApp = RemoteFunc.Invoke(testerDomain.Domain, assemblyPath, writeMessagesBackOfTesting);
-					Interlocked.Add(ref messagesWrittenCount, messagesWrittenByApp);
-				}
-				finally
-				{
-					try
-					{
-						if (testerDomain != null)
-							testerDomain.Dispose();
-					}
-					catch (CannotUnloadAppDomainException)
-					{
-						// this exception gets thrown because NamedPipeServerStream.WaitForConnectionAsync has a bug: it doesn't cancel when the specified CancellationToken cancels
-						// I can't cancel it using Thread.Abort or something related because the waiting happens in native code (the land where Thread.Abort holds no power)
-						// A workaround would be (I think, because I've read that in comments on referencesource.microsoft.com in NamedPipeServerStream) to use new thread instead of a ThreadPool thread
-						Logger.Log("Appdomain could not be disposed of");
-					}
-				}
-			}
-
-			int writeMessagesBackOfTesting(string assemblyPath)
-			{
-				Contract.Assert(AppDomain.CurrentDomain.BaseDirectory == Path.GetDirectoryName(assemblyPath), $"AppDomain switch failed: {AppDomain.CurrentDomain.BaseDirectory} != {Path.GetDirectoryName(assemblyPath)}");
-
-				try
-				{
-					using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
-					{
-						outPipe.Connect();
-						using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
-						{
-							int totalTestCount = 0;
-							int messagesCount = 0;
-							try
-							{
-								foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPath))
-								{
-									writer.WriteLine(STARTED_CODON + $"{method.DeclaringType.FullName}.{method.Name}");
-									messagesCount++;
-
-									string methodError = RunTest(method);
-
-									if (!outPipe.IsConnected)
-										break;
-
-									totalTestCount++;
-									if (methodError == null)
-									{
-										const string successMessage = "";
-										writer.WriteLine(SUCCESS_CODON + successMessage);
-										messagesCount++;
-									}
-									else
-									{
-										string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
-										writer.WriteLine(ERROR_CODON + message);
-										messagesCount++;
-									}
-								}
-							}
-							catch (ReflectionTypeLoadException e)
-							{
-								foreach (var loadException in e.LoaderExceptions)
-								{
-									writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
-									messagesCount++;
-								}
-							}
-							catch (TargetInvocationException te)
-							{
-								Exception e = te.InnerException;
-								if (e.InnerException != null)
-								{
-									writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
-									messagesCount++;
-								}
-								else
-								{
-									writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
-									messagesCount++;
-								}
-							}
-							catch (Exception e)
-							{
-								writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
-								messagesCount++;
-							}
-							finally
-							{
-								writer.WriteLine(STOP_CODON + totalTestCount.ToString());
-								messagesCount++;
-							}
-							return messagesCount;
-						}
-					}
-				}
-				catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
-				catch (IOException e) { Console.WriteLine(e.Message); }
-				return 0;
-			}
 		}
 
-		private static string RemoveLineBreaks(string s)
-		{
-			Contract.Assert(SUCCESS_CODON.Length == STOP_CODON.Length);
-			Contract.Assert(ERROR_CODON.Length == STOP_CODON.Length);
-			Contract.Assert(STARTED_CODON.Length == STOP_CODON.Length);
-
-			return s?.Replace('\n', '-').Replace('\r', '-');
-		}
-
-		private static int messagesWrittenCount;
 		public const string PIPE_NAME = "CI_internal_pipe";
 		public const string SUCCESS_CODON = "SUCCESS_CODON";
 		public const string ERROR_CODON = "ERROR___CODON";
@@ -832,7 +751,7 @@ namespace JBSnorro.GitTools.CI
 		}
 
 		/// <summary>
-		/// Performs a nuget restore operation.
+		/// Performs a nuget restore operation synchronously.
 		/// </summary>
 		private static void NuGetRestore(string destinationSolutionFile)
 		{
@@ -842,19 +761,56 @@ namespace JBSnorro.GitTools.CI
 		}
 
 		/// <summary>
+		/// Performs a nuget restore operation.
+		/// </summary>
+		private static void StartProcessStarter(string testAssemblyPath)
+		{
+			string processStarterExe = Path.GetFullPath(ConfigurationManager.AppSettings["processstarter"] ?? throw new AppSettingNotFoundException("processstarter"));
+
+			Console.WriteLine("Starting process starter");
+			var process = ProcessExtensions.WaitForExitAndReadOutputAsync(processStarterExe, testAssemblyPath);
+			process.Wait();
+			if (process.Result.ExitCode != 0)
+				throw new Exception(process.Result.ErrorOutput);
+		}
+
+		private static IEnumerable<(Status, string)> BuildViaDotnetTool(string destinationSolutionFile, string outputDirectory, CancellationToken cancellationToken)
+		{
+			string dotnetExe = ConfigurationManager.AppSettings["dotnet.exe"] ?? throw new AppSettingNotFoundException("dotnet.exe");
+
+			var task = ProcessExtensions.WaitForExitAndReadOutputAsync(dotnetExe, "build", destinationSolutionFile, $"--output \"{outputDirectory}\"");
+			task.Wait(cancellationToken);
+
+			int exitCode = task.Result.ExitCode;
+			if (exitCode == 0)
+			{
+				yield return (Status.ProjectLoadSuccess, $"Solution {Path.GetFileName(destinationSolutionFile)} loaded successfully");
+			}
+			else
+			{
+				if (task.Result.ErrorOutput != null)
+					yield return (Status.ProjectLoadingError, task.Result.ErrorOutput);
+				if (task.Result.StandardOutput != null)
+					yield return (Status.Info, task.Result.StandardOutput);
+				yield return (Status.ProjectLoadingError, $"Solution {Path.GetFileName(destinationSolutionFile)} failed loading");
+			}
+		}
+
+		/// <summary>
 		/// Copies the dependencies of this project to the bin directory of the new app domain.
 		/// </summary>
 		/// <param name="binDirectory"> The bin directory where a project is to be built. </param>
-		private static void CopyDependenciesToNewAppDomainBaseDirectory(string projectFileDirectory, string newAppDomainBaseDirectory)
+		private static void CopyDependenciesToNewAppDomainBaseDirectory(string projectFileDirectory, string newAppDomainBaseDirectory, string frameworkDirectory)
 		{
 			List<string> packagesDirectories = new string[] { newAppDomainBaseDirectory, AppDomain.CurrentDomain.BaseDirectory }.Select(getPackagesDirectory).Where(p => p != null).ToList();
 			IEnumerable<string> dependencies = new string[]
 			{
-				"AppDomainToolkit",
 				"NUnit",
 				"GitTools",
 				"CI",
 				"JBSnorro",
+				//"ProcessStarter", // depends on GitTools
+				//"ProcessStarter.config",
 			};
 
 			var dependencyPaths = dependencies.Select(find).ToList();
@@ -863,8 +819,10 @@ namespace JBSnorro.GitTools.CI
 				Contract.AssertForAll(dependencies, dependencyPath => !dependencyPath.Contains("{0}"), "Cannot find package for '{1}'");
 			}
 
-
-			var dependencyFullPaths = dependencyPaths.Select(selectPackageDirectory).ToList();
+			var frameworkPaths = frameworkDirectory == null ? Enumerable.Empty<string>() : NETVersionLocationResolver.Framework(frameworkDirectory);
+			var dependencyFullPaths = dependencyPaths.Select(selectPackageDirectory)
+													 .Concat(frameworkPaths)
+													 .ToList();
 			Contract.AssertForAll(dependencyFullPaths, File.Exists, "The specified file '{1}' does not exist");
 
 			copy(dependencyFullPaths, newAppDomainBaseDirectory);
@@ -900,8 +858,6 @@ namespace JBSnorro.GitTools.CI
 			{
 				switch (dependencyName)
 				{
-					case "AppDomainToolkit":
-						return @"{0}\AppDomainToolkit.1.0.4.3\lib\net\AppDomainToolkit.dll";
 					case "NUnit":
 						return @"{0}\NUnit.3.9.0\lib\net45\nunit.framework.dll";
 					case "JBSnorro":
@@ -910,6 +866,10 @@ namespace JBSnorro.GitTools.CI
 						return @"{1}\JBSnorro.GitTools.exe";
 					case "CI":
 						return @"{1}\JBSnorro.GitTools.CI.exe";
+					case "ProcessStarter":
+						return @"{1}\CI.ProcessStarter.exe";
+					case "ProcessStarter.config":
+						return @"{1}\..\..\..\..\CI.ProcessStarter\bin\Debug\netcoreapp3.0\CI.ProcessStarter.runtimeconfig.json";
 					default:
 						throw new ContractException($"Don't know where to find the dependency '{dependencyName}'");
 				}
@@ -943,60 +903,10 @@ namespace JBSnorro.GitTools.CI
 			}
 		}
 
-		/// <returns>null means the test succeeded; otherwise the error message. </returns>
-		private static string RunTest(MethodInfo testMethod)
+
+		private static string GetAssemblyPath(IProject project)
 		{
-			if (testMethod == null) throw new ArgumentNullException(nameof(testMethod));
-
-			object testClassInstance = null;
-			try
-			{
-				testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
-				TestClassExtensions.RunInitializationMethod(testClassInstance);
-				int? timeout = TestClassExtensions.GetTestMethodTimeout(testMethod);
-				Action invocation = () => testMethod.Invoke(testClassInstance, new object[0]);
-				if (timeout != null)
-				{
-					var task = Task.Run(invocation);
-					var whenAnyTask = Task.WhenAny(task, Task.Delay(timeout.Value));
-					whenAnyTask.Wait();
-					if (whenAnyTask.Result == task)
-					{
-						return null;
-					}
-					else
-					{
-						return "{0} timed out";
-					}
-				}
-				else
-				{
-					invocation();
-				}
-			}
-			catch (TargetInvocationException e)
-			{
-				if (TestClassExtensions.IsExceptionExpected(testMethod, e.InnerException))
-				{
-					return null;
-				}
-				throw;
-			}
-			finally
-			{
-				TestClassExtensions.RunCleanupMethod(testClassInstance);
-			}
-
-			return null;
-		}
-		private static string GetAssemblyPath(Project project)
-		{
-			if (!project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.StartsWith("obj"))
-				throw new NotImplementedException();
-
-			//couldn't find it in the projects' AlLEvaluatedItems, so I'm hacking this together:
-			string relativePath = "bin" + project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.Substring("obj".Length);
-			string path = Path.Combine(project.DirectoryPath, relativePath);
+			string path = project.AssemblyPath;
 
 			if (!File.Exists(path))
 				if (skipCopySolution || skipBuild)

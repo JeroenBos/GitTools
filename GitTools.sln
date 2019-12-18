@@ -7,15 +7,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GitTools", "GitTools\GitToo
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CI", "CI\CI.csproj", "{53B9CF71-9E2F-4F3B-AEAE-271B4D3B3F5F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CI.UI", "CI.UI\CI.UI.csproj", "{B0FC2FBF-2166-457F-AD5F-5E2AB5C76ECA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CI.UI", "CI.UI\CI.UI.csproj", "{B0FC2FBF-2166-457F-AD5F-5E2AB5C76ECA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CI.Dispatcher", "CI.Dispatcher\CI.Dispatcher.csproj", "{44884954-1B2A-44CB-AF48-F4A3AC057722}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CI.Dispatcher", "CI.Dispatcher\CI.Dispatcher.csproj", "{44884954-1B2A-44CB-AF48-F4A3AC057722}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CI.UI.Tests", "CI.UI.Tests\CI.UI.Tests.csproj", "{B88A71FA-0E5B-45EE-9635-8EAE6AB12255}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CI.UI.Tests", "CI.UI.Tests\CI.UI.Tests.csproj", "{B88A71FA-0E5B-45EE-9635-8EAE6AB12255}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoGitHotkey", "AutoGitHotkey\AutoGitHotkey.csproj", "{D30B9F01-4555-407B-9F87-4E070BD856D3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoGitHotkey", "AutoGitHotkey\AutoGitHotkey.csproj", "{D30B9F01-4555-407B-9F87-4E070BD856D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoGitHotkey.Tests", "AutoGitHotkey.Tests\AutoGitHotkey.Tests.csproj", "{8E4EE772-966C-4605-801E-7C201AFF3F76}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoGitHotkey.Tests", "AutoGitHotkey.Tests\AutoGitHotkey.Tests.csproj", "{8E4EE772-966C-4605-801E-7C201AFF3F76}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackwardsCompatibility", "BackwardsCompatibility\BackwardsCompatibility.csproj", "{623F0C20-D296-44E2-A97F-F38997A459E7}"
 EndProject
@@ -93,6 +93,14 @@ Global
 		{623F0C20-D296-44E2-A97F-F38997A459E7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{623F0C20-D296-44E2-A97F-F38997A459E7}.Release|x86.ActiveCfg = Release|Any CPU
 		{623F0C20-D296-44E2-A97F-F38997A459E7}.Release|x86.Build.0 = Release|Any CPU
+		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Debug|x86.Build.0 = Debug|Any CPU
+		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Release|x86.ActiveCfg = Release|Any CPU
+		{6F748866-0B1F-418C-88F6-A893553CC3F5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
