@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoGitHotkey.Tests", "Auto
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackwardsCompatibility", "BackwardsCompatibility\BackwardsCompatibility.csproj", "{623F0C20-D296-44E2-A97F-F38997A459E7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CI.ProcessStarter", "CI.ProcessStarter\CI.ProcessStarter.csproj", "{6F748866-0B1F-418C-88F6-A893553CC3F5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
