@@ -264,3 +264,4 @@ __pycache__/
 
 # for working with SciTE4AutoHotkey
 .bak
+**/launchSettings.json
