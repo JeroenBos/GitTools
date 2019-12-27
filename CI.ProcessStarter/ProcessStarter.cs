@@ -17,11 +17,18 @@ namespace CI.ProcessStarter
 		public const string ERROR_CODON = "ERROR___CODON";
 		public const string STOP_CODON = "STOPS___CODON";
 		public const string STARTED_CODON = "STARTED_CODON";
-
+		public const string NO_PIPE = "--no-pipe";
 		static int Main(string[] args)
 		{
+#if DEBUG
+			if (args.Length != 1 && args.Length != 2)
+				throw new ArgumentException("Exected 1 or 2 arguments");
+			if (args.Length == 2 && args[1] != NO_PIPE)
+				throw new ArgumentException($"Second argument can only be '{NO_PIPE}'");
+#else
 			if (args.Length != 1)
 				throw new ArgumentException("Expected 1 argument");
+#endif
 
 			string assemblyPath = args[0];
 			if (!File.Exists(assemblyPath))
@@ -31,72 +38,76 @@ namespace CI.ProcessStarter
 			{
 				using (var outPipe = new NamedPipeClientStream(".", PIPE_NAME, PipeDirection.Out))
 				{
-					outPipe.Connect();
-					using (var writer = new StreamWriter(outPipe) { AutoFlush = true })
+					bool connect = args.Length == 1;
+
+					if (connect)
 					{
-						int totalTestCount = 0;
-						int messagesCount = 0;
-						try
-						{
-							foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPath))
-							{
-								writer.WriteLine(STARTED_CODON + $"{method.DeclaringType.FullName}.{method.Name}");
-								messagesCount++;
+						outPipe.Connect();
+					}
 
-								string methodError = RunTest(method);
-
-								if (!outPipe.IsConnected)
-									break;
-
-								totalTestCount++;
-								if (methodError == null)
-								{
-									const string successMessage = "";
-									writer.WriteLine(SUCCESS_CODON + successMessage);
-									messagesCount++;
-								}
-								else
-								{
-									string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
-									writer.WriteLine(ERROR_CODON + message);
-									messagesCount++;
-								}
-							}
-						}
-						catch (ReflectionTypeLoadException e)
+					using var writer = new StreamWriter(connect ? outPipe : (Stream)new MemoryStream()) { AutoFlush = true };
+					int totalTestCount = 0;
+					int messagesCount = 0;
+					try
+					{
+						foreach (MethodInfo method in TestClassExtensions.GetTestMethods(assemblyPath))
 						{
-							foreach (var loadException in e.LoaderExceptions)
+							writer.WriteLine(STARTED_CODON + $"{method.DeclaringType.FullName}.{method.Name}");
+							messagesCount++;
+
+							string methodError = RunTest(method);
+
+							if (!outPipe.IsConnected)
+								break;
+
+							totalTestCount++;
+							if (methodError == null)
 							{
-								writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
-								messagesCount++;
-							}
-						}
-						catch (TargetInvocationException te)
-						{
-							Exception e = te.InnerException;
-							if (e.InnerException != null)
-							{
-								writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+								const string successMessage = "";
+								writer.WriteLine(SUCCESS_CODON + successMessage);
 								messagesCount++;
 							}
 							else
 							{
-								writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+								string message = string.Format($"{method.DeclaringType.FullName}.{method.Name}: {RemoveLineBreaks(methodError)}");
+								writer.WriteLine(ERROR_CODON + message);
 								messagesCount++;
 							}
 						}
-						catch (Exception e)
-						{
-							writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
-							messagesCount++;
-						}
-						finally
-						{
-							writer.WriteLine(STOP_CODON + totalTestCount.ToString());
-							messagesCount++;
-						}
-						Console.Write(messagesCount);
 					}
+					catch (ReflectionTypeLoadException e)
+					{
+						foreach (var loadException in e.LoaderExceptions)
+						{
+							writer.WriteLine(ERROR_CODON + RemoveLineBreaks(loadException.Message));
+							messagesCount++;
+						}
+					}
+					catch (TargetInvocationException te)
+					{
+						Exception e = te.InnerException;
+						if (e.InnerException != null)
+						{
+							writer.WriteLine(ERROR_CODON + "Inner message: " + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+							messagesCount++;
+						}
+						else
+						{
+							writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"{e.Message}\n{e.StackTrace}"));
+							messagesCount++;
+						}
+					}
+					catch (Exception e)
+					{
+						writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
+						messagesCount++;
+					}
+					finally
+					{
+						writer.WriteLine(STOP_CODON + totalTestCount.ToString());
+						messagesCount++;
+					}
+					Console.Write(messagesCount);
 				}
 			}
 			catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
