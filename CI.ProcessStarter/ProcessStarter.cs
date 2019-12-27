@@ -186,7 +186,8 @@ namespace CI.ProcessStarter
 			}
 			finally
 			{
-				TestClassExtensions.RunCleanupMethod(testClassInstance);
+				if (testClassInstance != null)
+					TestClassExtensions.RunCleanupMethod(testClassInstance);
 			}
 
 			return null;
