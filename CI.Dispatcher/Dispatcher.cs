@@ -37,9 +37,10 @@ namespace CI
 		private const string START_UI_ARG = "UI";
 
 		/// <summary>
-		/// The purpose of this application is for each time it is executed, dispatch the message to the only running instance of CI.UI.
-		/// Once the message has been sent to CI.UI, execution stops.
+		/// The purpose of this application is for each time it is executed, dispatch the message to the only running instance of CI.UI (and starts it if it isn't already).
+		/// Once the message has been sent to CI.UI, execution stops. 
 		/// </summary>
+		/// <param name="args"> The arguments (except for possibly the first if it is `UI`) are piped to the CI. An example is <code>dir\\GitTools.sln" $hash</code></param>
 		internal static void Main(string[] args)
 		{
 			using (var cts = new CancellationTokenSource())
@@ -77,6 +78,9 @@ namespace CI
 				catch (Exception e)
 				{
 					Logger.Log("exception: " + e.Message);
+#if DEBUG
+					Console.ReadLine();
+#endif
 				}
 				finally
 				{
@@ -93,7 +97,7 @@ namespace CI
 		public static string ComposeMessage(params string[] args)
 		{
 			Contract.Requires(args != null);
-			Contract.Requires(args.Length > 0);
+			Contract.Requires(args.Length > 0, "Insufficient arguments specified");
 
 			return string.Join(CIReceivingPipe.PipeMessageSeparator, args);
 		}
