@@ -43,7 +43,7 @@ namespace CI.UI
 		/// <summary>
 		/// Reads the pipe and handles the message pump for the icon.
 		/// </summary>
-		public static void Start(CancellationToken cancellationToken = default(CancellationToken))
+		public static void Start(CancellationToken cancellationToken = default)
 		{
 			using (var icon = new NotificationIcon(isVisible: true))
 				Start(icon, cancellationToken);
@@ -51,7 +51,7 @@ namespace CI.UI
 		/// <summary>
 		/// Reads the pipe and handles the message pump for the specified icon.
 		/// </summary>
-		public static void Start(NotificationIcon icon, CancellationToken cancellationToken = default(CancellationToken))
+		public static void Start(NotificationIcon icon, CancellationToken cancellationToken = default)
 		{
 			Dispatcher = Dispatcher.CurrentDispatcher;
 			using (var program = new Program(icon))
@@ -59,7 +59,7 @@ namespace CI.UI
 				program.start(cancellationToken);
 			}
 		}
-		private void start(CancellationToken cancellationToken = default(CancellationToken))
+		private void start(CancellationToken cancellationToken = default)
 		{
 			Logger.Log("In UI.start");
 
@@ -128,7 +128,7 @@ namespace CI.UI
             icon.ShowErrorBalloon(e.Message, e is ArgumentException ? Status.ArgumentError : Status.UnhandledException);
 #endif
 		}
-		internal void HandleInput(string[] input, CancellationToken externalCancellationToken = default(CancellationToken), bool ignoreParentFailed = false)
+		internal void HandleInput(string[] input, CancellationToken externalCancellationToken = default, bool ignoreParentFailed = false)
 		{
 			if (input == null || input.Length == 0) throw new ArgumentException("No arguments were provided");
 
@@ -207,7 +207,7 @@ namespace CI.UI
 		}
 		internal static void HandleCommit(ICopyBuildTestSolutions work,
 										  NotificationIcon icon,
-										  CancellationToken externalCancellationToken = default(CancellationToken),
+										  CancellationToken externalCancellationToken = default,
 										  bool ignoreParentFailed = false)
 		{
 			Contract.Requires(work != null);

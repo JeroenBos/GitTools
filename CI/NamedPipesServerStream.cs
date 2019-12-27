@@ -34,7 +34,7 @@ namespace JBSnorro.GitTools.CI
 														 string pipeName,
 														 Func<string, bool> isQuitSignal,
 														 int expectedNumberOfConnections,
-														 CancellationToken cancellationToken = default(CancellationToken),
+														 CancellationToken cancellationToken = default,
 														 bool spawnLazily = false)
 		{
 			using (var stream = new NamedPipesServerStream(pipeName, isQuitSignal, expectedNumberOfConnections, cancellationToken, spawnLazily))
@@ -45,7 +45,7 @@ namespace JBSnorro.GitTools.CI
 				}
 			}
 		}
-		internal NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, CancellationToken cancellationToken = default(CancellationToken), bool spawnLazily = false)
+		internal NamedPipesServerStream(string pipeName, Func<string, bool> isQuitSignal, int expectedNumberOfConnections, CancellationToken cancellationToken = default, bool spawnLazily = false)
 		{
 			this.PipeName = pipeName;
 			this.isQuitSignal = isQuitSignal;

@@ -70,7 +70,7 @@ namespace JBSnorro.GitTools.CI
 			Console.ReadLine();
 		}
 
-		public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, CancellationToken cancellationToken = default(CancellationToken))
+		public static IEnumerable<(Status, string)> CopySolutionAndExecuteTests(string solutionFilePath, string baseDestinationDirectory, string hash = null, CancellationToken cancellationToken = default)
 		{
 			TestResultsFile resultsFile = null;
 			try
@@ -160,7 +160,7 @@ namespace JBSnorro.GitTools.CI
 																				string destinationDirectory,
 																				out int projectCount,
 																				string hash = null,
-																				CancellationToken cancellationToken = default(CancellationToken))
+																				CancellationToken cancellationToken = default)
 		{
 			try
 			{
