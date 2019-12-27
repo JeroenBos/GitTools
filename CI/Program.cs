@@ -506,7 +506,7 @@ namespace JBSnorro.GitTools.CI
 
 			//// $(MSBuildRuntimeType)' == 'Core' exists, see https://github.com/aspnet/BuildTools/blob/9ea72bcf88063cee9afbe53835681702e2efd720/src/Internal.AspNetCore.BuildTools.Tasks/build/Internal.AspNetCore.BuildTools.Tasks.props#L2-L6
 
-			List<(Status, string)> messages = null;
+			List<(Status, string)> messages = new List<(Status, string)>() { (Status.Info, "dotnet.exe is working") };
 			bool tryLegacy;
 			try
 			{
