@@ -82,8 +82,11 @@ namespace JBSnorro.GitTools.CI
 		{
 			const string tagName = "AssemblyName";
 			var assemblyName = GetTagContents(csprojContents, tagName, fileName);
-			Contract.Assert<InvalidProjectFileException>(assemblyName != null, $"Expected '<{tagName}> ' in '{fileName}'");
-			return assemblyName;
+			if (assemblyName != null)
+				return assemblyName;
+
+			var defaultAssemblyName = Path.GetFileNameWithoutExtension(fileName);
+			return defaultAssemblyName;
 		}
 
 		private static string GetAssemblyExtension(string csprojContents, string fileName)
