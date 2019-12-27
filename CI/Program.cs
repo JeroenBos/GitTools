@@ -511,8 +511,13 @@ namespace JBSnorro.GitTools.CI
 				projectsInBuildOrder = solutionFile.ProjectsInOrder.Select(project => CoreProject.Resolve(project, solutionFile, tempDir)).ToList();
 				return messages;
 			}
+			catch (AppSettingNotFoundException)
+			{
+				throw;
+			}
 			catch
 			{
+				Logger.Log("Failed building via dotnet.exe. Maybe it's a .NET Framework solution? Trying legacy compilation.");
 				IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out projectsInBuildOrder);
 				IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFilePath, cancellationToken);
 				return loadSolutionMessages.Concat(buildSolutionMessages);
@@ -744,6 +749,7 @@ namespace JBSnorro.GitTools.CI
 		private static void NuGetRestore(string destinationSolutionFile)
 		{
 			string nugetExe = ConfigurationManager.AppSettings["nuget.exe"] ?? throw new AppSettingNotFoundException("nuget.exe");
+			Contract.Requires<FileNotFoundException>(File.Exists(nugetExe), "File not found", nugetExe);
 
 			ProcessExtensions.StartIndependentlyInvisiblyAsync(nugetExe, destinationSolutionFile).Wait();
 		}

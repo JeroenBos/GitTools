@@ -50,7 +50,7 @@ namespace CI
 
 				if (IsCIDisabled(args))
 				{
-					Logger.Log("CI not enabled");
+					Logger.Log("Error. Did not reach CI. It may be disabled");
 					return;
 				}
 
@@ -110,6 +110,9 @@ namespace CI
 		{
 			try
 			{
+				if (args.Length <= 2)
+					return false; // there's no file specified as argument, so let's just propagate the args to the CI
+
 				string file = args[2];
 				string solutionDirectory = Path.GetDirectoryName(file);
 				Contract.Assert(Directory.Exists(solutionDirectory), $"Directory '{solutionDirectory}' does not exist");
@@ -119,7 +122,7 @@ namespace CI
 			catch (Exception e)
 			{
 				Logger.Log(e.Message);
-				return false;
+				return true;
 			}
 		}
 		private static NamedPipeServerStream TrySetupConnection(CancellationToken cancellationToken)
