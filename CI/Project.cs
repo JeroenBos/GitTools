@@ -94,9 +94,11 @@ namespace JBSnorro.GitTools.CI
 		{
 			var outputType = GetTagContents(csprojContents, "OutputType", fileName)
 						  ?? GetTagContents(csprojContents, "WinOutputType", fileName);
+
 			switch (outputType?.ToUpperInvariant())
 			{
 				case null:
+				case "EXE" when csprojContents.Contains("Microsoft.NET.Sdk.Web"): // when Sdk.Web is used, the output type may be omitted, and is then .dll 
 				case "LIBRARY":
 					return "dll";
 				case "EXE":
