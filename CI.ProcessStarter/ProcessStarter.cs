@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace CI.ProcessStarter
 {
-	public class ProcessStarter
+	class ProcessStarter
 	{
 		static ProcessStarter() => ResolveJBSnorroDll.Resolve();
 
@@ -17,7 +17,7 @@ namespace CI.ProcessStarter
 		public const string STOP_CODON = "STOPS___CODON";
 		public const string STARTED_CODON = "STARTED_CODON";
 
-		public static int Main(string[] args)
+		static int Main(string[] args)
 		{
 			if (args.Length != 1)
 				throw new ArgumentException("Expected 1 argument");

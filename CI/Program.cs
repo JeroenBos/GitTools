@@ -762,12 +762,6 @@ namespace JBSnorro.GitTools.CI
 		/// </summary>
 		private static void StartProcessStarter(string testAssemblyPath)
 		{
-#if DEBUG
-			int exitCode = ProcessStarter.Main(new[] { testAssemblyPath });
-			if (exitCode != 0)
-				throw new Exception(exitCode.ToString());
-
-#endif
 			string processStarterDir = ConfigurationManager.AppSettings["processstarterDir"] ?? throw new AppSettingNotFoundException("processstarterDir");
 			string processStarterExe = ConfigurationManager.AppSettings["processstarterFiles"]?.Split(',')[0] ?? throw new AppSettingNotFoundException("processstarterFiles");
 			string processStarterPath = Path.GetFullPath(Path.Combine(processStarterDir, processStarterExe));

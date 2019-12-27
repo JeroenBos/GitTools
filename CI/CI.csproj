@@ -29,7 +29,6 @@
 
 
 	<ItemGroup>
-	  <ProjectReference Include="..\CI.ProcessStarter\CI.ProcessStarter.csproj" />
 	  <ProjectReference Include="..\GitTools\GitTools.csproj" />
 	</ItemGroup>
 </Project>
