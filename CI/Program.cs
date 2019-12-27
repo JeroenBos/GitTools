@@ -503,16 +503,15 @@ namespace JBSnorro.GitTools.CI
 
 			var tempDir = Path.Combine(Environment.GetEnvironmentVariable("TEMP"), Guid.NewGuid().ToString());
 
+
+			//// $(MSBuildRuntimeType)' == 'Core' exists, see https://github.com/aspnet/BuildTools/blob/9ea72bcf88063cee9afbe53835681702e2efd720/src/Internal.AspNetCore.BuildTools.Tasks/build/Internal.AspNetCore.BuildTools.Tasks.props#L2-L6
+
+			List<(Status, string)> messages = null;
+			bool tryLegacy;
 			try
 			{
-				// $(MSBuildRuntimeType)' == 'Core' exists, see https://github.com/aspnet/BuildTools/blob/9ea72bcf88063cee9afbe53835681702e2efd720/src/Internal.AspNetCore.BuildTools.Tasks/build/Internal.AspNetCore.BuildTools.Tasks.props#L2-L6
-
-				var messages = BuildViaDotnetTool(destinationSolutionFilePath, tempDir, cancellationToken).ToList();
-				projectsInBuildOrder = solutionFile.ProjectsInOrder
-					                               .Where(path => path.ProjectType != SolutionProjectType.SolutionFolder)
-					                               .Select(project => CoreProject.Resolve(project, solutionFile, tempDir))
-					                               .ToList();
-				return messages;
+				messages = BuildViaDotnetTool(destinationSolutionFilePath, tempDir, cancellationToken).ToList();
+				tryLegacy = false;
 			}
 			catch (AppSettingNotFoundException)
 			{
@@ -520,11 +519,36 @@ namespace JBSnorro.GitTools.CI
 			}
 			catch
 			{
-				Logger.Log("Failed building via dotnet.exe. Maybe it's a .NET Framework solution? Trying legacy compilation.");
-				IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out projectsInBuildOrder);
-				IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFilePath, cancellationToken);
-				return loadSolutionMessages.Concat(buildSolutionMessages);
+				tryLegacy = true;
 			}
+
+			if (!tryLegacy)
+			{
+				projectsInBuildOrder = solutionFile.ProjectsInOrder
+												   .Where(path => path.ProjectType != SolutionProjectType.SolutionFolder)
+												   .Select(TryResolve)
+												   .ToList();
+				return messages;
+
+				IProject TryResolve(ProjectInSolution project)
+				{
+					try
+					{
+						return CoreProject.Resolve(project, solutionFile, tempDir);
+					}
+					catch (Exception e)
+					{
+						messages.Add((Status.ProjectLoadingError, e.Message));
+						return null;
+					}
+				}
+			}
+
+			// try legacy: 
+			Logger.Log("Failed building via dotnet.exe. Maybe it's a .NET Framework solution? Trying legacy compilation.");
+			IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out projectsInBuildOrder);
+			IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFilePath, cancellationToken);
+			return loadSolutionMessages.Concat(buildSolutionMessages);
 		}
 		private static IEnumerable<(Status Status, string Message)> LoadSolution(IReadOnlyList<string> projectFilePaths, CancellationToken cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder)
 		{
