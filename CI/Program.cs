@@ -162,29 +162,21 @@ namespace JBSnorro.GitTools.CI
 																				string hash = null,
 																				CancellationToken cancellationToken = default)
 		{
-			try
+			projectCount = -1;
+
+			string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out string error);
+			if (error != null)
 			{
-				projectCount = -1;
-
-				string destinationSolutionFile = TryCopySolution(solutionFilePath, destinationDirectory, cancellationToken, out string error);
-				if (error != null)
-				{
-					return (Status.CopyingError, error).ToSingleton();
-				}
-
-				new GitCommandLine(destinationDirectory).CheckoutHard(hash);
-
-				IEnumerable<(Status, string)> loadAndBuildSolutionMessages = LoadAndBuildSolution(destinationSolutionFile, cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder);
-				IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken)).ToList(); // TODO: Remove ToList
-
-				return loadAndBuildSolutionMessages.Concat(testMessages)
-												   .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
+				return (Status.CopyingError, error).ToSingleton();
 			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e.Message);
-				throw new ContractException();
-			}
+
+			new GitCommandLine(destinationDirectory).CheckoutHard(hash);
+
+			IEnumerable<(Status, string)> loadAndBuildSolutionMessages = LoadAndBuildSolution(destinationSolutionFile, cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder);
+			IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken)).ToList(); // TODO: Remove ToList
+
+			return loadAndBuildSolutionMessages.Concat(testMessages)
+											   .TakeWhile(t => t.Item1.IsSuccessful(), t => !t.Item1.IsSuccessful()); // take all successes, and, in case of an error, all consecutive errors
 		}
 		/// <summary>
 		/// Yields the elements of the second sequence only if all elements in the first sequence match the specified predicate.
