@@ -1,5 +1,6 @@
 ﻿using JBSnorro.Diagnostics;
 using JBSnorro.Extensions;
+using JBSnorro.Testing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -140,8 +141,13 @@ namespace JBSnorro.GitTools
 			}
 			throw new NotImplementedException($"Getting the time out from '{fullName}' is not implemented");
 		}
-
-
+		/// <summary>
+		/// A helper method which asserts that the signature of the specified method could be a test method.
+		/// </summary>
+		public static void CheckTestMethodInvariants(MethodInfo method)
+		{
+			TestExtensions.CheckTestMethodInvariants(method);
+		}
 		private static bool IsTestInitializationMethod(MethodInfo method)
 		{
 			if (method == null) throw new ArgumentNullException(nameof(method));

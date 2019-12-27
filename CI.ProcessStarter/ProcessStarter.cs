@@ -151,6 +151,7 @@ namespace CI.ProcessStarter
 			object testClassInstance = null;
 			try
 			{
+				TestClassExtensions.CheckTestMethodInvariants(testMethod);
 				testClassInstance = testMethod.DeclaringType.GetConstructor(Type.EmptyTypes).Invoke(Array.Empty<object>());
 				TestClassExtensions.RunInitializationMethod(testClassInstance);
 				int? timeout = TestClassExtensions.GetTestMethodTimeout(testMethod);
