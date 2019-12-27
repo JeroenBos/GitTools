@@ -151,10 +151,10 @@ namespace CI.ProcessStarter
 			object testClassInstance = null;
 			try
 			{
-				testClassInstance = testMethod.DeclaringType.GetConstructor(new Type[0]).Invoke(new object[0]);
+				testClassInstance = testMethod.DeclaringType.GetConstructor(Type.EmptyTypes).Invoke(Array.Empty<object>());
 				TestClassExtensions.RunInitializationMethod(testClassInstance);
 				int? timeout = TestClassExtensions.GetTestMethodTimeout(testMethod);
-				Action invocation = () => testMethod.Invoke(testClassInstance, new object[0]);
+				Action invocation = () => testMethod.Invoke(testClassInstance, Array.Empty<object>());
 				if (timeout != null)
 				{
 					var task = Task.Run(invocation);
