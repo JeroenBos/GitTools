@@ -40,7 +40,7 @@ namespace JBSnorro.GitTools.CI
 			get
 			{
 				if (!this.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.StartsWith("obj"))
-					throw new NotImplementedException();
+					throw new NotImplementedException("FrameworkProject.AssemblyPath");
 
 				//couldn't find it in the projects' AlLEvaluatedItems, so I'm hacking this together:
 				string relativePath = "bin" + project.AllEvaluatedItems.Where(item => item.ItemType == "IntermediateAssembly").First().EvaluatedInclude.Substring("obj".Length);
@@ -145,13 +145,13 @@ namespace JBSnorro.GitTools.CI
 			this.TargetFramework = targetFramework;
 		}
 
-		ICollection<IProjectItem> IProject.Items => throw new NotImplementedException();
-		ICollection<IProjectItem> IProject.AllEvaluatedItems => throw new NotImplementedException();
+		ICollection<IProjectItem> IProject.Items => throw new NotImplementedException("CoreProject.Items");
+		ICollection<IProjectItem> IProject.AllEvaluatedItems => throw new NotImplementedException("CoreProject.AllEvaluatedItems");
 
 
 
-		bool IProject.Build(ILogger logger) => throw new NotImplementedException();
-		IProjectProperty IProject.GetProperty(string name) => throw new NotImplementedException();
+		bool IProject.Build(ILogger logger) => throw new NotImplementedException("CoreProject.Build");
+		IProjectProperty IProject.GetProperty(string name) => throw new NotImplementedException("CoreProject.GetProperty");
 	}
 	interface IProjectItem
 	{
@@ -185,7 +185,7 @@ namespace JBSnorro.GitTools.CI
 			this.projectMetadata = projectMetadata;
 		}
 
-		public string EvaluatedValue => throw new NotImplementedException();
+		public string EvaluatedValue => throw new NotImplementedException("FrameworkProjectMetadata.EvaluatedValue");
 	}
 
 	interface IProjectProperty

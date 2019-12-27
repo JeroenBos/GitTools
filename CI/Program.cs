@@ -75,7 +75,7 @@ namespace JBSnorro.GitTools.CI
 			TestResultsFile resultsFile = null;
 			try
 			{
-				throw new NotImplementedException();
+				throw new NotImplementedException("CopySolutionAndExecuteTests");
 				//return CopySolutionAndExecuteTests(solutionFilePath, baseDestinationDirectory, out resultsFile, out string commitMessage, out int projectCount, hash, cancellationToken);
 			}
 			finally

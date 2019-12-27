@@ -17,7 +17,7 @@ namespace JBSnorro.GitTools
 		{
 			if (string.IsNullOrEmpty(message)) throw new ArgumentException(nameof(message));
 
-			throw new NotImplementedException();
+			throw new NotImplementedException("Program.WriteLine");
 		}
 		static int Main(string[] args)
 		{
@@ -52,7 +52,7 @@ namespace JBSnorro.GitTools
 		/// <returns> whether all tests passed </returns>
 		static ExitCodes TestAll()
 		{
-			throw new NotImplementedException();
+			throw new NotImplementedException("Program.TestAll");
 		}
 		/// <summary>
 		/// Tests the specified method.
@@ -63,7 +63,7 @@ namespace JBSnorro.GitTools
 		{
 			if (method == null) throw new ArgumentNullException(nameof(method));
 
-			throw new NotImplementedException();
+			throw new NotImplementedException("Program.Test");
 		}
 
 	}

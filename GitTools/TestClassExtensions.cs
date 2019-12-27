@@ -125,7 +125,7 @@ namespace JBSnorro.GitTools
 			if (attribute == null)
 				return null;
 
-			throw new NotImplementedException();
+			throw new NotImplementedException("GetTestMethodTimeout");
 			//return TestMethodTimeoutAttribute[fullName](attribute);
 		}
 
