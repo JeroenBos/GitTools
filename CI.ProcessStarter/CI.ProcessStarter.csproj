@@ -2,10 +2,9 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
-		<SelfContained>True</SelfContained>
-		<RuntimeIdentifier>win-x86</RuntimeIdentifier>
-  </PropertyGroup>
+		<TargetFramework>netcoreapp3.1</TargetFramework> <!--The version of ProcessStarter must be at least that of any project that is loaded-->
+		<LangVersion>8.0</LangVersion>
+	</PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GitTools\GitTools.csproj" />
