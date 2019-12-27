@@ -5,6 +5,9 @@
 		<LangVersion>8.0</LangVersion>
 		<RootNamespace>CI.Dispatcher</RootNamespace>
 		<AssemblyName>CI.Dispatcher</AssemblyName>
+		<ApplicationIcon />
+		<OutputType>Exe</OutputType>
+		<StartupObject />
 	</PropertyGroup>
 
 	<ItemGroup>
