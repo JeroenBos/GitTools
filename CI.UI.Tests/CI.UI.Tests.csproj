@@ -45,7 +45,6 @@
 
 
 	<ItemGroup>
-		<ProjectReference Include="..\BackwardsCompatibility\BackwardsCompatibility.csproj" />
 		<ProjectReference Include="..\CI.Dispatcher\CI.Dispatcher.csproj" />
 		<ProjectReference Include="..\CI.ProcessStarter\CI.ProcessStarter.csproj" />
 		<ProjectReference Include="..\CI.UI\CI.UI.csproj" />

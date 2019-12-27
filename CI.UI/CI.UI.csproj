@@ -32,7 +32,6 @@
 
 
 	<ItemGroup>
-		<ProjectReference Include="..\BackwardsCompatibility\BackwardsCompatibility.csproj" />
 		<ProjectReference Include="..\CI\CI.csproj" />
 		<ProjectReference Include="..\GitTools\GitTools.csproj" />
 	</ItemGroup>
