@@ -45,8 +45,9 @@ namespace CI.ProcessStarter
 			var lists = propNames.Select(AppContext.GetData).Select(s => (string)s).ToList();
 			var s = lists[0]?.Split(';').OrderBy(_ => _).ToList();
 
-			var systemRuntimePath = s.Where(a => a.EndsWith("System.Runtime.dll")).First();
-			var systemRuntime = Assembly.LoadFrom(systemRuntimePath);
+
+			var path = s.Where(a => a.EndsWith("Microsoft.AspNetCore.Mvc.Abstractions.dll")).FirstOrDefault();
+			Console.WriteLine($"Microsoft.AspNetCore.Mvc.Abstractions at '{path}'");
 
 			try
 			{
