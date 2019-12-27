@@ -5,8 +5,16 @@
 		<LangVersion>8.0</LangVersion>
 		<RootNamespace>CI.UI</RootNamespace>
 		<AssemblyName>CI.UI</AssemblyName>
-		<OutputType>WinExe</OutputType>
 		<UseWPF>true</UseWPF>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<OutputType>Exe</OutputType>
+		<ApplicationIcon />
+		<StartupObject />
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'!='Debug|AnyCPU'">
+		<OutputType>WinExe</OutputType>
 	</PropertyGroup>
 
 
@@ -15,19 +23,19 @@
 			<HintPath>..\packages\JBSnorro.CI.dll</HintPath>
 		</Reference>
 		<Reference Include="System.Windows.Forms">
-		  <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7\System.Windows.Forms.dll</HintPath>
+			<HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7\System.Windows.Forms.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
 
 	<ItemGroup>
-	  <PackageReference Include="Microsoft.Build.Utilities.Core" Version="16.4.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.4.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.4.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="3.4.0" />
-	  <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="3.4.0" />
-	  <PackageReference Include="Microsoft.Windows.Compatibility" Version="3.1.0" />
-	  <PackageReference Include="System.Drawing.Common" Version="4.7.0" />
+		<PackageReference Include="Microsoft.Build.Utilities.Core" Version="16.4.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="3.4.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.4.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="3.4.0" />
+		<PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="3.4.0" />
+		<PackageReference Include="Microsoft.Windows.Compatibility" Version="3.1.0" />
+		<PackageReference Include="System.Drawing.Common" Version="4.7.0" />
 	</ItemGroup>
 
 
