@@ -808,9 +808,9 @@ namespace JBSnorro.GitTools.CI
 			}
 			else
 			{
-				if (result.ErrorOutput != null)
+				if (!string.IsNullOrEmpty(result.ErrorOutput))
 					yield return (Status.ProjectLoadingError, result.ErrorOutput);
-				if (result.StandardOutput != null)
+				if (!string.IsNullOrEmpty(result.StandardOutput))
 					yield return (Status.Info, result.StandardOutput);
 				yield return (Status.ProjectLoadingError, $"Solution {Path.GetFileName(destinationSolutionFile)} failed loading");
 			}
