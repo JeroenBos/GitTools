@@ -122,6 +122,11 @@ namespace CI.ProcessStarter
 						messagesCount++;
 					}
 					Console.Write(messagesCount);
+					if (!connect)
+					{
+						writer.BaseStream.Position = 0;
+						var debug = new StreamReader(writer.BaseStream).ReadToEnd();
+					}
 				}
 			}
 			catch (ObjectDisposedException e) { Console.WriteLine(e.Message); }
