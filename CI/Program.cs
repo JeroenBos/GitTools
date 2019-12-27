@@ -170,7 +170,10 @@ namespace JBSnorro.GitTools.CI
 				return (Status.CopyingError, error).ToSingleton();
 			}
 
-			new GitCommandLine(destinationDirectory).CheckoutHard(hash);
+			if (hash != null)
+			{
+				new GitCommandLine(destinationDirectory).CheckoutHard(hash);
+			}
 
 			IEnumerable<(Status, string)> loadAndBuildSolutionMessages = LoadAndBuildSolution(destinationSolutionFile, cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder);
 			IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken)).ToList(); // TODO: Remove ToList
