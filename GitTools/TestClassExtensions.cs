@@ -125,8 +125,20 @@ namespace JBSnorro.GitTools
 			if (attribute == null)
 				return null;
 
-			throw new NotImplementedException("GetTestMethodTimeout");
-			//return TestMethodTimeoutAttribute[fullName](attribute);
+			if (fullName == "Microsoft.VisualStudio.TestTools.UnitTesting.TimeoutAttribute")
+			{
+				return (int)attribute.GetType().GetProperty("Timeout").GetValue(attribute);
+			}
+			const string nunitAttributeName = "NUnit.Framework.TimeoutAttribute";
+			if (fullName == nunitAttributeName)
+			{
+				return (int)method.GetCustomAttributesData()
+								  .Where(m => m.AttributeType.FullName == nunitAttributeName)
+								  .First().ConstructorArguments
+										  .First()
+										  .Value;
+			}
+			throw new NotImplementedException($"Getting the time out from '{fullName}' is not implemented");
 		}
 
 
