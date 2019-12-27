@@ -113,7 +113,7 @@ namespace CI.ProcessStarter
 					}
 					catch (Exception e)
 					{
-						writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}"));
+						writer.WriteLine(ERROR_CODON + RemoveLineBreaks($"An unexpected error occurred: {e.Message}\n{e.StackTrace}"));
 						messagesCount++;
 					}
 					finally
