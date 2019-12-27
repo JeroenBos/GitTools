@@ -64,6 +64,8 @@ namespace JBSnorro.GitTools.CI
 					return "Skipped because parent failed";
 				case Status.Canceled:
 					return "Canceled";
+				case Status.Info:
+					return "Info";
 				default:
 					throw new DefaultSwitchCaseUnreachableException();
 			}
@@ -81,6 +83,7 @@ namespace JBSnorro.GitTools.CI
 				case Status.TestSuccess:
 				case Status.Skipped:
 				case Status.TestStarted:
+				case Status.Info:
 					return true;
 				case Status.ArgumentError:
 				case Status.CopyingError:
