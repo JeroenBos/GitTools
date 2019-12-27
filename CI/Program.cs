@@ -508,7 +508,10 @@ namespace JBSnorro.GitTools.CI
 				// $(MSBuildRuntimeType)' == 'Core' exists, see https://github.com/aspnet/BuildTools/blob/9ea72bcf88063cee9afbe53835681702e2efd720/src/Internal.AspNetCore.BuildTools.Tasks/build/Internal.AspNetCore.BuildTools.Tasks.props#L2-L6
 
 				var messages = BuildViaDotnetTool(destinationSolutionFilePath, tempDir, cancellationToken).ToList();
-				projectsInBuildOrder = solutionFile.ProjectsInOrder.Select(project => CoreProject.Resolve(project, solutionFile, tempDir)).ToList();
+				projectsInBuildOrder = solutionFile.ProjectsInOrder
+					                               .Where(path => path.ProjectType != SolutionProjectType.SolutionFolder)
+					                               .Select(project => CoreProject.Resolve(project, solutionFile, tempDir))
+					                               .ToList();
 				return messages;
 			}
 			catch (AppSettingNotFoundException)

@@ -65,6 +65,7 @@ namespace JBSnorro.GitTools.CI
 
 		public static IProject Resolve(ProjectInSolution csprojPath, SolutionFile solution, string outputDir)
 		{
+			Contract.Requires(csprojPath.ProjectType != SolutionProjectType.SolutionFolder);
 			var config = solution.GetDefaultConfigurationName();
 			var platform = solution.GetDefaultPlatformName();
 
