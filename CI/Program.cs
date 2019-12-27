@@ -778,7 +778,9 @@ namespace JBSnorro.GitTools.CI
 			string nugetExe = ConfigurationManager.AppSettings["nuget.exe"] ?? throw new AppSettingNotFoundException("nuget.exe");
 			Contract.Requires<FileNotFoundException>(File.Exists(nugetExe), "File not found", nugetExe);
 
+			Logger.Log("Invoking nuget restore");
 			ProcessExtensions.StartIndependentlyInvisiblyAsync(nugetExe, destinationSolutionFile).Wait();
+			Logger.Log("Invoked nuget restore");
 		}
 
 		/// <summary>
@@ -829,6 +831,8 @@ namespace JBSnorro.GitTools.CI
 			if (result.ExitCode == 0)
 			{
 				yield return (Status.ProjectLoadSuccess, $"Solution {Path.GetFileName(destinationSolutionFile)} loaded successfully");
+				if (!string.IsNullOrEmpty(result.StandardOutput))
+					yield return (Status.Info, result.StandardOutput);
 			}
 			else
 			{
