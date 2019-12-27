@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.IO.Pipes;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -131,7 +132,9 @@ namespace CI.ProcessStarter
 					whenAnyTask.Wait();
 					if (whenAnyTask.Result == task)
 					{
-						return null;
+						if (task.IsCompletedSuccessfully)
+							return null;
+						return string.Join(", ", task.Exception.InnerExceptions.Select(e => e.Message));
 					}
 					else
 					{
