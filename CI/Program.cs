@@ -790,7 +790,7 @@ namespace JBSnorro.GitTools.CI
 			string processStarterExe = ConfigurationManager.AppSettings["processstarterFiles"]?.Split(',')[0] ?? throw new AppSettingNotFoundException("processstarterFiles");
 			string processStarterPath = Path.GetFullPath(Path.Combine(processStarterDir, processStarterExe));
 
-			Console.WriteLine("Starting process starter");
+			Console.WriteLine($"Starting process starter with argument '{testAssemblyPath}'");
 			var process = ProcessExtensions.WaitForExitAndReadOutputAsync(processStarterPath, testAssemblyPath);
 			process.Wait();
 			if (process.Result.ExitCode != 0)
