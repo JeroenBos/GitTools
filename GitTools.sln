@@ -8,6 +8,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CI", "CI\CI.csproj", "{53B9CF71-9E2F-4F3B-AEAE-271B4D3B3F5F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CI.UI", "CI.UI\CI.UI.csproj", "{B0FC2FBF-2166-457F-AD5F-5E2AB5C76ECA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{6F748866-0B1F-418C-88F6-A893553CC3F5} = {6F748866-0B1F-418C-88F6-A893553CC3F5}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CI.Dispatcher", "CI.Dispatcher\CI.Dispatcher.csproj", "{44884954-1B2A-44CB-AF48-F4A3AC057722}"
 EndProject
@@ -17,7 +20,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoGitHotkey", "AutoGitHot
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AutoGitHotkey.Tests", "AutoGitHotkey.Tests\AutoGitHotkey.Tests.csproj", "{8E4EE772-966C-4605-801E-7C201AFF3F76}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CI.ProcessStarter", "CI.ProcessStarter\CI.ProcessStarter.csproj", "{6F748866-0B1F-418C-88F6-A893553CC3F5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CI.ProcessStarter", "CI.ProcessStarter\CI.ProcessStarter.csproj", "{6F748866-0B1F-418C-88F6-A893553CC3F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
