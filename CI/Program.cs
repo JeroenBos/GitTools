@@ -741,7 +741,7 @@ namespace JBSnorro.GitTools.CI
 			foreach (string line in lines)
 			{
 				string codon = line.Substring(0, ERROR_CODON.Length);
-				string message = line.Substring(ERROR_CODON.Length);
+				string message = line.Substring(ERROR_CODON.Length).Trim('\r', '\n', '\t', ' ');
 
 				switch (codon)
 				{
