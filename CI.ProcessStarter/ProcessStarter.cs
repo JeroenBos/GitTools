@@ -10,13 +10,6 @@ namespace CI.ProcessStarter
 {
 	class ProcessStarter
 	{
-		static string[] propNames = new[]
-		{
-			"TRUSTED_PLATFORM_ASSEMBLIES",
-			"PLATFORM_RESOURCE_ROOTS",
-			"APP_PATHS",
-			"ADDITIONAL_DEPS"
-		};
 		static ProcessStarter() => ResolveJBSnorroDll.Resolve();
 
 		public const string PIPE_NAME = "CI_internal_pipe";
@@ -40,13 +33,6 @@ namespace CI.ProcessStarter
 			string assemblyPath = args[0];
 			if (!File.Exists(assemblyPath))
 				throw new FileNotFoundException(assemblyPath);
-
-
-			var lists = propNames.Select(AppContext.GetData).Select(s => (string)s).ToList();
-			var s = lists[0]?.Split(';').OrderBy(_ => _).ToList();
-
-			var systemRuntimePath = s.Where(a => a.EndsWith("System.Runtime.dll")).First();
-			var systemRuntime = Assembly.LoadFrom(systemRuntimePath);
 
 			try
 			{
@@ -157,9 +143,9 @@ namespace CI.ProcessStarter
 					whenAnyTask.Wait();
 					if (whenAnyTask.Result == task)
 					{
-						if (task.IsFaulted)
-							return string.Join(", ", task.Exception.InnerExceptions.Select(e => e.Message));
-						return null;
+						if (task.IsCompletedSuccessfully)
+							return null;
+						return string.Join(", ", task.Exception.InnerExceptions.Select(e => e.Message));
 					}
 					else
 					{
