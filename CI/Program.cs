@@ -176,6 +176,7 @@ namespace JBSnorro.GitTools.CI
 			}
 
 			IEnumerable<(Status, string)> loadAndBuildSolutionMessages = LoadAndBuildSolution(destinationSolutionFile, cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder);
+			projectsInBuildOrder = projectsInBuildOrder.Where(x => !x.AssemblyPath.EndsWith("SemanticsEngine.Tests.dll")).ToList();
 			IEnumerable<(Status, string)> testMessages = EnumerableExtensions.EvaluateLazily(() => RunTests(projectsInBuildOrder, cancellationToken));
 
 			return loadAndBuildSolutionMessages.Concat(testMessages)
@@ -909,7 +910,7 @@ namespace JBSnorro.GitTools.CI
 					case "JBSnorro":
 						return @"{0}\JBSnorro.CI.dll";
 					case "GitTools":
-						return @"{1}\JBSnorro.GitTools.exe";
+						return @"{1}\JBSnorro.GitTools.dll";
 					case "CI":
 						return @"{1}\JBSnorro.GitTools.CI.exe";
 					default:
