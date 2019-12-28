@@ -805,7 +805,7 @@ namespace JBSnorro.GitTools.CI
 
 			void TryCopyDepsJson()
 			{
-				string processsStarterPathWithoutExtension = PathWithoutExtension(processStarterPath);
+				string processsStarterPathWithoutExtension = Path.Combine(Path.GetDirectoryName(testAssemblyPath), Path.GetFileNameWithoutExtension(processStarterPath));
 				string testAssemblyPathWithoutExtension = PathWithoutExtension(testAssemblyPath);
 
 				foreach (var extension in new[] { ".deps.json", ".runtimeconfig.json" })
