@@ -566,6 +566,8 @@ namespace JBSnorro.GitTools.CI
 			{
 				var result = messages().ToList();
 				inBuildOrder.AddRange(ToBuildOrder(projects.LoadedProjects.Select(p => new FrameworkProject(p)).ToList()));
+				if (inBuildOrder.Count == 0)
+					Logger.Log("The specified solution has no projects. Maybe something went wrong?");
 				return result;
 			}
 			catch
@@ -698,8 +700,8 @@ namespace JBSnorro.GitTools.CI
 			{
 				foreach (var project in projectsInBuildOrder)
 				{
-					string binDirectory = Path.GetDirectoryName(GetAssemblyPath(project));
-					CopyDependenciesToNewAppDomainBaseDirectory(project.DirectoryPath, binDirectory, null);
+					string distDirectory = Path.GetDirectoryName(GetAssemblyPath(project));
+					CopyDependenciesToNewAppDomainBaseDirectory(distDirectory, project.TargetFrameworkMoniker);
 				}
 
 				int processedProjectsCount = 0;
@@ -713,7 +715,7 @@ namespace JBSnorro.GitTools.CI
 						while (remainingProjects.TryDequeue(out IProject project) && !cancellationToken.IsCancellationRequested)
 						{
 							Interlocked.Increment(ref processedProjectsCount);
-							StartProcessStarter(GetAssemblyPath(project));
+							StartProcessStarter(GetAssemblyPath(project), project.TargetFrameworkMoniker);
 						}
 					}
 				}
@@ -792,15 +794,13 @@ namespace JBSnorro.GitTools.CI
 		/// <summary>
 		/// Performs a nuget restore operation.
 		/// </summary>
-		private static void StartProcessStarter(string testAssemblyPath)
+		private static void StartProcessStarter(string testAssemblyPath, string tfm)
 		{
-			string processStarterExe = ConfigurationManager.AppSettings["processstarterFiles"]?.Split(',')[0] ?? throw new AppSettingNotFoundException("processstarterFiles");
-			string processStarterPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(testAssemblyPath), processStarterExe));
-
 			Console.WriteLine($"Starting process starter with argument '{testAssemblyPath}'");
 
-			TryCopyDepsJson();
+			string processStarterPath = getProcessStarterFiles(tfm).First();
 
+			TryCopyDepsJson();
 			var process = ProcessExtensions.WaitForExitAndReadOutputAsync(processStarterPath, testAssemblyPath);
 			process.Wait();
 			if (process.Result.ExitCode != 0)
@@ -813,7 +813,8 @@ namespace JBSnorro.GitTools.CI
 				string processsStarterPathWithoutExtension = Path.Combine(Path.GetDirectoryName(testAssemblyPath), Path.GetFileNameWithoutExtension(processStarterPath));
 				string testAssemblyPathWithoutExtension = PathWithoutExtension(testAssemblyPath);
 
-				foreach (var extension in new[] { ".deps.json", ".runtimeconfig.json" })
+				var extensions = new[] { ".deps.json", ".runtimeconfig.json" }.Take(2);
+				foreach (var extension in extensions)
 				{
 					string source = testAssemblyPathWithoutExtension + extension;
 					if (!File.Exists(source))
@@ -831,10 +832,35 @@ namespace JBSnorro.GitTools.CI
 				return Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
 			}
 		}
-		private static IEnumerable<string> getProcessStarterFiles()
+		private static string GetAppContextTargetFrameworkMoniker()
 		{
-			string processStarterDir = ConfigurationManager.AppSettings["processstarterDir"] ?? throw new AppSettingNotFoundException("processstarterDir");
-			var processStarterFiles = ConfigurationManager.AppSettings["processstarterFiles"]?.Split(',') ?? throw new AppSettingNotFoundException("processstarterFiles");
+			Contract.Requires(AppContext.TargetFrameworkName != null);
+
+			string name = AppContext.TargetFrameworkName.ToLowerInvariant().Replace(" ", "");
+
+			if (name.Length > 3 && name[0] == '.' && name[name.Length - 2] == '.')
+			{
+				int endOfType = name.IndexOf(",version=v");
+				if (endOfType != -1)
+				{
+					string type = name.Substring(".".Length, endOfType - ".".Length);
+					string version = name.Substring(endOfType + ",version=v".Length);
+					string result = type + version;
+					return result;
+				}
+			}
+			return "?";
+		}
+		private static IEnumerable<string> getProcessStarterFiles(string tfm)
+		{
+			const string fallbackDirKey = "processstarterDir";
+			const string fallbackFilesKey = "processstarterFiles";
+			string dirKey = $"{fallbackDirKey}_{tfm}";
+			string filesKey = $"{fallbackFilesKey}_{tfm}";
+
+			string processStarterDir = ConfigurationManager.AppSettings[dirKey] ?? ConfigurationManager.AppSettings[fallbackDirKey] ?? throw new AppSettingNotFoundException($"{dirKey}' or '{fallbackDirKey}");
+			var processStarterFiles = (ConfigurationManager.AppSettings[filesKey] ?? ConfigurationManager.AppSettings[fallbackFilesKey] ?? throw new AppSettingNotFoundException($"{filesKey}' or '{fallbackFilesKey}"))
+										?.Split(',');
 
 			return processStarterFiles.Where(_ => !string.IsNullOrWhiteSpace(_))
 									  .Select(fileName => Path.GetFullPath(Path.Combine(processStarterDir, fileName)));
@@ -879,7 +905,7 @@ namespace JBSnorro.GitTools.CI
 		/// Copies the dependencies of this project to the bin directory of the new app domain.
 		/// </summary>
 		/// <param name="binDirectory"> The bin directory where a project is to be built. </param>
-		private static void CopyDependenciesToNewAppDomainBaseDirectory(string projectFileDirectory, string newAppDomainBaseDirectory, string frameworkDirectory)
+		private static void CopyDependenciesToNewAppDomainBaseDirectory(string newAppDomainBaseDirectory, string tfm)
 		{
 			List<string> packagesDirectories = new string[] { newAppDomainBaseDirectory, AppDomain.CurrentDomain.BaseDirectory }.Select(getPackagesDirectory).Where(p => p != null).ToList();
 			IEnumerable<string> dependencies = new string[]
@@ -896,7 +922,7 @@ namespace JBSnorro.GitTools.CI
 				Contract.AssertForAll(dependencies, dependencyPath => !dependencyPath.Contains("{0}"), "Cannot find package for '{1}'");
 			}
 
-			var processStarterFiles = getProcessStarterFiles();
+			var processStarterFiles = getProcessStarterFiles(tfm);
 			var dependencyFullPaths = dependencyPaths.Select(selectPackageDirectory)
 													 .Concat(processStarterFiles)
 													 .ToList();

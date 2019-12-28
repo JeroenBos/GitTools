@@ -19,7 +19,7 @@ namespace JBSnorro.GitTools.CI
 		string DirectoryPath { get; }
 		string FullPath { get; }
 		string? AssemblyPath { get; }
-		string TargetFramework { get; }
+		string TargetFrameworkMoniker { get; }
 		ICollection<IProjectItem> AllEvaluatedItems { get; }
 		ICollection<IProjectItem> Items { get; }
 		bool Build(ILogger logger);
@@ -50,7 +50,7 @@ namespace JBSnorro.GitTools.CI
 			}
 		}
 
-		public string TargetFramework => project.GetPropertyValue("TargetFramework");
+		public string TargetFrameworkMoniker => project.GetPropertyValue("TargetFramework");
 
 		public bool Build(ILogger logger) => project.Build(logger);
 		public IProjectProperty GetProperty(string name) => new FrameworkProjectProperty(project.GetProperty(name));
@@ -60,7 +60,7 @@ namespace JBSnorro.GitTools.CI
 	{
 		public string FullPath { get; }
 		public string AssemblyPath { get; }
-		public string TargetFramework { get; }
+		public string TargetFrameworkMoniker { get; }
 		string IProject.DirectoryPath => Path.GetDirectoryName(FullPath);
 
 		public static IProject Resolve(ProjectInSolution csprojPath, SolutionFile solution, string outputDir)
@@ -75,9 +75,9 @@ namespace JBSnorro.GitTools.CI
 			var assemblyFileName = assemblyName + "." + extension;
 			var assemblyPath = Path.Combine(outputDir, assemblyFileName);
 			Contract.Assert(File.Exists(assemblyPath), $"Something went wrong in inferring the assembly name '{assemblyFileName}'");
-			string targetFramework = GetTargetFrameworkMoniker(csprojContents, Path.GetFileName(csprojPath.AbsolutePath));
+			string tfm = GetTargetFrameworkMoniker(csprojContents, Path.GetFileName(csprojPath.AbsolutePath));
 
-			return new CoreProject(csprojPath.AbsolutePath, assemblyPath, targetFramework);
+			return new CoreProject(csprojPath.AbsolutePath, assemblyPath, tfm);
 		}
 		private static string GetAssemblyName(string csprojContents, string fileName)
 		{
@@ -135,14 +135,14 @@ namespace JBSnorro.GitTools.CI
 			int length = j - i - $"<{tagName}>".Length;
 			return contents.Substring(i + $"<{tagName}>".Length, length);
 		}
-		private CoreProject(string projPath, string assemblyPath, string targetFramework)
+		private CoreProject(string projPath, string assemblyPath, string tfm)
 		{
 			Contract.Requires(!string.IsNullOrEmpty(projPath));
 			Contract.Requires(!string.IsNullOrEmpty(assemblyPath));
 
 			this.FullPath = projPath;
 			this.AssemblyPath = assemblyPath;
-			this.TargetFramework = targetFramework;
+			this.TargetFrameworkMoniker = tfm;
 		}
 
 		ICollection<IProjectItem> IProject.Items => throw new NotImplementedException("CoreProject.Items");
