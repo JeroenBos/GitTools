@@ -788,17 +788,42 @@ namespace JBSnorro.GitTools.CI
 		/// </summary>
 		private static void StartProcessStarter(string testAssemblyPath)
 		{
-			string processStarterDir = ConfigurationManager.AppSettings["processstarterDir"] ?? throw new AppSettingNotFoundException("processstarterDir");
 			string processStarterExe = ConfigurationManager.AppSettings["processstarterFiles"]?.Split(',')[0] ?? throw new AppSettingNotFoundException("processstarterFiles");
-			string processStarterPath = Path.GetFullPath(Path.Combine(processStarterDir, processStarterExe));
+			string processStarterPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(testAssemblyPath), processStarterExe));
 
 			Console.WriteLine($"Starting process starter with argument '{testAssemblyPath}'");
+
+			TryCopyDepsJson();
+
 			var process = ProcessExtensions.WaitForExitAndReadOutputAsync(processStarterPath, testAssemblyPath);
 			process.Wait();
 			if (process.Result.ExitCode != 0)
 				throw new Exception(process.Result.ErrorOutput);
 			// just in case I want to know this again:
 			int.TryParse(process.Result.StandardOutput, out int _writtenMessagesCount);
+
+			void TryCopyDepsJson()
+			{
+				string processsStarterPathWithoutExtension = PathWithoutExtension(processStarterPath);
+				string testAssemblyPathWithoutExtension = PathWithoutExtension(testAssemblyPath);
+
+				foreach (var extension in new[] { ".deps.json", ".runtimeconfig.json" })
+				{
+					string source = testAssemblyPathWithoutExtension + extension;
+					if (!File.Exists(source))
+					{
+						throw new FileNotFoundException($"Cannot find a '{extension}' file for project '{Path.GetFileNameWithoutExtension(testAssemblyPath)}'", source);
+					}
+
+					string destination = processsStarterPathWithoutExtension + extension;
+					const bool overwrite = true; // otherwise File.Copy throws 'already exists' exception
+					File.Copy(source, destination, overwrite);
+				}
+			}
+			static string PathWithoutExtension(string path)
+			{
+				return Path.Combine(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path));
+			}
 		}
 		private static IEnumerable<string> getProcessStarterFiles()
 		{
