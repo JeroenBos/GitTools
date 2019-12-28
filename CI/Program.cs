@@ -548,11 +548,13 @@ namespace JBSnorro.GitTools.CI
 				}
 			}
 
-			// try legacy: 
-			Logger.Log("Failed building via dotnet.exe. Maybe it's a .NET Framework solution? Trying legacy compilation.");
-			IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out projectsInBuildOrder);
-			IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFilePath, cancellationToken);
-			return loadSolutionMessages.Concat(buildSolutionMessages);
+			IEnumerable<(Status, string)> legacyBuild(out IReadOnlyList<IProject> projectsInBuildOrder)
+			{
+				// try legacy: 
+				IEnumerable<(Status, string)> loadSolutionMessages = LoadSolution(projectFilePaths, cancellationToken, out projectsInBuildOrder);
+				IEnumerable<(Status, string)> buildSolutionMessages = BuildSolution(projectsInBuildOrder, destinationSolutionFilePath, cancellationToken);
+				return loadSolutionMessages.Concat(buildSolutionMessages);
+			}
 		}
 		private static IEnumerable<(Status Status, string Message)> LoadSolution(IReadOnlyList<string> projectFilePaths, CancellationToken cancellationToken, out IReadOnlyList<IProject> projectsInBuildOrder)
 		{
