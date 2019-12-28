@@ -523,7 +523,7 @@ namespace JBSnorro.GitTools.CI
 				tryLegacy = true;
 			}
 
-			if (!tryLegacy)
+			if (tryLegacy)
 			{
 				projectsInBuildOrder = solutionFile.ProjectsInOrder
 												   .Where(path => path.ProjectType != SolutionProjectType.SolutionFolder)
