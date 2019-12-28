@@ -41,13 +41,26 @@ namespace CI.ProcessStarter
 			if (!File.Exists(assemblyPath))
 				throw new FileNotFoundException(assemblyPath);
 
+			var tf = AppContext.TargetFrameworkName;
 
 			var lists = propNames.Select(AppContext.GetData).Select(s => (string)s).ToList();
 			var s = lists[0]?.Split(';').OrderBy(_ => _).ToList();
+			var runtime = s.First(_ => _.ToLower().EndsWith("system.runtime.dll"));
 
+			if (lists[0] == null)
+				Console.WriteLine("null");
+			else
+			{
+				foreach (var p in s)
+				{
+					Console.WriteLine(p);
+				}
+			}
 
-			var path = s.Where(a => a.EndsWith("Microsoft.AspNetCore.Mvc.Abstractions.dll")).FirstOrDefault();
-			Console.WriteLine($"Microsoft.AspNetCore.Mvc.Abstractions at '{path}'");
+			///var runtimepath = s.Where(a => a.EndsWith("System.Runtime.dll")).FirstOrDefault();
+			///Console.WriteLine($"System.Runtime.dll at '{runtimepath}'");
+			///var path = s.Where(a => a.EndsWith("Microsoft.AspNetCore.Mvc.Abstractions.dll")).FirstOrDefault();
+			///Console.WriteLine($"Microsoft.AspNetCore.Mvc.Abstractions at '{path}'");
 
 			try
 			{

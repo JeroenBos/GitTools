@@ -813,7 +813,7 @@ namespace JBSnorro.GitTools.CI
 				string processsStarterPathWithoutExtension = Path.Combine(Path.GetDirectoryName(testAssemblyPath), Path.GetFileNameWithoutExtension(processStarterPath));
 				string testAssemblyPathWithoutExtension = PathWithoutExtension(testAssemblyPath);
 
-				var extensions = new[] { ".deps.json", ".runtimeconfig.json" }.Take(2);
+				var extensions = new[] { ".deps.json", ".runtimeconfig.json" }.Take(0);
 				foreach (var extension in extensions)
 				{
 					string source = testAssemblyPathWithoutExtension + extension;
@@ -871,7 +871,8 @@ namespace JBSnorro.GitTools.CI
 			string dotnetExe = ConfigurationManager.AppSettings["dotnet.exe"] ?? throw new AppSettingNotFoundException("dotnet.exe");
 
 			string executable = dotnetExe;
-			var arguments = new string[] { "build", destinationSolutionFile, $"--output \"{outputDirectory}\"" };
+			const string runtimeId = "win-x86";
+			var arguments = new string[] { "publish", destinationSolutionFile, $"--runtime \"{runtimeId}\" --output \"{outputDirectory}\"" };
 
 			var startInfo = new ProcessStartInfo(executable, string.Join(" ", arguments));
 			startInfo.UseShellExecute = false;
@@ -897,7 +898,7 @@ namespace JBSnorro.GitTools.CI
 					yield return (Status.ProjectLoadingError, result.ErrorOutput);
 				if (!string.IsNullOrEmpty(result.StandardOutput))
 					yield return (Status.Info, result.StandardOutput);
-				yield return (Status.ProjectLoadingError, $"Solution {Path.GetFileName(destinationSolutionFile)} failed loading");
+				yield return (Status.ProjectLoadingError, $"Solution {Path.GetFileName(destinationSolutionFile)} failed loading with exit code " + result.ExitCode);
 			}
 		}
 
