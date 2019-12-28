@@ -525,23 +525,26 @@ namespace JBSnorro.GitTools.CI
 
 			if (tryLegacy)
 			{
-				projectsInBuildOrder = solutionFile.ProjectsInOrder
-												   .Where(path => path.ProjectType != SolutionProjectType.SolutionFolder)
-												   .Select(TryResolve)
-												   .ToList();
-				return messages;
+				Logger.Log("Failed building via dotnet.exe. Maybe it's a .NET Framework solution? Trying legacy compilation.");
+				return legacyBuild(out projectsInBuildOrder);
+			}
 
-				IProject TryResolve(ProjectInSolution project)
+			projectsInBuildOrder = solutionFile.ProjectsInOrder
+											   .Where(path => path.ProjectType != SolutionProjectType.SolutionFolder)
+											   .Select(TryResolve)
+											   .ToList();
+			return messages;
+
+			IProject TryResolve(ProjectInSolution project)
+			{
+				try
 				{
-					try
-					{
-						return CoreProject.Resolve(project, solutionFile, tempDir);
-					}
-					catch (Exception e)
-					{
-						messages.Add((Status.ProjectLoadingError, e.Message));
-						return null;
-					}
+					return CoreProject.Resolve(project, solutionFile, tempDir);
+				}
+				catch (Exception e)
+				{
+					messages.Add((Status.ProjectLoadingError, e.Message));
+					return null;
 				}
 			}
 
